@@ -20,7 +20,7 @@ keep it that way.
 ## Develop
 
 ```bash
-git clone https://github.com/elon-choo/fable-profile
+git clone https://github.com/elon-choo/fablever
 cd fable-profile
 npm test                 # runs MCP protocol tests + the install/uninstall lifecycle test
 node tools/fable-leaktest.js   # behavioral baseline from your own logs (read-only)

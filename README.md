@@ -1,6 +1,6 @@
 # Fable Profile
 
-[![CI](https://github.com/elon-choo/fable-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/elon-choo/fable-profile/actions/workflows/ci.yml)
+[![CI](https://github.com/elon-choo/fablever/actions/workflows/ci.yml/badge.svg)](https://github.com/elon-choo/fablever/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
 
@@ -16,7 +16,7 @@ installable by anyone. **Zero dependencies.**
 > Code (macOS/Linux; Windows via WSL).
 
 ```bash
-git clone https://github.com/elon-choo/fable-profile && cd fable-profile && ./install.sh
+git clone https://github.com/elon-choo/fablever && cd fable-profile && ./install.sh
 # then restart Claude Code (or /clear). Disable anytime: export FABLE_PROFILE=off
 ```
 
@@ -32,6 +32,31 @@ never narrate your reasoning as the answer. Safety and explicit project rules al
 > reasoning ceiling or long-horizon autonomy — those live in the weights. Everything here is built from
 > Anthropic's own published Fable prompting guidance and applied through documented Claude Code
 > mechanisms. See [`docs/RESEARCH.md`](docs/RESEARCH.md) for the full evaluation of 16 sources.
+
+## Two layers: working *style* vs *orchestration*
+
+This project has two distinct parts, and it's worth being clear about which does what:
+
+1. **The working-style layer** (everything above) — a behavioral output style + hooks
+   + MCP that make a single agent *act* more like Fable: decisive, outcome-first,
+   restrained. This is a **style** transplant. It is the right tool for steering one
+   agent's behavior, and an honest one — but it does **not** make a model *orchestrate*
+   like Fable.
+2. **The orchestration layer** ([`orchestration/`](orchestration/), experimental) — the
+   part that targets what was actually different about Fable in `ultracode`: it reached
+   for the Workflow tool by default, decomposed deeper, fanned out wider, and reviewed
+   more independently. That edge lives in **executed control flow**, not prose, so this
+   layer ships **runnable Workflow recipes** (independent adversarial review, divergent
+   exploration, decompose-and-fan-out, staged map, best-of-N judge panel) plus an eval
+   harness — not a "behave like Fable" instruction.
+
+A multi-round adversarial panel (6 personas → debate → arbiter panel → completeness
+critic) reached this split and verified it at source; the full write-up is
+[`docs/ORCHESTRATION-RESEARCH.md`](docs/ORCHESTRATION-RESEARCH.md). The honest headline:
+**scaffolding is a multiplier on base competence, never a substitute** — the ceiling is
+"closer to Fable," never "equal to Fable," and the *size* of the gain is not claimed
+until the eval harness ([`eval/`](eval/)) measures it under a model swap. Start with
+[`orchestration/README.md`](orchestration/README.md).
 
 ## Why these traits — the style gap, illustrated
 
@@ -57,7 +82,7 @@ with `--since <install-date>` after installing to check whether your own numbers
 they also work on Windows — on Windows, install via WSL or set the output style + MCP up by hand, see below).
 
 ```bash
-git clone https://github.com/elon-choo/fable-profile ~/work/fable-profile   # or wherever
+git clone https://github.com/elon-choo/fablever ~/work/fable-profile   # or wherever
 cd ~/work/fable-profile
 ./install.sh                  # output style (default) + SubagentStart hook + MCP server
 ./install.sh --help           # all options
@@ -167,6 +192,7 @@ auth, and cost details in [`fusion/README.md`](fusion/README.md).
 ```bash
 node test/mcp-test.js                  # 16 MCP protocol checks
 node test/fusion-test.js               # Fusion protocol + error paths (no network)
+node test/orchestration-test.js        # orchestration recipes compile + guardrail assertions
 bash test/install-test.sh              # install/uninstall safety lifecycle
 node tools/fable-leaktest.js           # behavioral baseline from your own logs
 node tools/fable-leaktest.js --since <install-date>   # did the profile move the needle?

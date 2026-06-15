@@ -1,13 +1,14 @@
 {
-  "name": "fable-profile",
-  "version": "1.1.0",
-  "description": "Make any Claude model (Opus/Sonnet/Haiku) adopt Claude Fable 5's working style in Claude Code — decisive, outcome-first, restrained, evidence-grounded. Always-on output style + zero-dependency MCP server. A style transplant, not a capability transplant.",
+  "name": "fablever",
+  "version": "1.2.0",
+  "description": "Make any Claude model (Opus/Sonnet/Haiku) work more like Claude Fable 5 in Claude Code — a behavioral working-style layer (output style + hooks + MCP) PLUS an experimental orchestration layer (runnable Workflow recipes for independent review, divergent exploration, decompose-and-fan-out). A style/structure transplant, not a capability transplant. Zero dependencies.",
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && bash test/install-test.sh",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && bash test/install-test.sh",
     "test:mcp": "node test/mcp-test.js",
     "test:fusion": "node test/fusion-test.js",
+    "test:orchestration": "node test/orchestration-test.js",
     "test:install": "bash test/install-test.sh",
     "leaktest": "node tools/fable-leaktest.js"
   },
@@ -19,6 +20,6 @@
   "engines": { "node": ">=18" },
   "dependencies": {},
   "files": [
-    "profiles", "mcp", "fusion", "claude-code", "tools", "install.sh", "docs", "README.md", "LICENSE"
+    "profiles", "mcp", "fusion", "orchestration", "eval", "claude-code", "tools", "install.sh", "docs", "README.md", "LICENSE"
   ]
 }

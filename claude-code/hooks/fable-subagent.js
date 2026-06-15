@@ -21,6 +21,24 @@ try {
   const dir = path.join(process.env.HOME || os.homedir(), '.claude', 'fable-profile');
   if (fs.existsSync(path.join(dir, 'OFF'))) process.exit(0);
 
+  // Orchestration workers must NOT receive the restraint governor — it tells skeptics to
+  // stop early / under-validate, which is backwards for fan-out and verification depth.
+  // Read the SubagentStart event and skip injection for orchestration agentTypes.
+  // Fail-open: any error (or no stdin) -> fall through and inject as before; never blocks.
+  try {
+    if (!process.stdin.isTTY) {
+      const raw = fs.readFileSync(0, 'utf8');
+      if (raw) {
+        const ev = JSON.parse(raw);
+        const t = ev.subagent_type || ev.agentType || ev.subagentType ||
+          (ev.hookSpecificOutput && ev.hookSpecificOutput.subagentType) || '';
+        const EXEMPT = new Set(['red-team-validator', 'evidence-verifier', 'purple-team-arbiter']);
+        const EXEMPT_RE = /skeptic|refut|verif|explore|diverge|search|orchestrat/i;
+        if (t && (EXEMPT.has(t) || EXEMPT_RE.test(t))) process.exit(0); // no restraint for workers
+      }
+    }
+  } catch (_) { /* fall through: inject as before */ }
+
   // Inject the compact reminder (fuller than core, but still ~1 paragraph) once per subagent.
   let text = '';
   for (const variant of ['compact', 'core']) {

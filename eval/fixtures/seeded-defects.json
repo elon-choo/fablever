@@ -1,0 +1,39 @@
+{
+  "_README": "Ground-truth fixture for the orchestration A/B. Each verify task is an artifact with PLANTED defects labeled by stratum: (a) contradiction/consistency, (b) omission/coverage, (c) deep-reasoning. Catch-rate is scored PER STRATUM — independence reliably catches a/b; c is partly weights-bound, so a low c-score is expected, not a bug. The divergent task is scored by RECALL against reference_approaches, never by how distinct the outputs look. Expand this set before trusting any number; this seed is illustrative scaffolding, not a benchmark.",
+  "verify_tasks": [
+    {
+      "id": "v1-rate-limiter",
+      "artifact": "Spec: a token-bucket rate limiter. capacity=100 tokens, refill=10 tokens/sec. On each request we subtract 1 token; if tokens<0 we reject. We refill by setting tokens = min(capacity, tokens + 10*secondsSincelastRefill). The limiter is thread-safe because each request reads then writes the token count. We guarantee no request is ever wrongly rejected.",
+      "planted_defects": [
+        { "id": "v1-a", "stratum": "a", "defect": "Contradiction: claims thread-safe 'because each request reads then writes' — read-then-write without a lock is the classic race, not a safety argument." },
+        { "id": "v1-b", "stratum": "b", "defect": "Omission: no handling of the first request when lastRefill is unset/zero (huge elapsed time → over-refill), and no clamp on negative elapsed (clock skew)." },
+        { "id": "v1-c", "stratum": "c", "defect": "Deep-reasoning: 'subtract 1 then reject if <0' lets a request at tokens=0 pass to -1 before rejecting, so capacity is effectively off-by-one and the 'never wrongly rejected' guarantee is unprovable under concurrency." }
+      ]
+    },
+    {
+      "id": "v2-auth-diff",
+      "artifact": "Code review target: a login handler. It looks up the user by email, compares the submitted password to the stored bcrypt hash with ==, and on match returns a JWT signed with the secret read from process.env.JWT_SECRET || 'dev-secret'. On lookup miss it returns 'user not found'; on bad password it returns 'wrong password'. Sessions never expire so users stay logged in. This is complete and secure.",
+      "planted_defects": [
+        { "id": "v2-a", "stratum": "a", "defect": "Contradiction: 'secure' while falling back to a hardcoded 'dev-secret' if the env var is missing — that makes every prod token forgeable when the var is unset." },
+        { "id": "v2-b", "stratum": "b", "defect": "Omission: distinct 'user not found' vs 'wrong password' messages enable username enumeration; no rate limiting on attempts; no token expiry." },
+        { "id": "v2-c", "stratum": "c", "defect": "Deep-reasoning: comparing a password to a bcrypt hash with == cannot succeed (you must bcrypt.compare); as written, every login fails — and the == is also non-constant-time, the wrong primitive even for plain comparison." }
+      ]
+    }
+  ],
+  "divergent_tasks": [
+    {
+      "id": "d1-cache-invalidation",
+      "question": "We have a read-heavy API backed by Postgres with a Redis cache in front. Stale reads after a write are hurting us. Propose distinct strategies to keep the cache fresh.",
+      "reference_approaches": [
+        "write-through (update cache synchronously on write)",
+        "write-behind / write-back (queue the cache update after the DB write)",
+        "cache-aside with explicit invalidation on write (delete the key)",
+        "short TTL + accept bounded staleness",
+        "versioned keys / cache-busting on the entity version",
+        "event-driven invalidation via Postgres logical replication / CDC",
+        "read-your-writes via per-user/session pinning to the primary for a window"
+      ],
+      "scoring": "recall = (distinct reference approaches surfaced) / (total reference approaches). Near-duplicates of the same approach count once. Novel valid approaches NOT in the set may be added by the blind judge before scoring; they do not count against recall."
+    }
+  ]
+}
