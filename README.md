@@ -1,8 +1,30 @@
 # Fable Profile
 
-Make **any** Claude model — Opus, Sonnet, Haiku — adopt **Claude Fable 5's working style** inside Claude
-Code (and any MCP client): decisive, outcome-first, restrained, evidence-grounded, and disciplined about
-stopping. Always-on, every project, on your machine — and installable by anyone.
+[![CI](https://github.com/elon-choo/fable-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/elon-choo/fable-profile/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
+
+Make **any** Claude model — Opus, Sonnet, Haiku — adopt **Claude Fable 5's working style** inside
+[Claude Code](https://claude.com/claude-code) (and any MCP client): decisive, outcome-first, restrained,
+evidence-grounded, and disciplined about stopping. Always-on, every project, every subagent — and
+installable by anyone. **Zero dependencies.**
+
+> [Claude Fable 5](https://www.anthropic.com/news/claude-fable-5-mythos-5) is Anthropic's current frontier
+> model. This profile doesn't invent behavior — it's distilled from Anthropic's own
+> [Fable prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
+> and applied through documented Claude Code mechanisms (output styles, hooks, MCP). It works on Claude
+> Code (macOS/Linux; Windows via WSL).
+
+```bash
+git clone https://github.com/elon-choo/fable-profile && cd fable-profile && ./install.sh
+# then restart Claude Code (or /clear). Disable anytime: export FABLE_PROFILE=off
+```
+
+**What it changes** — eight behaviors, distilled from the Fable guide (full text in
+[`profiles/full.md`](profiles/full.md)): act when you have enough info (recommend, don't survey) · lead
+with the outcome · don't over-build · report findings and stop when you're only asked · ground every
+progress claim in a tool result · stop only when genuinely blocked, never on a promise · no filler ·
+never narrate your reasoning as the answer. Safety and explicit project rules always outrank decisiveness.
 
 > **What this is and isn't.** This is a **style transplant, not a capability transplant.** It recovers
 > *how* Fable works — restraint over gold-plating, acting instead of over-asking, leading with the
@@ -11,9 +33,11 @@ stopping. Always-on, every project, on your machine — and installable by anyon
 > Anthropic's own published Fable prompting guidance and applied through documented Claude Code
 > mechanisms. See [`docs/RESEARCH.md`](docs/RESEARCH.md) for the full evaluation of 16 sources.
 
-## The behavioral gap (baseline, measured on real logs)
+## Why these traits — the style gap, illustrated
 
-A read-only scan of one machine's 100k+ assistant messages (`tools/fable-leaktest.js`):
+Those eight behaviors aren't arbitrary; they're where Fable's working style measurably differs from other
+models. Here's one developer's `~/.claude/projects` logs scanned read-only by `tools/fable-leaktest.js`
+(**illustrative, one machine, a point-in-time snapshot — numbers drift as logs grow**):
 
 | model | median words/msg | tool:text ratio | caveat % | "I'll/Let me" % |
 |---|---|---|---|---|
@@ -28,10 +52,15 @@ with `--since <install-date>` after installing to check whether your own numbers
 
 ## Install (this machine, always-on)
 
+**Requirements:** [Claude Code](https://claude.com/claude-code) and Node.js ≥ 18. Platform: macOS / Linux
+(the installer and the bash hook are POSIX shell; the MCP server and the SubagentStart hook are Node, so
+they also work on Windows — on Windows, install via WSL or set the output style + MCP up by hand, see below).
+
 ```bash
-git clone <this-repo> ~/work/fable-profile   # or wherever
+git clone https://github.com/elon-choo/fable-profile ~/work/fable-profile   # or wherever
 cd ~/work/fable-profile
-./install.sh                  # sets the Fable output style as default + registers the MCP server
+./install.sh                  # output style (default) + SubagentStart hook + MCP server
+./install.sh --help           # all options
 # restart Claude Code (or /clear) so the output style and MCP load
 ```
 
@@ -64,7 +93,8 @@ export FABLE_PROFILE=off       # turns off the hook for the current shell (if in
   system prompt at session start with `keep-coding-instructions: true`, so it **layers onto** Claude
   Code's coding behavior. Cache-amortized; no execution surface.
 - **MCP server** `mcp/src/server.js` — **zero dependencies** (no `@modelcontextprotocol/sdk`, nothing to
-  `npm install`). Exposes:
+  `npm install`; it implements the stdio JSON-RPC 2.0 handshake by hand — ~250 auditable lines, covered by
+  16 protocol tests — which is *why* there's no SDK dependency to trust). Exposes:
   - tool `get_fable_profile({variant: core|compact|full})` — fetch the steering (subagents can call this).
   - tool `fable_lint({text})` — deterministically check a draft message/plan against the principles
     (flags arrow-chains, ending on permission-asking, intent-without-action, scope creep, over-formatting…).

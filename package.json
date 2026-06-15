@@ -1,0 +1,23 @@
+{
+  "name": "fable-profile",
+  "version": "1.1.0",
+  "description": "Make any Claude model (Opus/Sonnet/Haiku) adopt Claude Fable 5's working style in Claude Code — decisive, outcome-first, restrained, evidence-grounded. Always-on output style + zero-dependency MCP server. A style transplant, not a capability transplant.",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node test/mcp-test.js && bash test/install-test.sh",
+    "test:mcp": "node test/mcp-test.js",
+    "test:install": "bash test/install-test.sh",
+    "leaktest": "node tools/fable-leaktest.js"
+  },
+  "bin": { "fable-profile-mcp": "mcp/src/server.js" },
+  "keywords": [
+    "claude", "claude-code", "anthropic", "fable", "mcp", "output-style",
+    "prompt-engineering", "agent", "llm", "developer-tools"
+  ],
+  "engines": { "node": ">=18" },
+  "dependencies": {},
+  "files": [
+    "profiles", "mcp", "claude-code", "tools", "install.sh", "docs", "README.md", "LICENSE"
+  ]
+}

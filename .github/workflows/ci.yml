@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: MCP protocol tests (zero-dependency)
+        run: node test/mcp-test.js
+      - name: Install / uninstall lifecycle tests (sandboxed HOME)
+        run: bash test/install-test.sh
+      - name: Hooks are valid and fail-safe
+        run: |
+          node --check claude-code/hooks/fable-subagent.js
+          bash -n claude-code/hooks/fable-reinject.sh
+          bash -n install.sh
+          node --check mcp/src/server.js
+          node --check claude-code/lib/settings-merge.js

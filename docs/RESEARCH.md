@@ -6,13 +6,11 @@ kept. Every third-party tool was statically analyzed for supply-chain risk befor
 
 ## 0. Premise check (what's true, what's lore)
 
-- **Fable 5 is a real, current Anthropic model** — not fictional, not (verifiably) suspended. Corroborated
-  on-disk by `~/.claude/cache/changelog.md` ("Introducing Claude Fable 5 … made safe for general use",
-  1M context by default); further attributes (always-on thinking, `refusal` stop reason) per Anthropic's
-  model docs. The load-bearing claim is just the directional one (real, not suspended). Several
-  third-party posts assert "Fable was suspended 2026-06-12
-  under an export-control directive"; that claim is **unverified community lore** and the system is
-  **not** built around it.
+- **Fable 5 is a real, current Anthropic model.** Primary sources: Anthropic's
+  [announcement](https://www.anthropic.com/news/claude-fable-5-mythos-5) and
+  [Fable prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
+  (also corroborated on this machine's `~/.claude/cache/changelog.md`). (A third-party "Fable was suspended"
+  rumor circulated; it is unverified community lore and the system is **not** built around it.)
 - **This is a STYLE transplant, not a capability transplant.** Fable's working *style* (restraint,
   decisiveness, outcome-first communication, anti-fabrication, stop-when-done) is recoverable on other
   models with prompt/harness steering. Fable's *capability ceiling* (long-horizon autonomy, first-shot

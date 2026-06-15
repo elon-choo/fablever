@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # install.sh — apply the Fable working style on this machine (always-on, every project).
 #
-#   ./install.sh                 install + set the Fable output style as the default (always-on),
-#                                register the MCP server, symlink the profiles.
-#   ./install.sh --with-hook     ALSO install the opt-in per-turn re-injection hook (anti-decay
-#                                booster for very long sessions; costs a few tokens every turn and
-#                                does NOT reach workflow subagents — see README "Why opt-in").
+#   ./install.sh                 set the Fable output style as default (always-on) + the SubagentStart
+#                                hook (reaches every subagent, incl. background) + register the MCP server.
+#   ./install.sh --with-hook     ALSO install the opt-in per-turn re-injection hook for the MAIN session
+#                                (anti-decay booster for very long sessions; costs a few tokens every turn).
+#   ./install.sh --no-subagent   skip the SubagentStart hook (don't inject into subagents).
 #   ./install.sh --no-style      install the output-style FILE but don't set it as default
 #                                (you can still pick it in /config).
 #   ./install.sh --no-mcp        skip registering the MCP server.
@@ -33,6 +33,24 @@ PROFILE_DST_DIR="${CLAUDE_DIR}/fable-profile"
 MERGE="${REPO}/claude-code/lib/settings-merge.js"
 MCP_SERVER="${REPO}/mcp/src/server.js"
 
+usage() {
+  cat <<'USAGE'
+Fable Profile installer — make any Claude model adopt Claude Fable 5's working style.
+
+Usage: ./install.sh [options]
+
+  (no options)     output style (always-on) + SubagentStart hook (reaches every subagent) + MCP server
+  --with-hook      also add the opt-in per-turn re-injection hook for the MAIN session
+  --no-subagent    skip the SubagentStart hook (don't inject into subagents)
+  --no-style       install the style file but don't set it as the default (pick "Fable" in /config)
+  --no-mcp         skip registering the MCP server
+  --uninstall      remove everything; restores prior settings
+  -h, --help       show this help
+
+After installing, restart Claude Code (or /clear). Disable anytime: export FABLE_PROFILE=off
+USAGE
+}
+
 WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1
 for a in "$@"; do
   case "$a" in
@@ -41,7 +59,8 @@ for a in "$@"; do
     --no-mcp)      DO_MCP=0 ;;
     --no-subagent) DO_SUBAGENT=0 ;;
     --uninstall)   UNINSTALL=1 ;;
-    *) echo "unknown flag: $a" >&2; exit 2 ;;
+    -h|--help)     usage; exit 0 ;;
+    *) echo "unknown flag: $a" >&2; usage >&2; exit 2 ;;
   esac
 done
 have() { command -v "$1" >/dev/null 2>&1; }
