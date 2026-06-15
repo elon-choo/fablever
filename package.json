@@ -5,8 +5,9 @@
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && bash test/install-test.sh",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && bash test/install-test.sh",
     "test:mcp": "node test/mcp-test.js",
+    "test:fusion": "node test/fusion-test.js",
     "test:install": "bash test/install-test.sh",
     "leaktest": "node tools/fable-leaktest.js"
   },
@@ -18,6 +19,6 @@
   "engines": { "node": ">=18" },
   "dependencies": {},
   "files": [
-    "profiles", "mcp", "claude-code", "tools", "install.sh", "docs", "README.md", "LICENSE"
+    "profiles", "mcp", "fusion", "claude-code", "tools", "install.sh", "docs", "README.md", "LICENSE"
   ]
 }

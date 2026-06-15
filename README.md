@@ -144,10 +144,29 @@ machine, they run `./install.sh` too (the output style is the portable always-on
 "force it on everyone without opt-in" path — by design: Claude Code's `force-for-plugin` frontmatter only
 applies to plugin-bundled output styles and is ignored for a user style like ours.
 
+## Fusion — multi-model deliberation (optional, off by default)
+
+Want a second and third opinion on a hard question? The optional [Fusion module](fusion/README.md) bridges
+to [OpenRouter Fusion](https://openrouter.ai/docs/guides/features/plugins/fusion): a panel of models
+(default **Opus + GPT + Gemini**) answers in parallel, a judge compares them, and a final answer is
+synthesized — in the Fable style.
+
+```bash
+export OPENROUTER_API_KEY="sk-or-v1-..."   # an API key (NOT OAuth login) — see fusion/README.md
+./install.sh --with-fusion                 # registers a SEPARATE fable-fusion MCP server
+```
+
+This is the **only** part of the project that touches the network or needs a key, and it's isolated in its
+own MCP server — the core never gains either. Disable with `FABLE_FUSION=off`; remove with
+`./install.sh --uninstall`. **Auth note:** OpenRouter uses **API keys**; there is no "log in with your
+ChatGPT/Gemini account" path (BYOK lets you add your own OpenAI/Google keys server-side). Full setup,
+auth, and cost details in [`fusion/README.md`](fusion/README.md).
+
 ## Verify
 
 ```bash
 node test/mcp-test.js                  # 16 MCP protocol checks
+node test/fusion-test.js               # Fusion protocol + error paths (no network)
 bash test/install-test.sh              # install/uninstall safety lifecycle
 node tools/fable-leaktest.js           # behavioral baseline from your own logs
 node tools/fable-leaktest.js --since <install-date>   # did the profile move the needle?
@@ -155,11 +174,16 @@ node tools/fable-leaktest.js --since <install-date>   # did the profile move the
 
 ## Supply-chain hygiene
 
-Built from inspectable plain text only: an output-style markdown file, one small [audited](docs/RESEARCH.md#4-supply-chain-findings-every-reused-idea-was-static-analyzed) bash hook, and a
-zero-dependency Node MCP. **No** `npx`/`pip`/`curl|sh`, no postinstall, no third-party package, no network
-calls, no credential reads. The research deliberately avoided tools that required any of those
+**The core** — output style, hooks, and `mcp/src/server.js` — is built from inspectable plain text only:
+an output-style markdown file, small [audited](docs/RESEARCH.md#4-supply-chain-findings-every-reused-idea-was-static-analyzed)
+hooks, and a zero-dependency Node MCP. **No** `npx`/`pip`/`curl|sh`, no postinstall, no third-party package,
+**no network calls, no credential reads.** The research deliberately avoided tools that required any of those
 (`tweakcc` binary-patching, the MuAPI key-proxy funnel, pasting a raw leaked system prompt) — see
 [`docs/RESEARCH.md`](docs/RESEARCH.md) §4.
+
+The **only** exception is the optional, off-by-default [Fusion module](fusion/README.md): when *you* enable
+it, it (and only it) makes network calls to OpenRouter with *your* API key. It's a separate MCP server with
+zero npm dependencies (built-in `fetch`), so the core's guarantees are unchanged whether Fusion is on or off.
 
 ## License
 

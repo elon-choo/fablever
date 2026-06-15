@@ -32,6 +32,7 @@ GOVERNOR="${REPO}/profiles/full.md"
 PROFILE_DST_DIR="${CLAUDE_DIR}/fable-profile"
 MERGE="${REPO}/claude-code/lib/settings-merge.js"
 MCP_SERVER="${REPO}/mcp/src/server.js"
+FUSION_SERVER="${REPO}/fusion/fusion-server.js"
 
 usage() {
   cat <<'USAGE'
@@ -41,6 +42,8 @@ Usage: ./install.sh [options]
 
   (no options)     output style (always-on) + SubagentStart hook (reaches every subagent) + MCP server
   --with-hook      also add the opt-in per-turn re-injection hook for the MAIN session
+  --with-fusion    register the OPTIONAL OpenRouter Fusion MCP (multi-model deliberation; needs an
+                   OPENROUTER_API_KEY and makes network calls — see fusion/README.md). Off by default.
   --no-subagent    skip the SubagentStart hook (don't inject into subagents)
   --no-style       install the style file but don't set it as the default (pick "Fable" in /config)
   --no-mcp         skip registering the MCP server
@@ -51,10 +54,11 @@ After installing, restart Claude Code (or /clear). Disable anytime: export FABLE
 USAGE
 }
 
-WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1
+WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0
 for a in "$@"; do
   case "$a" in
     --with-hook)   WITH_HOOK=1 ;;
+    --with-fusion) WITH_FUSION=1 ;;
     --no-style)    SET_STYLE=0 ;;
     --no-mcp)      DO_MCP=0 ;;
     --no-subagent) DO_SUBAGENT=0 ;;
@@ -73,7 +77,10 @@ if [ "$UNINSTALL" = "1" ]; then
   rm -f "$HOOK_DST" "$SUBHOOK_DST" "$STYLE_DST"
   rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md"
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
-  if have claude; then claude mcp remove fable-profile --scope user 2>/dev/null || true; fi
+  if have claude; then
+    claude mcp remove fable-profile --scope user 2>/dev/null || true
+    claude mcp remove fable-fusion  --scope user 2>/dev/null || true
+  fi
   rm -f /tmp/fable-profile/seen-* 2>/dev/null || true
   echo "Done. Restart Claude Code (or /clear) for the change to take full effect."
   exit 0
@@ -134,6 +141,23 @@ if [ "$DO_MCP" = "1" ]; then
     echo "  mcp       -> 'claude' CLI not found; add manually:"
     echo "               claude mcp add --transport stdio fable-profile --scope user -- node $MCP_SERVER"
   fi
+fi
+
+# 6) OPTIONAL: OpenRouter Fusion MCP (off by default; only with --with-fusion). The one network module.
+if [ "$WITH_FUSION" = "1" ]; then
+  if have claude; then
+    if claude mcp list 2>/dev/null | grep -q '^fable-fusion\b'; then
+      echo "  fusion    -> already registered"
+    else
+      claude mcp add --transport stdio fable-fusion --scope user -- node "$FUSION_SERVER" \
+        && echo "  fusion    -> registered (needs OPENROUTER_API_KEY; FABLE_FUSION=off to disable; see fusion/README.md)" \
+        || echo "  fusion    -> WARN: 'claude mcp add' failed; add manually (see fusion/README.md)"
+    fi
+  else
+    echo "  fusion    -> 'claude' CLI not found; add manually:"
+    echo "               claude mcp add --transport stdio fable-fusion --scope user -- node $FUSION_SERVER"
+  fi
+  [ -n "${OPENROUTER_API_KEY:-}" ] || echo "  fusion    -> NOTE: OPENROUTER_API_KEY is not set in this shell — set it before using fusion (fusion/README.md)."
 fi
 
 HOOK_NOTE=""

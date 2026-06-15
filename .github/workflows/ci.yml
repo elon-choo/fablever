@@ -22,12 +22,15 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: MCP protocol tests (zero-dependency)
         run: node test/mcp-test.js
+      - name: Fusion module tests (no network — error paths only)
+        run: node test/fusion-test.js
       - name: Install / uninstall lifecycle tests (sandboxed HOME)
         run: bash test/install-test.sh
-      - name: Hooks are valid and fail-safe
+      - name: Scripts are valid and fail-safe
         run: |
           node --check claude-code/hooks/fable-subagent.js
           bash -n claude-code/hooks/fable-reinject.sh
           bash -n install.sh
           node --check mcp/src/server.js
+          node --check fusion/fusion-server.js
           node --check claude-code/lib/settings-merge.js

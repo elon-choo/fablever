@@ -7,8 +7,10 @@ keep it that way.
 
 - **Zero runtime dependencies.** The MCP server and hooks must not add npm/pip packages. If you need a
   capability, write it in plain Node or POSIX shell. This is a security property, not a style preference.
-- **No network calls, no credential/secret reads** in any shipped script. Everything runs locally on
-  inspectable plain text.
+- **The core makes no network calls and reads no credentials.** Output style, hooks, and `mcp/src/server.js`
+  run entirely on local, inspectable plain text. The *only* exception is the optional, off-by-default
+  `fusion/` module, which calls OpenRouter with the user's own key — keep all network/key code there,
+  isolated, opt-in, and clearly documented. Don't add network or secret-reading code to the core.
 - **Hooks must be fail-safe.** A hook may never block a prompt or a subagent spawn — always exit 0 on error.
 - **One source of truth for the steering text:** `profiles/full.md`. The output style, the MCP, and the
   hooks all derive from it. Don't fork the wording.
