@@ -405,7 +405,24 @@ does NOT support a productivity claim — it points the other way:**
 
 **Conclusion:** the falsification discipline ran as designed; on easy/saturated tasks the
 panel is **pure cost**, so T2 stays **un-grounded (and, on this fixture, contraindicated)**.
-A positive signal would require a **harder, partly independently-sourced fixture** (defects
-below the single-agent ceiling) at a **powered n** — that is the real next experiment, not a
-claim the project may make today. This *strengthens* the bounded-honest posture rather than
-weakening it.
+
+### A/B re-run on a HARDER fixture 2026-06-15 (see `eval/results-2026-06-15-hard.md`)
+
+A second run on 6 denser artifacts with 18 subtle planted defects (real bug classes,
+deliberately below the single-agent ceiling) created real headroom — and the **controls
+delivered the decisive finding:**
+- The panel beats the single *baseline* on recall only **slightly** (Opus 15 vs 14, Sonnet
+  15 vs 13 of 18) — **but it does NOT beat its own controls.** The **prompt-matched single
+  agent** (one agent, full lens menu, one context) caught **16** on Opus at **1/5 the cost**;
+  the **draw-matched** arm (30 raw draws) caught the **most** (16–17). So the recall gain is
+  the lens *taxonomy* + *draw count* (ML-1/ML-4 confounds), **not** the parallel structure.
+- The panel's one **genuine structural win is PRECISION** (0.53/0.73 vs the draws' 0.35/0.44
+  at equal agent count) — cleaner output, not more catches. Cost stays a ~5× regression.
+- **Actionable result:** the cheap **prompt-matched single agent (A2)** captures most of the
+  recall at 1/5 the agents; reserve the parallel panel for when precision-at-scale matters.
+
+**Net:** even with headroom, T2 ("productivity demonstrably improves") is **not supported** —
+the eval *localized* the real value (precision, not recall; and a cheap single-agent config
+captures the recall). This is the honest, evidence-backed outcome, and it **strengthens** the
+bounded posture: the project ships the mechanism + this falsifying evidence, and makes **no**
+productivity-magnitude claim. (Still n=6, author-planted, single judge — directional.)
