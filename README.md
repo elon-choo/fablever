@@ -4,19 +4,22 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
 
-Make **any** Claude model — Opus, Sonnet, Haiku — adopt **Claude Fable 5's working style** inside
-[Claude Code](https://claude.com/claude-code) (and any MCP client): decisive, outcome-first, restrained,
-evidence-grounded, and disciplined about stopping. Always-on, every project, every subagent — and
-installable by anyone. **Zero dependencies.**
+Apply Anthropic's documented **Fable working-style guidance** as an always-on output style in
+[Claude Code](https://claude.com/claude-code) (and any MCP client), so **any** Claude model — Opus,
+Sonnet, Haiku — works more the way Fable does: decisive, outcome-first, restrained, evidence-grounded,
+and disciplined about stopping. Every project, every subagent, installable by anyone. **Zero dependencies.**
 
-> [Claude Fable 5](https://www.anthropic.com/news/claude-fable-5-mythos-5) is Anthropic's current frontier
-> model. This profile doesn't invent behavior — it's distilled from Anthropic's own
+> This profile doesn't invent behavior — it's distilled from Anthropic's own
 > [Fable prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
 > and applied through documented Claude Code mechanisms (output styles, hooks, MCP). It works on Claude
 > Code (macOS/Linux; Windows via WSL).
 
+> **Not affiliated with Anthropic.** Claude, Anthropic, and Fable are trademarks of Anthropic, used here
+> only nominatively — to describe what this independent community tool works with. Not sponsored or
+> endorsed by Anthropic. See [`NOTICE`](NOTICE).
+
 ```bash
-git clone https://github.com/elon-choo/fablever && cd fable-profile && ./install.sh
+git clone https://github.com/elon-choo/fablever && cd fablever && ./install.sh
 # then restart Claude Code (or /clear). Disable anytime: export FABLE_PROFILE=off
 ```
 
@@ -31,7 +34,8 @@ never narrate your reasoning as the answer. Safety and explicit project rules al
 > outcome, grounding claims in tool results, stopping when done. It **cannot** raise a weaker model's
 > reasoning ceiling or long-horizon autonomy — those live in the weights. Everything here is built from
 > Anthropic's own published Fable prompting guidance and applied through documented Claude Code
-> mechanisms. See [`docs/RESEARCH.md`](docs/RESEARCH.md) for the full evaluation of 16 sources.
+> mechanisms. The basis is Anthropic's two primary sources; see [`docs/RESEARCH.md`](docs/RESEARCH.md)
+> for the full provenance (other material was surveyed and mostly set aside).
 
 ## Two layers: working *style* vs *orchestration*
 
@@ -45,18 +49,19 @@ This project has two distinct parts, and it's worth being clear about which does
 2. **The orchestration layer** ([`orchestration/`](orchestration/), experimental) — the
    part that targets what was actually different about Fable in `ultracode`: it reached
    for the Workflow tool by default, decomposed deeper, fanned out wider, and reviewed
-   more independently. That edge lives in **executed control flow**, not prose, so this
+   more independently. That edge is **context-isolation + decomposition** — one
+   realization of which is executed control flow (the bundled A/B has not yet isolated
+   which factor, and per-lens prompting carries some of it) — so this
    layer ships **runnable Workflow recipes** (independent adversarial review, divergent
    exploration, decompose-and-fan-out, staged map, best-of-N judge panel) plus an eval
    harness — not a "behave like Fable" instruction.
 
-A multi-round adversarial panel (6 personas → debate → arbiter panel → completeness
-critic) reached this split and verified it at source; the full write-up is
+The full reasoning behind this split — and its honest limits — is in
 [`docs/ORCHESTRATION-RESEARCH.md`](docs/ORCHESTRATION-RESEARCH.md). The honest headline:
 **scaffolding is a multiplier on base competence, never a substitute** — the ceiling is
-"closer to Fable," never "equal to Fable," and the *size* of the gain is not claimed
-until the eval harness ([`eval/`](eval/)) measures it under a model swap. Start with
-[`orchestration/README.md`](orchestration/README.md).
+"closer to Fable," never "equal to Fable," and the *size* of the gain is **not** claimed
+until the eval harness ([`eval/`](eval/)) measures it under a model swap (it has not run
+yet). Start with [`orchestration/README.md`](orchestration/README.md).
 
 ## Why these traits — the style gap, illustrated
 
@@ -143,8 +148,11 @@ booster** for very long sessions, not the primary mechanism.
 
 > **Subagents are covered automatically.** The output style and the main-session hook don't reach Task /
 > background / workflow subagents (they run with their own system prompt), so the default install adds a
-> **`SubagentStart` hook** that injects the compact reminder into every subagent at spawn. Verified
-> end-to-end: a spawned subagent receives it as "SubagentStart hook additional context." For environments
+> **`SubagentStart` hook** that injects the compact reminder into every subagent at spawn.
+> (`SubagentStart` is a documented Claude Code lifecycle event that supports `additionalContext`
+> injection — see the [hooks reference](https://code.claude.com/docs/en/hooks); it requires a current
+> CLI, and the hook simply no-ops on older builds that predate the event.) Verified end-to-end on this
+> machine: a spawned subagent receives it as "SubagentStart hook additional context." For environments
 > without the hook (or to also steer a *custom agent definition*), the snippet in
 > [`claude-code/subagent-brief.md`](claude-code/subagent-brief.md) and the MCP `get_fable_profile` tool
 > remain available as a fallback.

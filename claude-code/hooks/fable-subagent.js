@@ -32,9 +32,16 @@ try {
         const ev = JSON.parse(raw);
         const t = ev.subagent_type || ev.agentType || ev.subagentType ||
           (ev.hookSpecificOutput && ev.hookSpecificOutput.subagentType) || '';
-        const EXEMPT = new Set(['red-team-validator', 'evidence-verifier', 'purple-team-arbiter']);
-        const EXEMPT_RE = /skeptic|refut|verif|explore|diverge|search|orchestrat/i;
-        if (t && (EXEMPT.has(t) || EXEMPT_RE.test(t))) process.exit(0); // no restraint for workers
+        // Exact-match the calibrated orchestration agent types (incl. CC's built-in Explore/Plan).
+        const EXEMPT = new Set(['red-team-validator', 'evidence-verifier', 'purple-team-arbiter', 'Explore', 'Plan']);
+        // Word-anchored match for orchestration ROLE names only. The broad substrings 'verif' and
+        // 'search' were REMOVED (H3/SEC-3): they silently stripped the profile from ordinary user
+        // agents (doc-search, fact-verifier, config-verify). Anchored tokens won't collide.
+        const EXEMPT_RE = /(^|[-_ ])(skeptic|refuters?|refute|diverge\w*|orchestrat\w*|adversar\w*)([-_ ]|$)/i;
+        if (t && (EXEMPT.has(t) || EXEMPT_RE.test(t))) {
+          try { process.stderr.write('[fable-subagent] exempting orchestration agentType from restraint payload: ' + t + '\n'); } catch (_) {}
+          process.exit(0); // no restraint for orchestration workers
+        }
       }
     }
   } catch (_) { /* fall through: inject as before */ }

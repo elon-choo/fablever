@@ -1,11 +1,26 @@
 # Proposal: exempt orchestration workers from the restraint payload
 
-**Status: APPLIED 2026-06-15 (Option A, with owner approval).** `claude-code/hooks/fable-subagent.js`
+**Status: APPLIED 2026-06-15 (Option A, with owner approval) — verified against a SYNTHETIC payload;
+the live-payload field name is NOT yet confirmed (Round 1, H2/EVAL-8).** `claude-code/hooks/fable-subagent.js`
 now reads the SubagentStart event and skips the restraint payload for orchestration agentTypes
 (fail-open, with an `isTTY` guard so it can never block a spawn). The change was verified in
 isolation (exempt types → no injection; normal types → injection unchanged; `FABLE_PROFILE=off`
-→ no injection) and copied to the live `~/.claude/hooks/`. This document is retained as the
-rationale and the exact diff. Option B below remains an alternative for matcher-based setups.
+→ no injection) and copied to the live `~/.claude/hooks/`.
+
+> **Caveat (do not over-trust this):** "verified in isolation" means a hand-built JSON event with a
+> *guessed* field name (`subagent_type || agentType || subagentType || hookSpecificOutput.subagentType`)
+> matched the parser branch. It does **not** prove the live `SubagentStart` payload populates one of
+> those fields. If the real field name is none of the four, the regex never matches and the hook
+> **fails open → injects the restraint payload into every orchestration worker** silently. The eval
+> harness's `hookExemptionConfirmed` gate is a manual human boolean, not a runtime check that injection
+> actually stopped. **Fix before relying on it:** capture a real `SubagentStart` payload (log raw stdin
+> on the next spawn), pin the actual field name, and replace the guess-list with the confirmed key plus
+> a logged warning when no known field is present. Until then treat the exemption as "best-effort,
+> unconfirmed on the live harness." (Separately, the exemption regex is over-broad — see the code batch
+> for the exact-allowlist fix.)
+
+This document is retained as the rationale and the exact diff. Option B below remains an alternative
+for matcher-based setups.
 
 ## The problem (verified at source)
 

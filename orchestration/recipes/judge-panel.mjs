@@ -38,6 +38,15 @@ const SCORE_SCHEMA = {
 let a = args; if (typeof a === 'string') { try { a = JSON.parse(a); } catch (_) { a = {}; } } if (typeof a !== 'object' || !a) a = {}
 const task = a.task
 if (!task) { log('judge-panel: no args.task.'); return { skipped: true } }
+// COST-2 floor: judge-panel is the most expensive recipe (N gen + N judges + synth). It must
+// NOT run on low-stakes work. Gate deterministically in JS, not by prose: require an explicit
+// highStakes flag OR a substantial artifact. A low-stakes call no-ops here instead of paying
+// for best-of-N theater.
+const HIGH_STAKES = a.highStakes === true || (typeof task === 'string' && task.trim().length >= 400)
+if (!HIGH_STAKES) {
+  log('judge-panel: not high-stakes (pass highStakes:true or a substantial task) — skipping to avoid best-of-N cost on low-stakes work.')
+  return { skipped: true, reason: 'not-high-stakes', hint: 'judge-panel is gated to high-stakes single artifacts; pass highStakes:true to override.' }
+}
 const angles = (Array.isArray(a.angles) && a.angles.length ? a.angles : ['the most robust/correct solution', 'the simplest solution that works', 'the most novel/creative solution'])
 const rubric = (Array.isArray(a.rubric) && a.rubric.length ? a.rubric : ['correctness', 'completeness', 'simplicity', 'robustness'])
 const MAX = 16

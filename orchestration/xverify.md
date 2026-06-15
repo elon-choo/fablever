@@ -47,13 +47,20 @@ argument**, which means the cross-model branch is never even constructed.
 ## Toggling
 
 ```bash
-export FABLE_XVERIFY=off          # force-disable for this shell, even if configured
-./install.sh --with-xverify=off   # persist "off"
+export FABLE_XVERIFY=off          # disables the OpenRouter path (checked in the fusion server)
+./install.sh --with-xverify=off   # persist "off" (sets xverify.json mode=off)
 ./install.sh --with-xverify=openrouter   # re-enable
 ```
 
-`FABLE_FUSION=off` also disables the OpenRouter path (the cross-verify tool lives on the
-fusion server).
+**Scope of the switches (important — they are not symmetric):**
+- `FABLE_XVERIFY=off` / `FABLE_FUSION=off` are checked **only in the fusion server**, so they
+  disable the **OpenRouter** path. They do **NOT** stop the **codex-MCP** path: when
+  `xverify.json` mode is `codex`, the cross-model agent calls `mcp__codex__codex` directly and
+  never touches the fusion server, so those env vars do not gate it.
+- The **single switch that disables both paths** is `xverify.json` mode (set `off` via
+  `./install.sh --with-xverify=off`), because the `orchestrate` skill reads that file and only
+  passes `crossModel` when it is enabled. To kill the **codex** egress specifically, set mode `off`
+  (or disconnect the codex MCP). Do not rely on `FABLE_XVERIFY=off` for the codex channel.
 
 ## Honest scope
 
@@ -66,11 +73,40 @@ fusion server).
   treatment (see `eval/README.md`).
 - It improves *recall of correlated-blind-spot defects*. It does **not** raise the per-model
   reasoning ceiling. Honest as ever: a lever, not a substitute.
+- **A cross-model "all clear" is NOT authoritative.** The artifact under review is, by design,
+  arbitrary attacker-influenceable text, and it is embedded in the reviewer model's prompt. A
+  hostile artifact can prompt-inject the cross-model reviewer into returning `refuted:false`.
+  Because cross-model verdicts are folded into the findings a human reads, treat a cross-model
+  pass as a weak signal, never a guarantee — its only hard guarantee is that it never changes
+  the RED gate.
+- **`fable_cross_verify` applies no Fable-style steering.** Unlike `fable_fusion` (which has a
+  `fable_style` parameter), the cross-verify tool exposes no such parameter and never injects the
+  Fable system prompt, so the independence it sells is not contaminated by re-steering the
+  "independent" reviewer with our own style.
 
-## Supply-chain note
+## Supply-chain & data-governance note
 
 The cross-verify tool reuses the existing zero-dependency `fusion-server.js` (built-in
 `fetch`, no npm packages, no postinstall). It is the **only** network/key surface, isolated in
 the optional fusion MCP — the core orchestration recipes stay zero-network when cross-verify is
-off. It sends your artifact to a third-party proxy (OpenRouter) only when *you* enable it and
-only for the calls you trigger; don't enable it for artifacts that must not leave your machine.
+off.
+
+**What leaves your machine, and when.** When you enable OpenRouter mode, the FULL artifact under
+review (your diff / plan / source) is sent verbatim to OpenRouter, which itself fans it out to the
+configured providers (by default OpenAI + Google). So the artifact reaches **at least three
+external parties.** There is no redaction and no size cap today (disclosure-only by choice — a
+byte cap is a possible future hardening, not shipped). And because the `orchestrate` skill reads
+`xverify.json` and passes `crossModel` automatically, once enabled the egress happens on every
+**`adversarial-verify`** run, not as a per-artifact opt-in. (Only `adversarial-verify` wires
+`crossModel`; **`judge-panel` performs NO cross-model egress** — it has no cross arm.) Do not enable
+it for artifacts that must not leave your machine; prefer the codex-MCP mode (no OpenRouter proxy)
+when you only need a GPT cross-check.
+
+**Secrets.** `OPENROUTER_API_KEY` is read from the environment of the fusion MCP process — a
+process that also ingests attacker-controlled artifacts. Use a **dedicated, spend-capped, minimal-
+scope** OpenRouter key and recognize it persists in that process's environment. NOTE: the fusion MCP
+is **user-scoped and spawned by the Claude host**, so it inherits the **host's** environment at
+spawn — a `export` in some other interactive shell does not reach it (and does not isolate it). The
+effective controls are: a dedicated spend-capped key, and **removing/disconnecting the fusion MCP
+when not in use** (`./install.sh --uninstall` or unregister it), rather than assuming a per-shell
+export scopes the key away from the running server.

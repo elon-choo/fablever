@@ -109,7 +109,7 @@ async function runFusion(args) {
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/elon-choo/fable-profile',
+        'HTTP-Referer': 'https://github.com/elon-choo/fablever',
         'X-Title': 'Fable Profile — Fusion',
       },
       body: JSON.stringify(body),

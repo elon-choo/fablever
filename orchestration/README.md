@@ -28,8 +28,9 @@ weights-bound. We claim breadth and catch-rate, not raw intelligence.
 A prompt that says "orchestrate like Fable" is placebo — it biases surface tokens,
 not pre-token control flow. These recipes are **real programs**: a real `parallel()`
 barrier, real schema-forced output, real JS-owned stopping rules and gates. That is
-why they survive the on/off test the critics rightly demand — structure-driven gains
-persist under a worker-model swap; prose-driven gains vanish on toggle.
+the kind of property an on/off test can detect — real control flow *can* persist under a
+worker-model swap where prose cannot; whether THESE recipes actually do is what `eval/` has
+yet to measure (the A/B has not run).
 
 ## How to run
 
@@ -62,6 +63,14 @@ one-liner is over-building. The three fan-out recipes (`adversarial-verify`,
 `divergent-explore`, `decompose-first`) enforce a floor in JS, not by asking the model;
 `judge-panel` is gated to high-stakes artifacts by the decision table, and `pipeline-map`
 processes the items it's handed.
+
+> **Honest caveat on the floor (Round 1, COST-1/COST-2).** The JS floors live *inside*
+> each recipe, so they only fire **after** the Workflow has already launched — they make
+> a mis-routed recipe no-op, they do **not** decide route-vs-solo. The actual stay-solo
+> decision is the `orchestrate` skill's model judgment (prose), with no deterministic
+> pre-flight gate. And `judge-panel` (the most expensive recipe) has **no JS floor at
+> all** — its high-stakes gating is prose-only. So "the floor is JS-deterministic" is true
+> only for post-launch width, not for the spend decision a cost-conscious team cares about.
 
 ## Guardrails (binding — from the rejected-ideas list)
 
@@ -98,7 +107,12 @@ never be the A/B eval judge. Full setup, cost, and the toggle: [`xverify.md`](xv
 
 ## Status
 
-These recipes are **runnable and reviewed**, but their *quantitative* benefit is
-**not yet validated** — the eval harness (`eval/`) and the premise-reproduction
-control (`eval/premise-control.md`) are how you earn the right to claim a number.
-Until then this layer is labeled experimental on purpose.
+These recipes are **runnable and reviewed** — they compile as Workflow scripts, were
+author-run via the Workflow tool during development (which is how the dogfood bugs were
+found), and now have a **committed runtime smoke test** (`test/orchestration-runtime-test.js`,
+in `npm test`) that EXECUTES `adversarial-verify` against contract-faithful stubs and
+asserts the `parallel()` settle-to-null contract + the RED gate behavior. (The real
+Workflow tool itself is exercised by author runs, not yet in CI.) Their *quantitative*
+benefit is **not yet validated** — the eval harness
+(`eval/`) and the premise-reproduction control (`eval/premise-control.md`) are how you
+earn the right to claim a number. This layer is labeled experimental on purpose.

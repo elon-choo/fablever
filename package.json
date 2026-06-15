@@ -3,12 +3,14 @@
   "version": "1.2.0",
   "description": "Make any Claude model (Opus/Sonnet/Haiku) work more like Claude Fable 5 in Claude Code — a behavioral working-style layer (output style + hooks + MCP) PLUS an experimental orchestration layer (runnable Workflow recipes for independent review, divergent exploration, decompose-and-fan-out). A style/structure transplant, not a capability transplant. Zero dependencies.",
   "license": "MIT",
+  "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && bash test/install-test.sh",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && bash test/install-test.sh",
     "test:mcp": "node test/mcp-test.js",
     "test:fusion": "node test/fusion-test.js",
     "test:orchestration": "node test/orchestration-test.js",
+    "test:orchestration:runtime": "node test/orchestration-runtime-test.js",
     "test:install": "bash test/install-test.sh",
     "leaktest": "node tools/fable-leaktest.js"
   },

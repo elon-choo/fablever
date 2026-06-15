@@ -21,7 +21,7 @@ keep it that way.
 
 ```bash
 git clone https://github.com/elon-choo/fablever
-cd fable-profile
+cd fablever
 npm test                 # runs MCP protocol tests + the install/uninstall lifecycle test
 node tools/fable-leaktest.js   # behavioral baseline from your own logs (read-only)
 ```

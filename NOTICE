@@ -1,0 +1,24 @@
+Fable Profile / fablever
+Copyright (c) 2026 elon-choo (https://github.com/elon-choo) and contributors.
+
+This is an independent, community-built tool. It is NOT affiliated with, sponsored
+by, or endorsed by Anthropic.
+
+"Claude", "Anthropic", "Fable", "Opus", "Sonnet", and "Haiku" are trademarks of
+Anthropic, PBC. They are used in this project only nominatively — to identify the
+products this tool is designed to work with, and to describe the published Anthropic
+guidance the working-style profile is distilled from. No claim of ownership or
+endorsement is made or implied.
+
+Provenance of the working-style governor (profiles/full.md):
+  - It is distilled from Anthropic's PUBLIC "Prompting Claude Fable 5" guide and the
+    Claude Fable 5 announcement. Those two primary sources are the load-bearing basis;
+    see docs/RESEARCH.md for the dated provenance.
+  - A third-party leaked-system-prompt repository was consulted only to corroborate
+    wording against the PUBLIC guide above. The shipped governor's behaviors derive from
+    the public sources; no verbatim text from the leaked repo ships here, its
+    authenticity is unconfirmed, and none of its content is redistributed.
+
+Third-party ideas that were re-implemented (not copied) are credited in docs/RESEARCH.md.
+
+License: MIT (see LICENSE).

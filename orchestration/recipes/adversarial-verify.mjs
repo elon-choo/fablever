@@ -179,7 +179,7 @@ const blockers = confirmed.filter(f => f.severity === 'blocker')
 let synthesis
 if (!confirmed.length) {
   synthesis = gatePass
-    ? 'No defects raised by any of the ' + (schemaValid.length + crossValid.length) + ' independent reviewers. Gate PASS (full panel ran). Safe to deliver on these lenses — depth not guaranteed (see eval/).'
+    ? 'No defects raised by any of the ' + (schemaValid.length + crossValid.length) + ' independent reviewers. Gate PASS (full panel ran). NOTE: a clean SAME-FAMILY panel can share a correlated blind spot — read this as "no defect found by these reviewers," NOT "safe to deliver"; for high-stakes delivery add cross-model (xverify) or human review. Refutation depth is not guaranteed here (scored offline; see eval/).'
     : 'No findings, but the gate FAILED: only ' + schemaValid.length + '/' + lensKeys.length + ' requested skeptics returned' + (crashed ? ' (' + crashed + ' dropped)' : '') + ' — re-run before trusting this.'
   log('adversarial-verify: zero findings — skipping the synthesis agent (cost floor).')
 } else {

@@ -30,9 +30,11 @@ STYLE_HEADER="${REPO}/claude-code/output-styles/Fable.header.md"
 STYLE_DST="${CLAUDE_DIR}/output-styles/Fable.md"
 GOVERNOR="${REPO}/profiles/full.md"
 PROFILE_DST_DIR="${CLAUDE_DIR}/fable-profile"
+RUNTIME_DIR="${PROFILE_DST_DIR}/runtime"          # SEC-1: immutable copy the MCP runs from (NOT the mutable clone)
 MERGE="${REPO}/claude-code/lib/settings-merge.js"
-MCP_SERVER="${REPO}/mcp/src/server.js"
-FUSION_SERVER="${REPO}/fusion/fusion-server.js"
+MCP_REMOVE="${REPO}/claude-code/lib/mcp-remove.js"
+MCP_SERVER="${RUNTIME_DIR}/mcp/src/server.js"
+FUSION_SERVER="${RUNTIME_DIR}/fusion/fusion-server.js"
 XVERIFY_CFG="${PROFILE_DST_DIR}/xverify.json"
 
 usage() {
@@ -84,11 +86,15 @@ if [ "$UNINSTALL" = "1" ]; then
   node "$MERGE" subhook-off "$SETTINGS" "$SUBHOOK_CMD" 2>/dev/null || true
   rm -f "$HOOK_DST" "$SUBHOOK_DST" "$STYLE_DST"
   rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG"
+  rm -rf "$RUNTIME_DIR" 2>/dev/null || true
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
   if have claude; then
     claude mcp remove fable-profile --scope user 2>/dev/null || true
     claude mcp remove fable-fusion  --scope user 2>/dev/null || true
   fi
+  # Deterministic fallback (SEC-2): strip the MCP entries directly even if `claude` is absent,
+  # so "uninstall restores prior settings" does not silently leave entries behind.
+  node "$MCP_REMOVE" "$HOME/.claude.json" fable-profile fable-fusion 2>/dev/null || true
   rm -f /tmp/fable-profile/seen-* 2>/dev/null || true
   echo "Done. Restart Claude Code (or /clear) for the change to take full effect."
   exit 0
@@ -133,6 +139,17 @@ if [ "$WITH_HOOK" = "1" ]; then
   echo "  hook      -> installed + registered (per-turn core re-injection; FABLE_PROFILE=off to disable)"
 else
   echo "  hook      -> file staged at ${HOOK_DST} but NOT registered (re-run with --with-hook to enable)"
+fi
+
+# 4.5) SEC-1: copy the MCP runtime to an IMMUTABLE location so the registered server does NOT
+#       execute from the mutable clone dir (where a stray edit/pull/compromise would change what
+#       auto-runs every session). Copy the servers AND the profiles they read via relative paths,
+#       preserving the layout the servers expect. Re-running install.sh refreshes this copy.
+if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ]; then
+  rm -rf "$RUNTIME_DIR" 2>/dev/null || true   # refresh cleanly so files deleted from the repo don't persist stale
+  mkdir -p "$RUNTIME_DIR"
+  cp -R "${REPO}/mcp" "${REPO}/fusion" "${REPO}/profiles" "$RUNTIME_DIR"/ 2>/dev/null || true
+  echo "  mcp-copy  -> runtime copied to $RUNTIME_DIR (immutable; re-run install to refresh)"
 fi
 
 # 5) register the MCP server globally (portable on-demand tools + subagent-reachable profile)

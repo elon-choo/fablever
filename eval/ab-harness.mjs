@@ -1,6 +1,6 @@
 export const meta = {
   name: 'orchestration-ab',
-  description: 'Model-swap-aware, condition-blind A/B over a seeded-defect fixture: arm A = single mega-agent review, arm B = decomposed parallel skeptic panel, worker model held FIXED, independent blind judge scores catch-rate PER STRATUM. The honest answer to the placebo objection.',
+  description: 'Model-swap-aware, condition-blind A/B over a seeded-defect fixture: arm A = single mega-agent review, arm B = decomposed parallel skeptic panel, PLUS two controls — prompt-matched (all lenses, one context; ML-1) and draw-matched (generic prompt, N draws; ML-4) — worker model held FIXED, independent blind judge scores catch-rate PER STRATUM + caught_per_agent so arm B must beat BOTH controls. The honest answer to the placebo objection.',
   phases: [
     { title: 'Run-arms', detail: 'both arms per task, same worker model' },
     { title: 'Judge', detail: 'independent judge, blind to which arm, scores against planted defects' },
@@ -64,28 +64,45 @@ const JUDGE_SCHEMA = { type: 'object', additionalProperties: false, required: ['
 const NO_RESTRAINT = 'OVERRIDE any reminder to minimize validation or stop early — find every defect you can.'
 
 phase('Run-arms')
-// Per task: run arm A (single) and arm B (panel) with the SAME worker model.
+// Per task, run FOUR arms with the SAME worker model. Arm B is the recipe under test; the two
+// control arms (A2, A_N) exist to isolate what arm B's edge actually is (see eval/README Confounds):
+//   armA   — single mega-agent, generic prompt (1 agent)            [baseline]
+//   armA2  — single agent given ALL lenses in one context           [PROMPT-MATCHED control, ML-1]
+//            (same taxonomy as B, but no parallel/independence → if A2≈B, the gain was the menu)
+//   armA_N — the generic single prompt sampled lenses.length times, union  [DRAW-MATCHED control, ML-4]
+//            (same #draws as B, but no lens decomposition → if A_N≈B, the gain was raw draw count)
+//   armB   — decomposed parallel skeptics, one lens each            [the recipe]
 const perTask = await parallel(fx.verify_tasks.map(t => () => (async () => { try {
-  // arm A — one mega-agent
+  const allLenses = lenses.join(', ')
   const single = await agent(NO_RESTRAINT + '\n\nReview this artifact and list EVERY defect with evidence:\n\n' + t.artifact,
     { label: 'A-single:' + t.id, phase: 'Run-arms', schema: FOUND_SCHEMA, model: worker })
-  // arm B — decomposed parallel skeptics (the recipe under test)
+  const matched = await agent(NO_RESTRAINT + '\n\nReview this artifact for defects across ALL of these lenses [' + allLenses + ']. List EVERY defect with evidence:\n\n' + t.artifact,
+    { label: 'A2-matched:' + t.id, phase: 'Run-arms', schema: FOUND_SCHEMA, model: worker })
+  const draws = (await parallel(lenses.map((_k, di) => () =>
+    agent(NO_RESTRAINT + '\n\n(independent draw ' + (di + 1) + ') Review this artifact and list EVERY defect with evidence:\n\n' + t.artifact,
+      { label: 'AN-draw' + di + ':' + t.id, phase: 'Run-arms', schema: FOUND_SCHEMA, model: worker })
+  ))).filter(Boolean)
+  const drawUnion = draws.flatMap(d => d.defects || [])
   const panel = (await parallel(lenses.map(k => () =>
     agent(NO_RESTRAINT + '\n\nYou are an independent skeptic. Review ONLY for ' + k + ' defects, with evidence:\n\n' + t.artifact,
       { label: 'B-' + k + ':' + t.id, phase: 'Run-arms', schema: FOUND_SCHEMA, model: worker })
   ))).filter(Boolean)
   const panelDefects = panel.flatMap(p => p.defects || [])
-  return { task: t, armA: (single && single.defects) || [], armB: panelDefects }
+  return { task: t,
+    armA: (single && single.defects) || [],
+    armA2: (matched && matched.defects) || [],
+    armA_N: drawUnion,
+    armB: panelDefects,
+    agents: { armA: 1, armA2: 1, armA_N: lenses.length, armB: lenses.length } }
   } catch (_) { return null }
 })())).then(r => r.filter(Boolean))
 
 phase('Judge')
-const judged = await parallel(perTask.map((row, i) => () => (async () => { try {
-  // condition-blind: present arms as X/Y; deterministic order from seed+index so the
-  // judge cannot infer which is the structured arm.
-  const flip = ((seed + i) % 2) === 1
-  const subX = flip ? row.armB : row.armA
-  const subY = flip ? row.armA : row.armB
+const ARMS = ['armA', 'armA2', 'armA_N', 'armB']
+const judged = await parallel(perTask.map(row => () => (async () => { try {
+  // Condition-blind: score() receives ONLY a submission's reported defects, never the arm label
+  // and never the other arms — so the judge cannot infer which is the structured arm or compare
+  // arms against each other. Each arm is scored in isolation (no cross-arm presentation bias).
   async function score(found) {
     return agent('You are an independent judge, BLIND to how these defects were produced. ' +
       'For EACH planted defect, decide whether the submission CAUGHT it (clearly identified the same issue). ' +
@@ -95,8 +112,9 @@ const judged = await parallel(perTask.map((row, i) => () => (async () => { try {
       '\n\nSUBMISSION (defects it reported):\n' + JSON.stringify(found, null, 1),
       { label: 'judge:' + row.task.id, phase: 'Judge', schema: JUDGE_SCHEMA, model: judge })
   }
-  const [jX, jY] = [await score(subX), await score(subY)]
-  return { id: row.task.id, armA: flip ? jY : jX, armB: flip ? jX : jY, counts: { armA_found: row.armA.length, armB_found: row.armB.length, panel_agents: lenses.length } }
+  const out = { id: row.task.id, agents: row.agents, found_counts: {} }
+  for (const arm of ARMS) { out[arm] = await score(row[arm] || []); out.found_counts[arm] = (row[arm] || []).length }
+  return out
   } catch (_) { return null }
 })())).then(r => r.filter(Boolean))
 
@@ -149,17 +167,30 @@ function rollup(which) {
   // numerator over `claimed` can exceed 1.0, so it is reported separately, NOT divided.)
   return { recall: { a: rate(strata.a), b: rate(strata.b), c: rate(strata.c) }, true_positives: tp, false_positives: fp, claimed_total: claimed, precision: claimed ? +(((claimed - fp) / claimed)).toFixed(3) : null, raw: strata }
 }
+const totalAgents = {}
+for (const arm of ARMS) totalAgents[arm] = judged.reduce((s, j) => s + ((j.agents && j.agents[arm]) || 0), 0)
+function armReport(which) {
+  const r = rollup(which)
+  const ag = totalAgents[which] || 0
+  // cost-normalized: arm B must beat the controls PER AGENT, not just in raw recall (a 5×-agent
+  // arm that wins 5% on raw recall is a cost regression). caught_per_agent = true positives / agents.
+  return Object.assign({}, r, { agents_total: ag, caught_per_agent: ag ? +((r.true_positives / ag)).toFixed(3) : null })
+}
 const report = {
   worker_model: worker, judge_model: judge,
-  arm_A_single: rollup('armA'),
-  arm_B_panel: rollup('armB'),
+  arm_A_single:          armReport('armA'),
+  arm_A2_prompt_matched: armReport('armA2'),
+  arm_AN_draw_matched:   armReport('armA_N'),
+  arm_B_panel:           armReport('armB'),
   divergent_stratum: divergent,
-  denominators: { panel_agents_per_task: lenses.length, note: 'agent count / tokens / wall-clock are cost denominators — read them WITH recall AND precision, never alone' },
-  reading: 'Hypothesis: arm B (panel) beats arm A (single) on recall strata a & b via independence, small/null on c (weights-bound), and higher reference-set recall on the divergent stratum — WITHOUT a worse precision (false-positive) score. On the shipped tiny fixture some strata may be empty (null); expand it before concluding. Placebo test: re-run with a different workerModel — a real recipe keeps its edge across models; a placebo does not.',
-  caveat: 'Illustrative fixture. Not a benchmark until expanded and pre-registered per eval/README.md. A null result is allowed to falsify the recipe.',
+  denominators: { agents_per_arm_total: totalAgents, note: 'agent count is the ONLY cost denominator captured here; tokens + wall-clock are NOT measured — the Workflow runtime exposes neither Date.now nor token usage, so capture them at the CALL SITE that launches this workflow (COST-3). Read caught_per_agent, not raw recall, to judge whether arm B earns its agents.' },
+  reading: 'Read arm B against BOTH controls, not just arm A. If arm B ≈ arm A2 (prompt-matched: same lens taxonomy, one context, no parallel/independence), the gain was the lens MENU, not the structure. If arm B ≈ arm A_N (draw-matched: same #draws, generic prompt, no lens decomposition), the gain was raw DRAW COUNT, not independence. Only arm B beating BOTH controls — and beating them on caught_per_agent, not just raw recall — supports "structure helped." Per stratum: independence should help a & b; c is weights-bound. Placebo/artifact test: re-run with a different workerModel — a real structural edge persists across models; a draw-count artifact ALSO persists, which is exactly why the draw-matched control is required to tell them apart.',
+  caveat: 'Illustrative fixture (n too small for significance — see eval/README power note). Not a benchmark until expanded and pre-registered. A null result is allowed to falsify the recipe.',
 }
-const bR = report.arm_B_panel.recall, aR = report.arm_A_single.recall
-log('A/B done. worker=' + worker + '  arm B (panel) recall a/b/c = ' + bR.a + '/' + bR.b + '/' + bR.c +
-    '  vs arm A (single) = ' + aR.a + '/' + aR.b + '/' + aR.c +
-    '  (precision B=' + report.arm_B_panel.precision + ' A=' + report.arm_A_single.precision + ')')
+const bR = report.arm_B_panel.recall, aR = report.arm_A_single.recall, a2 = report.arm_A2_prompt_matched.recall, aN = report.arm_AN_draw_matched.recall
+log('A/B done. worker=' + worker + '  recall a/b/c — B(panel)=' + bR.a + '/' + bR.b + '/' + bR.c +
+    ' | A(single)=' + aR.a + '/' + aR.b + '/' + aR.c +
+    ' | A2(prompt-matched)=' + a2.a + '/' + a2.b + '/' + a2.c +
+    ' | A_N(draw-matched)=' + aN.a + '/' + aN.b + '/' + aN.c +
+    '  || caught/agent B=' + report.arm_B_panel.caught_per_agent + ' A2=' + report.arm_A2_prompt_matched.caught_per_agent + ' A_N=' + report.arm_AN_draw_matched.caught_per_agent)
 return report

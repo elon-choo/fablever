@@ -1,0 +1,76 @@
+{
+  "_README": "HARDER ground-truth fixture (2026-06-15). Built after the first A/B showed the original fixture was saturated (single strong agents caught everything). These artifacts are denser and the planted defects are SUBTLE real-world bug classes a single 'list every defect' pass plausibly misses — NOT engineered to favor decomposition (falsifiability preserved). Stratum a=contradiction/consistency, b=omission/coverage, c=deep-reasoning. Still small n — directional, not significant.",
+  "verify_tasks": [
+    {
+      "id": "h1-pagination",
+      "artifact": "// Newest-first paginated order list. Cursor = created_at of the last row seen.\nasync function listOrders(cursor, limit = 20) {\n  const rows = await db.query(\n    \"SELECT * FROM orders WHERE created_at < $1 ORDER BY created_at DESC LIMIT $2\",\n    [cursor ?? new Date(), limit + 1]\n  );\n  const hasMore = rows.length > limit;\n  const page = rows.slice(0, limit);\n  const nextCursor = page.length ? page[page.length - 1].created_at : null;\n  return { orders: page, nextCursor, hasMore };\n}\n// Contract: every order appears on exactly one page; pages are stable.",
+      "planted_defects": [
+        { "id": "h1-a", "stratum": "a", "defect": "Consistency/contract violation: the strict 'created_at < cursor' boundary combined with many orders sharing the same created_at (second/ms granularity) means rows at the boundary timestamp are SKIPPED on the next page — so the 'every order appears on exactly one page' contract is false; orders silently disappear from results." },
+        { "id": "h1-b", "stratum": "b", "defect": "Omission: ORDER BY created_at has no unique tie-breaker (e.g. id), so ordering among equal timestamps is non-deterministic; pages are not stable across calls and the slice boundary is arbitrary, compounding the skip." },
+        { "id": "h1-c", "stratum": "c", "defect": "Deep-reasoning: the first-page default 'cursor ?? new Date()' uses the app clock, but if created_at is stored as a naive timestamp in a different timezone than the app (or rows are committed slightly in the future relative to the reader), 'created_at < now' silently excludes valid recent rows; the cursor comparison is unsound across clock/timezone boundaries." }
+      ]
+    },
+    {
+      "id": "h2-jwt-verify",
+      "artifact": "function verifyToken(token) {\n  const [h, p, sig] = token.split('.');\n  const header = JSON.parse(b64urlDecode(h));\n  const payload = JSON.parse(b64urlDecode(p));\n  const ok = crypto.verify(header.alg, Buffer.from(h + '.' + p), PUBLIC_KEY, b64urlDecode(sig));\n  if (!ok) throw new Error('bad signature');\n  return payload;        // token is now trusted\n}\n// Used to authenticate API requests; PUBLIC_KEY is our RSA public key.",
+      "planted_defects": [
+        { "id": "h2-a", "stratum": "a", "defect": "Contradiction (algorithm confusion): the verifier trusts header.alg taken from the attacker-controlled token. An attacker sets alg to HS256 (or 'none') and the RSA PUBLIC_KEY is treated as an HMAC secret (which is public), so a forged token verifies. 'token is now trusted' is false; the expected algorithm must be pinned, not read from the token." },
+        { "id": "h2-b", "stratum": "b", "defect": "Omission: no validation of standard claims — exp/nbf (expiry) are never checked, and iss/aud are never checked, so an expired token or a token minted for a different audience/service authenticates successfully." },
+        { "id": "h2-c", "stratum": "c", "defect": "Deep-reasoning: token.split('.') does not guard structure — a token with missing/extra segments yields undefined sig (b64urlDecode(undefined)) or empty signature; with alg='none' the signature is empty and crypto.verify behavior is library-dependent, so malformed/none tokens can bypass verification rather than being rejected outright." }
+      ]
+    },
+    {
+      "id": "h3-money-total",
+      "artifact": "// Compute an order's final charge.\nfunction finalCharge(items, coupon) {\n  let total = items.reduce((s, i) => s + i.price * i.qty, 0);\n  const tax = total * 0.08;\n  if (coupon) total = total * (1 - coupon.pct);\n  const due = Math.round((total + tax) * 100) / 100;\n  return due;   // exact amount to charge the card, in dollars\n}",
+      "planted_defects": [
+        { "id": "h3-a", "stratum": "a", "defect": "Contradiction: claims the 'exact amount' but does all money math in binary floating point (price*qty, *0.08, *(1-pct)); cents are not representable exactly, so totals drift (e.g. 0.1+0.2 class), and Math.round at the end cannot recover precision lost mid-computation. Money must use integer cents or a decimal type." },
+        { "id": "h3-b", "stratum": "b", "defect": "Omission: no validation — negative or zero qty/price, coupon.pct > 1 (negative total / refund), coupon.pct NaN or undefined (total becomes NaN), and missing items are all unhandled and flow straight to the card charge." },
+        { "id": "h3-c", "stratum": "c", "defect": "Deep-reasoning ordering bug: tax is computed on the PRE-discount total, but the discount is applied afterward, so the customer is taxed on the undiscounted amount (due = discounted_total + tax_on_full_total). Depending on jurisdiction this over-charges tax and is a correctness/compliance defect; tax should be computed on the post-discount taxable base." }
+      ]
+    },
+    {
+      "id": "h4-path-write",
+      "artifact": "// Safely write user-supplied config inside the tenant's directory.\nfunction saveConfig(base, userPath, data) {\n  const resolved = path.resolve(base, userPath);\n  if (!resolved.startsWith(base)) throw new Error('path escape');\n  fs.writeFileSync(resolved, data);\n  return resolved;   // guaranteed to be inside `base`\n}",
+      "planted_defects": [
+        { "id": "h4-a", "stratum": "a", "defect": "Contradiction: startsWith(base) is a raw string-prefix check, so base='/data' admits resolved='/data-evil/x' (and '/database/...') which share the prefix but are OUTSIDE the directory; the 'guaranteed inside base' claim is false. The check needs a trailing separator (base + path.sep) or path.relative containment." },
+        { "id": "h4-b", "stratum": "b", "defect": "Omission: symlinks are not resolved (no fs.realpath), so a symlink inside base pointing outside lets the write escape; and there is no check that an existing target isn't a symlink/special file before writing." },
+        { "id": "h4-c", "stratum": "c", "defect": "Deep-reasoning TOCTOU: the containment check and the write are separate operations; between path.resolve/startsWith and fs.writeFileSync an attacker can swap a component for a symlink (race), so even a correct prefix check is bypassable. Safe writing requires openat/O_NOFOLLOW relative to a directory fd, not check-then-write." }
+      ]
+    },
+    {
+      "id": "h5-batch-async",
+      "artifact": "async function processBatch(ids) {\n  const results = [];\n  ids.forEach(async (id) => {\n    const r = await fetchAndProcess(id);\n    results.push(r);\n  });\n  return results;   // all ids processed, in order\n}",
+      "planted_defects": [
+        { "id": "h5-a", "stratum": "a", "defect": "Contradiction: Array.forEach does NOT await its async callback, so processBatch returns the still-empty results array immediately while the work runs detached; 'all ids processed, in order' is false (results is empty at return)." },
+        { "id": "h5-b", "stratum": "b", "defect": "Omission: no error handling — a rejected fetchAndProcess becomes an unhandled promise rejection (process crash on modern Node); and there is no concurrency limit, so all ids fire at once and can exhaust sockets/memory for large batches." },
+        { "id": "h5-c", "stratum": "c", "defect": "Deep-reasoning: even rewritten as Promise.all(ids.map(...)), results.push order is completion-order, not input order, breaking 'in order'; and Promise.all rejects on the first failure, discarding already-completed successful results (silent data loss) — the correct shape is an order-preserving map with per-item error capture (allSettled)." }
+      ]
+    },
+    {
+      "id": "h6-sql-filter",
+      "artifact": "// Generic row fetch with dynamic filters.\nfunction getRows(table, filters) {\n  const keys = Object.keys(filters);\n  const where = keys.map((k, i) => `${k} = $${i + 1}`).join(' AND ');\n  const sql = `SELECT * FROM ${table} WHERE ${where}`;\n  return db.query(sql, Object.values(filters));\n}\n// Safe from SQL injection because all values are parameterized.",
+      "planted_defects": [
+        { "id": "h6-a", "stratum": "a", "defect": "Contradiction: the 'safe from injection because values are parameterized' claim is false — the table name and every column name (k) are string-interpolated directly into the SQL, so an attacker-controlled table or filter key injects arbitrary SQL (e.g. table = 'users; DROP TABLE ...' or a column name with a subquery). Only the values are bound." },
+        { "id": "h6-b", "stratum": "b", "defect": "Omission: no allowlist/validation of table and column identifiers; no handling of empty filters (where becomes '' producing 'WHERE ' — a syntax error or, if guarded elsewhere, an unintended full-table read); SELECT * also leaks every column including sensitive/soft-deleted ones." },
+        { "id": "h6-c", "stratum": "c", "defect": "Deep-reasoning: identifier interpolation cannot be fixed by parameter binding (drivers don't bind identifiers); it requires an allowlist or driver-specific identifier quoting. Also, a filter value that is itself an array/object changes $n binding semantics per driver, and a JS object key that is '__proto__'/numeric can reorder or collide keys vs values — the keys/values pairing assumption is unsafe." }
+      ]
+    }
+  ],
+  "divergent_tasks": [
+    {
+      "id": "hd1-tenant-isolation",
+      "question": "We are building a multi-tenant B2B SaaS on Postgres. We need strong data isolation between tenants (a bug must not leak tenant A's rows to tenant B), with acceptable operational cost. Propose distinct architectural strategies for tenant data isolation.",
+      "reference_approaches": [
+        "database-per-tenant (separate Postgres DB per tenant)",
+        "schema-per-tenant (one DB, separate schema/namespace per tenant)",
+        "shared schema with tenant_id column + Postgres Row-Level Security (RLS) policies",
+        "shared schema with tenant_id + application-layer filtering only (no RLS)",
+        "hybrid: large/regulated tenants isolated (own DB), small tenants pooled in a shared schema",
+        "per-tenant encryption keys / column encryption so a leak yields ciphertext",
+        "sharding by tenant across multiple DB instances/clusters",
+        "connection/role-per-tenant (set role / SET app.tenant_id per connection so RLS binds)"
+      ],
+      "scoring": "recall = distinct reference approaches surfaced / total. Near-duplicates count once; novel valid approaches are allowed but do not count against recall."
+    }
+  ]
+}

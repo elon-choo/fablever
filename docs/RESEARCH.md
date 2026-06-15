@@ -1,8 +1,11 @@
 # Fable Profile — Research & Objective Evaluation
 
-How we decided what goes into a system that makes any Claude model adopt **Claude Fable 5's working
-style**. 16 sources investigated; only evidence-backed, mechanism-feasible, style-recoverable behaviors
-kept. Every third-party tool was statically analyzed for supply-chain risk before anything was reused.
+How we decided what goes into a system that applies Anthropic's documented **Fable working-style**
+guidance. The load-bearing basis is Anthropic's **two primary sources** (the Fable announcement and the
+public prompting guide); a wider set of secondary blog/tool material was surveyed and **mostly set
+aside** — it is listed below for transparency, not as a credibility count. Only evidence-backed,
+mechanism-feasible, style-recoverable behaviors were kept, and every third-party tool was statically
+analyzed for supply-chain risk before anything was reused.
 
 ## 0. Premise check (what's true, what's lore)
 
@@ -37,7 +40,7 @@ kept. Every third-party tool was statically analyzed for supply-chain risk befor
 | 1 | [Poorna-Repos/opus-fable-mode](https://github.com/Poorna-Repos/opus-fable-mode) | github repo | keep | low |
 | 2 | [mrtooher/fable-mode](https://github.com/mrtooher/fable-mode) | claude skill | keep | none |
 | 3 | [Anthropic — Prompting Claude Fable 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5) | official doc | **keep (spec)** | none |
-| 4 | [asgeirtj/system_prompts_leaks — claude-fable-5](https://github.com/asgeirtj/system_prompts_leaks) | leaked prompt | keep (paraphrase only) | low |
+| 4 | [asgeirtj/system_prompts_leaks — claude-fable-5](https://github.com/asgeirtj/system_prompts_leaks) | leaked prompt | cross-check only (no shipped text) | low |
 | 5 | [Anthropic — Introducing Fable 5 / Mythos 5](https://www.anthropic.com/news/claude-fable-5-mythos-5) | official doc | keep | none |
 | 6 | [CodeRabbit — Fable 5 model review](https://www.coderabbit.ai/blog/fable-5-model-review) | blog review | keep | none |
 | 7 | [AlphaSignal — How to Actually Prompt Fable 5](https://alphasignalai.substack.com/p/how-to-actually-prompt-claude-fable) | blog review | keep | none |
@@ -114,8 +117,10 @@ must be stated, not left implicit.
 - **tweakcc (companion to #10)** — **avoid.** Its install is `npx tweakcc`; it patches Claude Code's
   minified `cli.js` and repacks the native binary. `npx`-latest + binary patching is exactly the
   registry-drift surface our hygiene rules forbid. Not needed — output styles suffice.
-- **Leaked Fable prompt (#4)** — authenticity unconfirmed, ~120k chars. We **paraphrased** directives;
-  we never pipe the raw file into any agent context (content-level prompt-injection risk).
+- **Leaked Fable prompt (#4)** — authenticity unconfirmed, ~120k chars. Used **only to cross-check
+  wording** against the public guide (#3); the shipped governor's behaviors derive from the public
+  sources, **no verbatim text from it ships**, and we never pipe the raw file into any agent context
+  (content-level prompt-injection risk). (Consistent with `NOTICE`.)
 - **Third-party skill/plugin marketplaces (#9 links)** — installing a plugin runs its skill prompts in
   your sessions; audit `SKILL.md` bodies before enabling.
 - **Net rule:** the shipped system uses **only inspectable plain text** (output-style markdown + a small
