@@ -1,0 +1,15 @@
+{
+  "name": "fable-profile-mcp",
+  "version": "1.0.0",
+  "description": "Zero-dependency MCP server that ships the Fable behavioral profile (steering text + deterministic fable_lint) so any model in any MCP client can adopt Claude Fable 5's working style.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": { "fable-profile-mcp": "src/server.js" },
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node ../test/mcp-test.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}
