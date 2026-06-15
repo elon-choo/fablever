@@ -187,6 +187,12 @@ own MCP server — the core never gains either. Disable with `FABLE_FUSION=off`;
 ChatGPT/Gemini account" path (BYOK lets you add your own OpenAI/Google keys server-side). Full setup,
 auth, and cost details in [`fusion/README.md`](fusion/README.md).
 
+The same fusion server also hosts **`fable_cross_verify`**, which powers the optional
+[cross-model verification](orchestration/xverify.md) of the orchestration verify loop: different-weights
+models (GPT + Gemini) cross-check the Claude skeptic panel to catch its correlated blind spots. Off by
+default and **zero-overhead when off**; enable with `./install.sh --with-xverify=openrouter` (or `=codex`
+to use the codex MCP instead of an OpenRouter key). The installer prints the options with their costs.
+
 ## Verify
 
 ```bash

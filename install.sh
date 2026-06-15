@@ -33,6 +33,7 @@ PROFILE_DST_DIR="${CLAUDE_DIR}/fable-profile"
 MERGE="${REPO}/claude-code/lib/settings-merge.js"
 MCP_SERVER="${REPO}/mcp/src/server.js"
 FUSION_SERVER="${REPO}/fusion/fusion-server.js"
+XVERIFY_CFG="${PROFILE_DST_DIR}/xverify.json"
 
 usage() {
   cat <<'USAGE'
@@ -44,6 +45,11 @@ Usage: ./install.sh [options]
   --with-hook      also add the opt-in per-turn re-injection hook for the MAIN session
   --with-fusion    register the OPTIONAL OpenRouter Fusion MCP (multi-model deliberation; needs an
                    OPENROUTER_API_KEY and makes network calls — see fusion/README.md). Off by default.
+  --with-xverify[=openrouter|codex]
+                   enable CROSS-MODEL verification: different-weights models cross-check the
+                   orchestration verify loop, reducing the same-family blind spots a Claude-only
+                   panel shares. OFF by default (zero overhead when off). =openrouter needs an
+                   OPENROUTER_API_KEY + the fusion MCP; =codex uses the codex MCP. See orchestration/xverify.md.
   --no-subagent    skip the SubagentStart hook (don't inject into subagents)
   --no-style       install the style file but don't set it as the default (pick "Fable" in /config)
   --no-mcp         skip registering the MCP server
@@ -54,11 +60,13 @@ After installing, restart Claude Code (or /clear). Disable anytime: export FABLE
 USAGE
 }
 
-WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0
+WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0; XVERIFY=off
 for a in "$@"; do
   case "$a" in
-    --with-hook)   WITH_HOOK=1 ;;
-    --with-fusion) WITH_FUSION=1 ;;
+    --with-hook)      WITH_HOOK=1 ;;
+    --with-fusion)    WITH_FUSION=1 ;;
+    --with-xverify)   XVERIFY=openrouter ;;
+    --with-xverify=*) XVERIFY="${a#*=}" ;;
     --no-style)    SET_STYLE=0 ;;
     --no-mcp)      DO_MCP=0 ;;
     --no-subagent) DO_SUBAGENT=0 ;;
@@ -75,7 +83,7 @@ if [ "$UNINSTALL" = "1" ]; then
   node "$MERGE" hook-off    "$SETTINGS" "$HOOK_CMD" 2>/dev/null || true
   node "$MERGE" subhook-off "$SETTINGS" "$SUBHOOK_CMD" 2>/dev/null || true
   rm -f "$HOOK_DST" "$SUBHOOK_DST" "$STYLE_DST"
-  rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md"
+  rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG"
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
   if have claude; then
     claude mcp remove fable-profile --scope user 2>/dev/null || true
@@ -158,6 +166,46 @@ if [ "$WITH_FUSION" = "1" ]; then
     echo "               claude mcp add --transport stdio fable-fusion --scope user -- node $FUSION_SERVER"
   fi
   [ -n "${OPENROUTER_API_KEY:-}" ] || echo "  fusion    -> NOTE: OPENROUTER_API_KEY is not set in this shell — set it before using fusion (fusion/README.md)."
+fi
+
+# 7) Cross-model verification — accuracy options for the orchestration verify loop, with cost.
+cat <<'XMENU'
+
+──────────────────────────────────────────────────────────────────────────────
+ Verify-loop accuracy — the orchestration verify recipe can cross-check with OTHER
+ models to catch the blind spots a same-family (all-Claude) panel shares:
+
+   [A] Claude-only     cost: $0 extra, no network.  Same model family => shared blind spots.
+                       (default — nothing to configure)
+   [B] + OpenRouter    cost: ~1 OpenRouter call per extra model per verify (GPT + Gemini by
+                       default). Needs OPENROUTER_API_KEY. Different weights => decorrelated.
+                       enable:  ./install.sh --with-xverify=openrouter
+   [C] + Codex MCP     cost: uses your ChatGPT/Codex subscription quota (no OpenRouter key).
+                       Needs the codex MCP connected.  enable:  ./install.sh --with-xverify=codex
+
+ OFF by default. When off, the cross-model path NEVER runs — zero extra agents, zero network,
+ zero overhead on the base system. Toggle anytime: export FABLE_XVERIFY=off
+──────────────────────────────────────────────────────────────────────────────
+XMENU
+
+if [ "$XVERIFY" = "openrouter" ] || [ "$XVERIFY" = "codex" ]; then
+  printf '{\n  "mode": "%s",\n  "models": ["openai/gpt-4o", "google/gemini-2.5-pro"],\n  "n": 1\n}\n' "$XVERIFY" > "$XVERIFY_CFG"
+  echo "  xverify   -> ENABLED ($XVERIFY) -> $XVERIFY_CFG  (the orchestrate skill reads this and passes crossModel)"
+  if [ "$XVERIFY" = "openrouter" ]; then
+    if have claude && ! claude mcp list 2>/dev/null | grep -q '^fable-fusion\b'; then
+      claude mcp add --transport stdio fable-fusion --scope user -- node "$FUSION_SERVER" \
+        && echo "  xverify   -> fable-fusion MCP registered (hosts the fable_cross_verify tool)" \
+        || echo "  xverify   -> WARN: register fable-fusion manually (see fusion/README.md)"
+    fi
+    [ -n "${OPENROUTER_API_KEY:-}" ] || echo "  xverify   -> NOTE: set OPENROUTER_API_KEY before using cross-verify."
+  else
+    echo "  xverify   -> NOTE: ensure the codex MCP is connected ('claude mcp list')."
+  fi
+elif [ "$XVERIFY" = "off" ]; then
+  printf '{ "mode": "off" }\n' > "$XVERIFY_CFG"
+  echo "  xverify   -> Claude-only (off). Cross-model path will not run (no overhead)."
+else
+  echo "  xverify   -> WARN: unknown value '$XVERIFY' (use openrouter|codex|off); leaving off." ; printf '{ "mode": "off" }\n' > "$XVERIFY_CFG"
 fi
 
 HOOK_NOTE=""

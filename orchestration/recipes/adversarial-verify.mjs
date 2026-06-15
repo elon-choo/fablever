@@ -103,7 +103,7 @@ phase('Refute')
 // a default fresh-context worker. Each skeptic sees ONLY the artifact + its lens —
 // no sibling output, so no anchoring.
 const AGENT_FOR_LENS = { correctness: 'red-team-validator', security: 'red-team-validator', edge_cases: 'red-team-validator', overclaim: 'evidence-verifier' }
-const verdicts = (await parallel(lensKeys.map(k => () =>
+const thunks = lensKeys.map(k => () =>
   agent(
     ANTI_CONTAMINATION +
     '\n\nYou are an independent skeptic. LENS: ' + k + ' — ' + VERIFY_LENSES[k] +
@@ -112,7 +112,35 @@ const verdicts = (await parallel(lensKeys.map(k => () =>
     '\n\n=== ARTIFACT UNDER REVIEW ===\n' + artifact,
     { label: 'refute:' + k, phase: 'Refute', schema: VERDICT_SCHEMA, agentType: AGENT_FOR_LENS[k] }
   )
-))).filter(Boolean)
+)
+
+// OPTIONAL cross-model arm (OFF by default). Closes the same-family correlated-blind-spot
+// limit: a genuinely DIFFERENT-weights model (GPT/Gemini via OpenRouter, or Codex/GPT via the
+// codex MCP) reviews alongside the Claude panel. Controlled entirely by args.crossModel, which
+// the orchestrate skill passes ONLY when ~/.claude/fable-profile/xverify.json enables it. When
+// absent (the default) NOTHING below runs — zero extra agents, zero network, zero overhead.
+const xc = a.crossModel
+const crossEnabled = !!(xc && xc.provider && xc.provider !== 'off')
+if (crossEnabled) {
+  const tool = xc.provider === 'codex' ? 'the mcp__codex__codex tool' : 'the fable_cross_verify MCP tool'
+  const xModels = (Array.isArray(xc.models) && xc.models.length) ? (' (models: ' + xc.models.join(', ') + ')') : ''
+  thunks.push(() => agent(
+    ANTI_CONTAMINATION +
+    '\n\nYou are a CROSS-MODEL verification ADAPTER (not a re-judge). Use ' + tool +
+    ' to obtain an INDEPENDENT adversarial review of the artifact below from a DIFFERENT model family' + xModels +
+    '. Ask it to REFUTE. Then RELAY its findings faithfully into your verdict — do not soften, drop, or invent; ' +
+    'prefix each finding with the external model name. Set lens to "cross-model". If the tool errors or is ' +
+    'unavailable, return refuted:false, defect_class:none, and ONE finding noting the tool was unavailable.' +
+    '\n\n=== ARTIFACT UNDER REVIEW ===\n' + artifact,
+    { label: 'xverify:' + xc.provider, phase: 'Refute', schema: VERDICT_SCHEMA }
+  ))
+}
+
+// One barrier; parallel() results are positional, so slice the Claude panel (gated) from the
+// cross arm (bonus coverage that does NOT affect the full-panel gate).
+const all = await parallel(thunks)
+const verdicts = all.slice(0, lensKeys.length).filter(Boolean)
+const crossVerdicts = (crossEnabled ? all.slice(lensKeys.length) : []).filter(Boolean)
 
 phase('Synthesize')
 // RED output-gate (deterministic, JS-owned). HONEST FRAMING: this gate is
@@ -142,33 +170,36 @@ log('RED-gate: ' + (gatePass ? 'PASS' : 'FAIL') + ' — ' + schemaValid.length +
     ' effective skeptics returned schema-valid verdicts' + (crashed ? ' (' + crashed + ' dropped by runtime)' : '') +
     '; ' + withFindings.length + ' raised findings. (Gate certifies the full panel RAN, not that refutation was deep — see eval/.)')
 
-const confirmed = schemaValid.flatMap(v => (v.findings || []).map(f => ({ ...f, lens: v.lens, defect_class: v.defect_class, confidence: v.confidence })))
+const crossValid = crossVerdicts.filter(v => v && Array.isArray(v.findings))
+if (crossEnabled) log('cross-model: ' + crossValid.length + ' different-weights reviewer(s) returned verdicts (bonus coverage; not part of the gate).')
+const confirmed = schemaValid.concat(crossValid).flatMap(v => (v.findings || []).map(f => ({ ...f, lens: v.lens, defect_class: v.defect_class, confidence: v.confidence })))
 const blockers = confirmed.filter(f => f.severity === 'blocker')
 
 // Don't pay a synthesis agent to summarize an empty finding set (cost floor in spirit).
 let synthesis
-if (!withFindings.length) {
+if (!confirmed.length) {
   synthesis = gatePass
-    ? 'No defects raised by any of the ' + schemaValid.length + ' independent skeptics. Gate PASS (full panel ran). Safe to deliver on these lenses — depth not guaranteed (see eval/).'
+    ? 'No defects raised by any of the ' + (schemaValid.length + crossValid.length) + ' independent reviewers. Gate PASS (full panel ran). Safe to deliver on these lenses — depth not guaranteed (see eval/).'
     : 'No findings, but the gate FAILED: only ' + schemaValid.length + '/' + lensKeys.length + ' requested skeptics returned' + (crashed ? ' (' + crashed + ' dropped)' : '') + ' — re-run before trusting this.'
   log('adversarial-verify: zero findings — skipping the synthesis agent (cost floor).')
 } else {
   synthesis = await agent(
     ANTI_CONTAMINATION +
-    '\n\nYou are the verification synthesizer. ' + schemaValid.length + ' independent skeptics reviewed an artifact through distinct lenses. ' +
-    'Here are their structured verdicts:\n' + JSON.stringify(verdicts, null, 1) +
+    '\n\nYou are the verification synthesizer. ' + (schemaValid.length + crossValid.length) + ' independent reviewers' + (crossValid.length ? ' (incl. ' + crossValid.length + ' cross-model)' : '') + ' reviewed an artifact through distinct lenses. ' +
+    'Here are their structured verdicts:\n' + JSON.stringify(verdicts.concat(crossVerdicts), null, 1) +
     '\n\nDeduplicate overlapping findings, rank by severity, and write a tight verdict: is this artifact safe to deliver? ' +
-    'List the must-fix blockers first. Be concrete; cite the lens each finding came from. Do not invent findings the skeptics did not raise.',
+    'List the must-fix blockers first. Be concrete; cite the lens each finding came from. Do not invent findings the reviewers did not raise.',
     { label: 'synthesize', phase: 'Synthesize' }
   )
 }
 
 return {
   gate: { red_gate_pass: gatePass, requested: requestedCount, ran: lensKeys.length, returned, crashed, schema_valid: schemaValid.length, raised_findings: withFindings.length },
+  cross_model: crossEnabled ? { provider: xc.provider, reviewers: crossValid.length } : null,
   confirmed_count: confirmed.length,
   blocker_count: blockers.length,
   blockers,
   findings: confirmed,
   synthesis,
-  cost_note: 'denominators only (not success metrics): ' + verdicts.length + ' skeptic agents + 1 synthesis. Track tokens & wall-clock at the call site.',
+  cost_note: 'denominators only (not success metrics): ' + verdicts.length + ' skeptic agents' + (crossEnabled ? ' + ' + crossVerdicts.length + ' cross-model' : '') + ' + 1 synthesis. Track tokens & wall-clock at the call site.',
 }

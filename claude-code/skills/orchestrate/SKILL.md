@@ -40,6 +40,23 @@ For `adversarial-verify` and `divergent-explore`, pick lenses from the fixed men
 drop overlapping ones. Do not invent a full lens set from scratch; classifying
 against the menu is the part a weaker worker does reliably.
 
+## Cross-model verification (optional, off by default)
+
+Before launching `adversarial-verify` (or `judge-panel`), check whether cross-model
+verification is enabled — it reduces the correlated blind spots a same-family Claude
+panel shares by adding a genuinely different-weights reviewer (GPT/Gemini).
+
+1. Read `~/.claude/fable-profile/xverify.json` (it may not exist → treat as off).
+2. If `mode` is `"openrouter"` or `"codex"`, pass it through to the recipe:
+   `args.crossModel = { provider: <mode>, models: <config.models or omit> }`.
+3. If `mode` is `"off"` or the file is absent, pass **nothing** — the recipe then runs
+   Claude-only with zero extra agents, zero network, zero overhead.
+
+Do not enable it yourself or hard-code a provider; the file is the single switch (set by
+`./install.sh --with-xverify=...` or edited by the user; `export FABLE_XVERIFY=off` force-disables).
+The cross-model arm is **bonus coverage** — it never gates delivery, and it never becomes the
+A/B eval judge (that would leak the treatment; see `eval/README.md`).
+
 ## Binding guardrails (do not break these)
 
 - **Never set a count quota.** Let `decompose-first` key width to the sub-problems it

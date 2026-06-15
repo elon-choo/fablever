@@ -54,6 +54,22 @@ const TOOLS = [{
     },
     required: ['prompt'],
   },
+}, {
+  name: 'fable_cross_verify',
+  description:
+    'Cross-model adversarial verification via OpenRouter: sends ONE artifact to N DIFFERENT-weights ' +
+    'models (default GPT + Gemini) and asks each to REFUTE it, returning each model\'s structured verdict. ' +
+    'Use to catch the correlated blind spots a same-family (all-Claude) panel shares. NETWORK + COST: hits ' +
+    'OpenRouter once per model; requires OPENROUTER_API_KEY. Disabled if FABLE_XVERIFY=off or FABLE_FUSION=off.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      artifact: { type: 'string', description: 'The artifact/plan/diff/answer to refute.' },
+      lens: { type: 'string', description: 'Optional focus (e.g. "security and edge cases").' },
+      models: { type: 'array', items: { type: 'string' }, description: 'Optional 1-4 OpenRouter model slugs from DIFFERENT families (e.g. "openai/gpt-4o", "google/gemini-2.5-pro"). Default: GPT + Gemini.' },
+    },
+    required: ['artifact'],
+  },
 }];
 
 async function runFusion(args) {
@@ -117,6 +133,59 @@ async function runFusion(args) {
   return { text: answer };
 }
 
+// One OpenRouter chat completion (reused by cross-verify; runFusion keeps its own call).
+async function openrouterChat(key, body) {
+  const resp = await fetch(OPENROUTER_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://github.com/elon-choo/fablever',
+      'X-Title': 'Fable Profile — Cross-Verify',
+    },
+    body: JSON.stringify(body),
+  });
+  const raw = await resp.text();
+  if (!resp.ok) throw new Error(`OpenRouter ${resp.status}: ${raw.slice(0, 300)}`);
+  return JSON.parse(raw);
+}
+
+// Cross-model adversarial verification: each DIFFERENT-weights model independently refutes the
+// artifact. This is the documented mitigation for the same-family correlated-blind-spot limit.
+async function runCrossVerify(args) {
+  if (process.env.FABLE_FUSION === 'off' || process.env.FABLE_XVERIFY === 'off') {
+    return { isError: true, text: 'cross-verify is disabled (FABLE_XVERIFY=off or FABLE_FUSION=off).' };
+  }
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) {
+    return { isError: true, text:
+      'OPENROUTER_API_KEY is not set — cross-verify needs an OpenRouter API key (not OAuth). See fusion/README.md.' };
+  }
+  if (!args || typeof args.artifact !== 'string' || !args.artifact.trim()) {
+    return { isError: true, text: 'fable_cross_verify requires a non-empty "artifact".' };
+  }
+  const models = (Array.isArray(args.models) && args.models.length ? args.models : ['openai/gpt-4o', 'google/gemini-2.5-pro']).slice(0, 4);
+  const lens = (typeof args.lens === 'string' && args.lens.trim()) ? args.lens.trim() : 'overall correctness, security, and missing/edge cases';
+  const sys = 'You are an independent adversarial reviewer from a different model family. Try to REFUTE the ' +
+    'artifact through the given lens. Reply with ONLY a JSON object: {"refuted": boolean, "confidence": ' +
+    '"high"|"medium"|"low", "findings": [{"claim": string, "evidence": string, "severity": ' +
+    '"blocker"|"major"|"minor"}]}. Default refuted=true when uncertain. No prose outside the JSON.';
+  const user = 'LENS: ' + lens + '\n\nARTIFACT:\n' + args.artifact;
+  const verdicts = await Promise.all(models.map(async (m) => {
+    try {
+      const data = await openrouterChat(key, {
+        model: m,
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
+        response_format: { type: 'json_object' },
+      });
+      const content = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      let parsed; try { parsed = JSON.parse(content); } catch (_) { parsed = { refuted: null, raw: String(content).slice(0, 800) }; }
+      return { model: m, verdict: parsed };
+    } catch (e) { return { model: m, error: e.message }; }
+  }));
+  return { text: JSON.stringify({ cross_model_verdicts: verdicts }, null, 1) };
+}
+
 // ---- JSON-RPC plumbing (newline-delimited stdio) ----
 function send(m) { process.stdout.write(JSON.stringify(m) + '\n'); }
 function result(id, res) { if (id === undefined || id === null) return; send({ jsonrpc: '2.0', id, result: res }); }
@@ -140,8 +209,11 @@ async function handle(msg) {
     case 'tools/list': return result(id, { tools: TOOLS });
     case 'tools/call': {
       const name = params && params.name;
-      if (name !== 'fable_fusion') return error(id, -32602, `Unknown tool: ${name}`);
-      const out = await runFusion((params && params.arguments) || {});
+      const callArgs = (params && params.arguments) || {};
+      let out;
+      if (name === 'fable_fusion') out = await runFusion(callArgs);
+      else if (name === 'fable_cross_verify') out = await runCrossVerify(callArgs);
+      else return error(id, -32602, `Unknown tool: ${name}`);
       return result(id, { isError: !!out.isError, content: [{ type: 'text', text: out.text }] });
     }
     default:

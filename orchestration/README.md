@@ -84,6 +84,18 @@ processes the items it's handed.
 - **No magnitude claims before the A/B.** Direction comes from mechanism now; the
   size of the gain comes only from `eval/` (model-swap, condition-blind, stratified).
 
+## Cross-model verification (optional, off by default)
+
+The Claude skeptic panel defeats the completion attractor but shares a same-family
+**correlated blind spot**. You can optionally add a genuinely different-weights reviewer
+(GPT/Gemini via OpenRouter, or GPT/Codex via the codex MCP) to the verify loop. It's
+**off by default and zero-overhead when off** — the cross-model agent is only built when
+the `orchestrate` skill passes `args.crossModel`, which it does only if
+`~/.claude/fable-profile/xverify.json` enables it. Enable with `./install.sh
+--with-xverify=openrouter` (or `=codex`); the installer prints the options with their costs.
+The cross-model verdicts are **bonus coverage** — they never change the RED gate and must
+never be the A/B eval judge. Full setup, cost, and the toggle: [`xverify.md`](xverify.md).
+
 ## Status
 
 These recipes are **runnable and reviewed**, but their *quantitative* benefit is

@@ -78,5 +78,29 @@ for (const rel of ['orchestration/recipes/adversarial-verify.mjs', 'orchestratio
   ok('fixture valid JSON + strata a/b/c present', ['a', 'b', 'c'].every(s => strata.has(s)), 'strata=' + [...strata]);
 }
 
+// 8) cross-model arm is OPT-IN and gated: the recipe only builds it when args.crossModel is set
+{
+  const src = fs.readFileSync(path.join(ROOT, 'orchestration/recipes/adversarial-verify.mjs'), 'utf8');
+  ok('xverify arm is gated on crossModel', /xc\s*=\s*a\.crossModel/.test(src) && /crossEnabled\s*=\s*!!\(\s*xc/.test(src) && /if\s*\(crossEnabled\)/.test(src));
+  ok('xverify default = no extra agents', /a\.crossModel/.test(src) && !/crossModel\s*=\s*\{/.test(src)); // never self-enables
+  ok('cross verdicts excluded from the gate', /slice\(0,\s*lensKeys\.length\)/.test(src));
+}
+
+// 9) fusion server exposes fable_cross_verify and guards it (off-switch + key + artifact)
+{
+  const src = fs.readFileSync(path.join(ROOT, 'fusion/fusion-server.js'), 'utf8');
+  ok('fable_cross_verify tool exists', /name:\s*'fable_cross_verify'/.test(src));
+  ok('cross_verify honors FABLE_XVERIFY/FABLE_FUSION off', /FABLE_XVERIFY\s*===\s*'off'/.test(src) && /FABLE_FUSION\s*===\s*'off'/.test(src));
+  ok('cross_verify requires a key + artifact', /OPENROUTER_API_KEY/.test(src) && /requires a non-empty "artifact"/.test(src));
+}
+
+// 10) installer offers cross-model option, defaults OFF
+{
+  const src = fs.readFileSync(path.join(ROOT, 'install.sh'), 'utf8');
+  ok('installer has --with-xverify', /--with-xverify/.test(src));
+  ok('installer defaults xverify OFF', /XVERIFY=off/.test(src));
+  ok('installer writes xverify config', /xverify\.json|XVERIFY_CFG/.test(src));
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
