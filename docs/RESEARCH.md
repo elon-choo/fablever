@@ -137,10 +137,15 @@ Ranked by steering weight and reach, per the official docs and the installed CLI
 2. **CLAUDE.md** — always-on per project, but injected as a *user message* (lower weight) and prone to
    conflicting with a user's existing rules. We **do not** modify the user's CLAUDE.md; the governor lives
    in the output style. A drop-in snippet is provided for those who want it.
-3. **UserPromptSubmit hook** — the only way to *re-inject per turn* (anti-decay). But it bills tokens
-   **every turn**, is **per-machine**, and **does not fire for workflow subagents**. So it's **opt-in**
-   (`--with-hook`) and injects only the tiny *core*, not the full governor.
-4. **MCP server** — portable, on-demand, and **subagent-reachable** (a subagent can call
+3. **UserPromptSubmit hook** — the only way to *re-inject per turn* (anti-decay) in the **main** session.
+   But it bills tokens **every turn**, is **per-machine**, and **does not fire for subagents**. So it's
+   **opt-in** (`--with-hook`) and injects only the tiny *core*, not the full governor.
+4. **SubagentStart hook** (default-on) — the mechanism that closes the subagent gap. It fires when any
+   subagent spawns (foreground, background/`run_in_background`, and workflow agents) and injects the
+   *compact* reminder via `hookSpecificOutput.additionalContext`. Verified end-to-end: a spawned subagent
+   reports receiving it as "SubagentStart hook additional context." One-time injection per subagent (no
+   per-turn tax); fail-safe (always exits 0). This is why subagents are now covered by default.
+5. **MCP server** — portable, on-demand, and **subagent-reachable** (a subagent can also call
    `get_fable_profile`). Best surface for distribution to other people and other MCP clients.
 
 **Two corrections from the skeptic pass that changed the build:**
@@ -155,13 +160,14 @@ Ranked by steering weight and reach, per the official docs and the installed CLI
 ## 6. Resulting architecture
 
 ```
-profiles/full.md ── single source of truth (the governor) ──┬─> output style (install.sh generates it; PRIMARY always-on)
+profiles/full.md ── single source of truth (the governor) ──┬─> output style (install.sh generates it; PRIMARY always-on, MAIN session)
                                                              ├─> MCP get_fable_profile / fable-mode prompt (portable + subagent-reachable)
-profiles/compact.md, core.md ───────────────────────────────┴─> opt-in UserPromptSubmit hook (anti-decay, tiny, model-aware)
+profiles/compact.md ─────────────────────────────────────────┼─> SubagentStart hook (default-on; injects into EVERY subagent incl. background)
+profiles/compact.md, core.md ───────────────────────────────┴─> opt-in UserPromptSubmit hook (main-session anti-decay, tiny, model-aware)
 mcp/src/server.js ── zero-dep MCP: get_fable_profile, fable_lint, fable-mode, resources
 tools/fable-leaktest.js ── read-only measurement: did behavior actually move toward Fable's column?
-claude-code/lib/settings-merge.js ── idempotent, backed-up settings edits
-install.sh ── one command; --with-hook, --no-style, --no-mcp, --uninstall
+claude-code/lib/settings-merge.js ── idempotent, backed-up settings edits (style-on, hook-on, subhook-on)
+install.sh ── one command; --with-hook, --no-subagent, --no-style, --no-mcp, --uninstall
 ```
 
 See `README.md` for install and usage.

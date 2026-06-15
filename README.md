@@ -39,8 +39,9 @@ Options:
 
 | flag | effect |
 |---|---|
-| *(none)* | output style set as default (always-on) + MCP registered |
-| `--with-hook` | also add the opt-in per-turn re-injection hook (see "Why opt-in") |
+| *(none)* | output style set as default (always-on) + **SubagentStart hook** (reaches every subagent) + MCP registered |
+| `--with-hook` | also add the opt-in per-turn re-injection hook for the main session (see "Why opt-in") |
+| `--no-subagent` | skip the SubagentStart hook (don't inject into subagents) |
 | `--no-style` | install the style file but don't set it default (pick "Fable" in `/config`) |
 | `--no-mcp` | skip the MCP server |
 | `--uninstall` | remove everything; restores prior settings |
@@ -69,8 +70,11 @@ export FABLE_PROFILE=off       # turns off the hook for the current shell (if in
     (flags arrow-chains, ending on permission-asking, intent-without-action, scope creep, over-formatting…).
   - prompt `fable-mode` — inject the full profile on demand (`/mcp__fable-profile__fable-mode`).
   - resources `fable://profile/{full,compact,core}`.
+- **SubagentStart hook** `~/.claude/hooks/fable-subagent.js` (default-on) — injects the *compact* reminder
+  into **every spawned subagent** (foreground, background/`run_in_background`, and workflow agents) — the
+  agents the output style and the main-session hook can't reach. Fail-safe (always exits 0), zero-dep Node.
 - **Opt-in hook** `~/.claude/hooks/fable-reinject.sh` — re-injects a tiny *core* reminder each turn to
-  fight long-session decay. Model-aware (skips Fable-class models), fail-safe (always exits 0).
+  fight long-session decay in the **main** session. Model-aware (skips Fable-class models), fail-safe.
 - **Profiles** `profiles/{full,compact,core}.md` — the single source of truth, symlinked into `~/.claude`.
 
 ### Why the hook is opt-in
@@ -82,10 +86,13 @@ full governor at session start with [built-in adherence reminders](https://code.
 so the hook is a small **anti-decay
 booster** for very long sessions, not the primary mechanism.
 
-> **Subagents.** Neither the output style nor the hook reaches Task/workflow subagents (they run with
-> their own system prompt). To put delegated subagents on the Fable style too, paste the snippet in
-> [`claude-code/subagent-brief.md`](claude-code/subagent-brief.md) into the agent's brief, or have the
-> subagent call the MCP `get_fable_profile` tool.
+> **Subagents are covered automatically.** The output style and the main-session hook don't reach Task /
+> background / workflow subagents (they run with their own system prompt), so the default install adds a
+> **`SubagentStart` hook** that injects the compact reminder into every subagent at spawn. Verified
+> end-to-end: a spawned subagent receives it as "SubagentStart hook additional context." For environments
+> without the hook (or to also steer a *custom agent definition*), the snippet in
+> [`claude-code/subagent-brief.md`](claude-code/subagent-brief.md) and the MCP `get_fable_profile` tool
+> remain available as a fallback.
 
 ## Use it elsewhere (other people, other MCP clients)
 

@@ -9,6 +9,8 @@
  *   style-off <settings.json> [styleName]     remove outputStyle (only if it equals styleName, default "Fable")
  *   hook-on   <settings.json> <hook-command>  add a UserPromptSubmit command hook (opt-in anti-decay booster)
  *   hook-off  <settings.json> <hook-command>  remove that UserPromptSubmit hook
+ *   subhook-on  <settings.json> <hook-command>  add a SubagentStart command hook (inject style into every subagent)
+ *   subhook-off <settings.json> <hook-command>  remove that SubagentStart hook
  *
  * Safety: only touches outputStyle and the single UserPromptSubmit entry matching the hook command.
  * Never modifies any other hook, permission, or field. Re-running is a no-op.
@@ -57,21 +59,29 @@ switch (mode) {
     delete s._fableProfilePrevOutputStyle; // always clean up the memo
     break;
   }
-  case 'hook-on': {
-    if (!arg) { console.error('hook-on requires a hook command'); process.exit(2); }
+  // hook-on/off  -> UserPromptSubmit (main-session per-turn reminder)
+  // subhook-on/off -> SubagentStart  (one-time injection into every spawned subagent, incl. background)
+  case 'hook-on':
+  case 'subhook-on': {
+    if (!arg) { console.error(`${mode} requires a hook command`); process.exit(2); }
+    const event = mode === 'subhook-on' ? 'SubagentStart' : 'UserPromptSubmit';
     s.hooks = s.hooks || {};
-    const ups = Array.isArray(s.hooks.UserPromptSubmit) ? s.hooks.UserPromptSubmit : [];
-    if (!ups.some(e => entryHasHook(e, arg))) {
-      ups.push({ hooks: [{ type: 'command', command: arg, timeout: 10 }] });
+    const arr = Array.isArray(s.hooks[event]) ? s.hooks[event] : [];
+    if (!arr.some(e => entryHasHook(e, arg))) {
+      const entry = { hooks: [{ type: 'command', command: arg, timeout: 10 }] };
+      if (event === 'SubagentStart') entry.matcher = '*'; // fire for every subagent type
+      arr.push(entry);
     }
-    s.hooks.UserPromptSubmit = ups;
+    s.hooks[event] = arr;
     break;
   }
-  case 'hook-off': {
-    if (!arg) { console.error('hook-off requires a hook command'); process.exit(2); }
-    if (s.hooks && Array.isArray(s.hooks.UserPromptSubmit)) {
-      s.hooks.UserPromptSubmit = s.hooks.UserPromptSubmit.filter(e => !entryHasHook(e, arg));
-      if (s.hooks.UserPromptSubmit.length === 0) delete s.hooks.UserPromptSubmit;
+  case 'hook-off':
+  case 'subhook-off': {
+    if (!arg) { console.error(`${mode} requires a hook command`); process.exit(2); }
+    const event = mode === 'subhook-off' ? 'SubagentStart' : 'UserPromptSubmit';
+    if (s.hooks && Array.isArray(s.hooks[event])) {
+      s.hooks[event] = s.hooks[event].filter(e => !entryHasHook(e, arg));
+      if (s.hooks[event].length === 0) delete s.hooks[event];
       if (Object.keys(s.hooks).length === 0) delete s.hooks;
     }
     break;

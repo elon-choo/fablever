@@ -27,7 +27,9 @@ echo "# default install (--no-mcp so the test never calls the claude CLI)"
 HOME="$SB" bash "$REPO/install.sh" --no-mcp >/dev/null
 assert 'const s=require(process.env.SB+"/.claude/settings.json"); process.exit(s.outputStyle==="Fable"?0:1)' "outputStyle set to Fable"
 assert 'const s=require(process.env.SB+"/.claude/settings.json"); process.exit((s.hooks.Stop&&s.hooks.PreToolUse&&s.effortLevel==="xhigh"&&s.permissions.allow.length===1)?0:1)' "existing hooks + permissions + effortLevel preserved"
-assert 'const s=require(process.env.SB+"/.claude/settings.json"); process.exit(!s.hooks.UserPromptSubmit?0:1)' "hook NOT added by default (opt-in)"
+assert 'const s=require(process.env.SB+"/.claude/settings.json"); process.exit(!s.hooks.UserPromptSubmit?0:1)' "UserPromptSubmit hook NOT added by default (opt-in)"
+assert 'const s=require(process.env.SB+"/.claude/settings.json"); const j=JSON.stringify(s.hooks.SubagentStart||[]); process.exit(/fable-subagent/.test(j)?0:1)' "SubagentStart hook registered by default (reaches subagents)"
+assert 'const fs=require("fs"); process.exit(fs.existsSync(process.env.SB+"/.claude/hooks/fable-subagent.js")?0:1)' "fable-subagent.js installed"
 assert 'const fs=require("fs");const t=fs.readFileSync(process.env.SB+"/.claude/output-styles/Fable.md","utf8");process.exit((/^---[\s\S]*name:\s*Fable/.test(t)&&/keep-coding-instructions:\s*true/.test(t)&&/Act when you have enough to act/.test(t))?0:1)' "output style generated with frontmatter + governor"
 assert 'const fs=require("fs");process.exit(fs.readFileSync(process.env.SB+"/.claude/fable-profile/full.md","utf8").length>500?0:1)' "profile symlink resolves"
 assert 'const fs=require("fs");process.exit(fs.readdirSync(process.env.SB+"/.claude").some(f=>f.startsWith("settings.json.fable-bak-"))?0:1)' "settings.json backed up before write"
@@ -45,7 +47,7 @@ OUT2="$(printf '{"session_id":"t2","transcript_path":"/nope"}' | FABLE_PROFILE=o
 
 echo "# uninstall restores cleanly"
 HOME="$SB" bash "$REPO/install.sh" --no-mcp --uninstall >/dev/null
-assert 'const s=require(process.env.SB+"/.claude/settings.json");process.exit((!s.outputStyle && !(s.hooks&&s.hooks.UserPromptSubmit) && s.hooks.Stop && s.effortLevel==="xhigh")?0:1)' "uninstall removed outputStyle + hook, kept Stop + effortLevel"
+assert 'const s=require(process.env.SB+"/.claude/settings.json");process.exit((!s.outputStyle && !(s.hooks&&s.hooks.UserPromptSubmit) && !(s.hooks&&s.hooks.SubagentStart) && s.hooks.Stop && s.effortLevel==="xhigh")?0:1)' "uninstall removed outputStyle + both hooks, kept Stop + effortLevel"
 node -e 'const fs=require("fs");process.exit(!fs.existsSync(process.env.SB+"/.claude/output-styles/Fable.md")?0:1)' && echo "PASS: style file removed" || { echo "FAIL: style file remained"; exit 1; }
 
 echo "# a pre-existing custom output style is RESTORED on uninstall, not clobbered"

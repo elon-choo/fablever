@@ -1,8 +1,15 @@
 # Extending the Fable style to subagents
 
-Neither the output style nor the `UserPromptSubmit` hook reaches **Task / workflow subagents** — they run
-with their own system prompt and do not load the main session's output style or CLAUDE.md. So if you
-delegate multi-step work to subagents and want them on the Fable style too, give them the style explicitly.
+**By default this is already handled automatically.** The standard install adds a `SubagentStart` hook
+(`claude-code/hooks/fable-subagent.js`) that injects the compact Fable reminder into **every** spawned
+subagent — foreground, background (`run_in_background`), and workflow agents. The output style and the
+main-session `UserPromptSubmit` hook can't reach subagents (they run with their own system prompt), so the
+`SubagentStart` hook is what closes that gap. Verified end-to-end: a spawned subagent receives it as
+"SubagentStart hook additional context."
+
+You only need the manual options below when: (a) you ran `install.sh --no-subagent`, (b) you're in an
+environment without the hook (e.g. a different MCP client), or (c) you want to **bake** the style into a
+specific custom agent definition file so it's self-contained.
 
 Two ways:
 
