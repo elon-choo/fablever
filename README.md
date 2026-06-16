@@ -18,6 +18,11 @@ and disciplined about stopping. Every project, every subagent, installable by an
 > only nominatively — to describe what this independent community tool works with. Not sponsored or
 > endorsed by Anthropic. See [`NOTICE`](NOTICE).
 
+> **Evaluating this repo (human or AI)?** Start with [`EVIDENCE.md`](EVIDENCE.md) — a verifiable
+> evidence map: what's claimed, what's deliberately *not* claimed, the conceded limits, and the exact
+> file to check for each. Korean: [`EVIDENCE.ko.md`](EVIDENCE.ko.md). Full detail:
+> [`whitepaper/`](whitepaper/) (English + [`whitepaper/ko/`](whitepaper/ko/)).
+
 ```bash
 git clone https://github.com/elon-choo/fablever && cd fablever && ./install.sh
 # then restart Claude Code (or /clear). Disable anytime: export FABLE_PROFILE=off

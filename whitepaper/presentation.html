@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>fablever — 교차검증 오케스트레이션 결과 (팀 공유)</title>
+<style>
+  :root{
+    --ink:#11161d; --muted:#5b6776; --line:#e4e8ee; --bg:#f6f8fb; --card:#fff;
+    --accent:#3b5bdb; --accent-soft:#eaeefb; --good:#1f9d55; --good-soft:#e6f6ec;
+    --warn:#b7791f; --warn-soft:#fdf6e3; --bad:#c23b3b;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Segoe UI",Roboto,sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{margin-bottom:36px}
+  .eyebrow{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);padding:5px 12px;border-radius:999px}
+  h1{font-size:34px;line-height:1.25;margin:16px 0 8px;letter-spacing:-.02em}
+  h1 small{display:block;font-size:17px;font-weight:500;color:var(--muted);margin-top:8px;letter-spacing:0}
+  h2{font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+  .section{margin-top:40px}
+  .section > p.lead{color:var(--muted);margin:0 0 20px}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+  .card h3{margin:0 0 6px;font-size:15px}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  /* hero result */
+  .resultcard{display:flex;align-items:center;gap:28px;background:linear-gradient(120deg,#0f1b3d,#22357a);
+    color:#fff;border-radius:18px;padding:28px 32px}
+  .bignum{font-size:64px;font-weight:800;line-height:1;letter-spacing:-.03em}
+  .bignum span{font-size:26px;font-weight:600;opacity:.7}
+  .resultcard .rt{flex:1}
+  .resultcard h2{color:#fff;font-size:22px;margin-bottom:6px}
+  .resultcard p{color:#c9d2ee;margin:0;font-size:14.5px}
+  .chips{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-size:12.5px;font-weight:600;background:rgba(255,255,255,.12);color:#dbe3ff;padding:4px 10px;border-radius:8px}
+  /* bars */
+  .bars{margin-top:8px}
+  .bar-row{display:grid;grid-template-columns:150px 1fr 64px;align-items:center;gap:12px;margin:9px 0}
+  .bar-row .lbl{font-size:13.5px;color:var(--ink);text-align:right;font-weight:600}
+  .bar-row .lbl small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+  .track{background:#eef1f6;border-radius:8px;height:26px;position:relative;overflow:hidden}
+  .fill{height:100%;border-radius:8px;background:#c3ccd9}
+  .fill.win{background:linear-gradient(90deg,#2f49b8,#3b5bdb)}
+  .bar-row .val{font-size:14px;font-weight:700;text-align:left}
+  .bar-row.winrow .lbl{color:var(--accent)}
+  /* table */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;font-size:14px}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line)}
+  th{background:#f0f3f8;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  tr:last-child td{border-bottom:none}
+  tr.win td{background:var(--accent-soft);font-weight:600}
+  td .tag{font-size:11px;font-weight:700;color:var(--accent);background:#fff;border:1px solid var(--accent);
+    padding:1px 7px;border-radius:6px;margin-left:6px}
+  /* pipeline */
+  .pipe{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .stage{flex:1;min-width:180px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;position:relative}
+  .stage .n{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.05em}
+  .stage h4{margin:4px 0 6px;font-size:15px}
+  .stage p{margin:0;font-size:13px;color:var(--muted)}
+  .arrow{display:flex;align-items:center;justify-content:center;width:34px;color:#9aa6b6;font-size:22px;font-weight:700}
+  /* callout */
+  .callout{background:var(--warn-soft);border:1px solid #f0e0b8;border-left:4px solid var(--warn);
+    border-radius:10px;padding:16px 20px}
+  .callout h3{margin:0 0 8px;color:#92610f;font-size:15px}
+  .callout ul{margin:0;padding-left:18px;color:#7a5512;font-size:14px}
+  .callout li{margin:3px 0}
+  .good-callout{background:var(--good-soft);border-color:#bfe6cc;border-left-color:var(--good)}
+  .good-callout h3{color:#136c39}
+  .good-callout ul{color:#1c5b35}
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef1f6;border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;font-size:12.5px}
+  @media (max-width:720px){.g3,.g2{grid-template-columns:1fr}.resultcard{flex-direction:column;text-align:center}
+    .bar-row{grid-template-columns:110px 1fr 50px}}
+  @media print{body{background:#fff}.wrap{padding:0}.resultcard{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">fablever · 팀 공유</span>
+    <h1>여러 모델을 교차로 쓰면 코드 결함을 더 잘 잡는가?
+      <small>가장 성능 좋은 모델들(Claude Opus · Gemini-2.5-pro · GPT-5.2)로 적대적 교차검증 파이프라인을 만들고, 심어둔 결함(planted defect)으로 실측했습니다.</small>
+    </h1>
+  </header>
+
+  <!-- HEADLINE RESULT -->
+  <div class="resultcard">
+    <div class="bignum">18<span>/18</span></div>
+    <div class="rt">
+      <h2>비용 무제한 구성(ULTRA V1)이 심어둔 결함 18개를 전부 탐지</h2>
+      <p>난이도·유형 3계층(모순 a · 누락 b · 심층추론 c) 전부 만점 — 5개 교차모델 심판단의 다수결 기준. 더 싼 단일 구성도, 같은 계열 패널도 여기 도달하지 못했습니다.</p>
+      <div class="chips">
+        <span class="chip">a 모순 = 1.00</span>
+        <span class="chip">b 누락 = 1.00</span>
+        <span class="chip">c 심층추론 = 1.00</span>
+        <span class="chip">정밀도 ≈ 0.63 (하한)</span>
+      </div>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:12px;font-size:13px;color:var(--muted)">
+    ※ 이건 <b>n=6 작은 픽스처에서의 “결함 탐지” 결과</b>이지, 생산성 향상 수치가 아닙니다. 솔직한 범위는 맨 아래 박스 참고.
+  </p>
+
+  <!-- WHAT IS IT -->
+  <div class="section">
+    <h2>한 줄 요약</h2>
+    <p class="lead">스타일 이식 + 오케스트레이션 + 교차모델 검증. 의존성 0개.</p>
+    <div class="grid g3">
+      <div class="card"><h3>① 작업 스타일</h3><p>어떤 Claude 모델이든 Fable처럼 — 결단력 있게·결과 먼저·절제·근거 기반으로 일하게. <b>능력이 아니라 ‘방식’</b>을 옮깁니다.</p></div>
+      <div class="card"><h3>② 오케스트레이션</h3><p>Workflow 도구로 병렬 패널·분해·파이프라인을 실제 코드로 실행. 프롬프트가 아니라 실행 제어흐름.</p></div>
+      <div class="card"><h3>③ 교차모델 검증</h3><p>기본 OFF. 켜면 가중치가 다른 모델(GPT·Gemini)이 같은 계열 패널이 구조적으로 못 보는 결함을 잡음.</p></div>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="section">
+    <h2>최고 성능 레시피 — “넓게 발산 → 강하게 판정”</h2>
+    <p class="lead">핵심은 한 문장: <b>여러 모델로 최대한 넓게 후보를 뽑고, 강력한 독립 모델 하나가 강하게 추려낸다.</b></p>
+    <div class="pipe">
+      <div class="stage">
+        <div class="n">STAGE A · 넓은 생성</div>
+        <h4>교차모델 발산</h4>
+        <p>Opus 7-렌즈 패널 + 심층 3드로 ∪ Gemini-2.5-pro(전체+심층) → <b>후보 417개</b> (노이즈·중복 많음 — 정상)</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="n">STAGE B · 판정</div>
+        <h4>적대적 애드주디케이션</h4>
+        <p>GPT-5.2 한 모델이 거짓양성·중복 제거 → <b>확정 32개</b> (정밀도 회복)</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="n">STAGE D · 채점</div>
+        <h4>교차모델 심판단</h4>
+        <p>5개 심판(GPT-5.2×4 + Gemini×1) 다수결 → <b>18/18</b> (단일 심판 편차 제거)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECALL CHART -->
+  <div class="section">
+    <h2>구성별 결함 탐지율 (18개 중)</h2>
+    <p class="lead">하드 픽스처(6개 아티팩트·18개 심층 결함) 기준. ULTRA만 18개 전부.</p>
+    <div class="bars card">
+      <div class="bar-row">
+        <div class="lbl">단일 에이전트<small>baseline · Opus</small></div>
+        <div class="track"><div class="fill" style="width:77.8%"></div></div>
+        <div class="val">14</div>
+      </div>
+      <div class="bar-row">
+        <div class="lbl">프롬프트-매칭<small>A2 · 1/5 비용</small></div>
+        <div class="track"><div class="fill" style="width:88.9%"></div></div>
+        <div class="val">16</div>
+      </div>
+      <div class="bar-row">
+        <div class="lbl">드로-매칭<small>A_N · 정밀도 최악</small></div>
+        <div class="track"><div class="fill" style="width:94.4%"></div></div>
+        <div class="val">17</div>
+      </div>
+      <div class="bar-row">
+        <div class="lbl">병렬 패널<small>B · 같은 계열</small></div>
+        <div class="track"><div class="fill" style="width:83.3%"></div></div>
+        <div class="val">15</div>
+      </div>
+      <div class="bar-row winrow">
+        <div class="lbl">ULTRA V1<small>교차모델·비용무제한</small></div>
+        <div class="track"><div class="fill win" style="width:100%"></div></div>
+        <div class="val" style="color:var(--accent)">18</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="section">
+    <h2>탐지율 × 정밀도 × 비용 한눈에</h2>
+    <table>
+      <thead><tr><th>구성</th><th>탐지 /18</th><th>정밀도</th><th>비용(에이전트)</th><th>특징</th></tr></thead>
+      <tbody>
+        <tr><td>단일 baseline</td><td>14</td><td>~0.46</td><td>1</td><td>바닥</td></tr>
+        <tr><td>프롬프트-매칭 A2</td><td>16</td><td>~0.42</td><td>1</td><td>가성비 — 일상용 추천</td></tr>
+        <tr><td>드로-매칭 A_N</td><td>16–17</td><td>0.35–0.44</td><td>N</td><td>제일 많이 잡지만 노이즈</td></tr>
+        <tr><td>병렬 패널 B</td><td>15</td><td>0.53–0.73</td><td>N</td><td>구조적 강점 = 정밀도</td></tr>
+        <tr class="win"><td>ULTRA V1 <span class="tag">최고</span></td><td>18</td><td>0.63</td><td>~13/건</td><td>탐지·정밀도 둘 다 프론티어 최상</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- KEY FINDINGS -->
+  <div class="section">
+    <h2>적대적으로 한번 더 검증하며 나온 3가지 핵심</h2>
+    <div class="grid g3">
+      <div class="card"><h3>① 더 키우니 오히려 나빠짐</h3><p>GPT-5.2 심층 생성을 더 얹은 V2는 탐지율이 <b>18→16</b>으로 하락. 후보가 많아져 판정관 출력 예산을 잠식. <b>“1회 생성에서 멈춰라.”</b></p></div>
+      <div class="card"><h3>② ‘거짓양성’은 사실 진짜 결함</h3><p>적대적 반박 패스(교차모델 2개, 둘 다 반박해야 제거)가 <b>32개 중 0개</b> 제거. 즉 정밀도 0.63은 정답키가 3개뿐이라 생긴 <b>하한</b>이지 환각률이 아님.</p></div>
+      <div class="card"><h3>③ 심판은 ‘단’이 아니라 ‘패널’로</h3><p>단일 심판은 17/18로 깐깐하게 봤지만, 5개 교차모델 다수결은 <b>18/18</b>. 한 모델 판정엔 편차가 있어 패널로 측정.</p></div>
+    </div>
+  </div>
+
+  <!-- HONEST FRAMING -->
+  <div class="section">
+    <div class="grid g2">
+      <div class="callout good-callout">
+        <h3>✓ 우리가 말할 수 있는 것</h3>
+        <ul>
+          <li>비용이 중요치 않은 고위험 검토(릴리스 게이트·보안 리뷰)에서 <b>“넓게 발산→강하게 판정”</b>이 도달하는 결함탐지 천장은 실재하고 측정됨.</li>
+          <li>심층추론(c) 결함까지 전부 — 더 싼 구성·같은 계열 패널은 못 한 일.</li>
+          <li>출력도 깔끔(반박패스가 확정 목록을 전부 통과).</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <h3>⚠ 솔직한 한계 (과장 금지)</h3>
+        <ul>
+          <li><b>생산성 수치가 아님</b> — n=6 심어둔 결함에서의 ‘탐지율’. 개발 생산성 A/B는 따로, 아직 안 함.</li>
+          <li><b>“병렬이 단일을 이긴다”가 아님</b> — 통제군이 그걸 반증. 이긴 건 ‘교차모델 발산+판정’ 조합.</li>
+          <li><b>공짜 아님</b> — 건당 ~13 에이전트. 일상용은 가성비 A2 권장.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    출처: 2026-06-15 실측 — 워커 Claude Opus + Gemini-2.5-pro, 판정/심판 GPT-5.2. 전체 문서·재현법은 <span class="kbd">whitepaper/</span> 폴더(README + 01–07).
+    Anthropic과 무관(독립 커뮤니티 도구). Claude·Anthropic·Fable은 Anthropic의 상표.
+  </footer>
+
+</div>
+</body>
+</html>
