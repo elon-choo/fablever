@@ -62,9 +62,10 @@ switch (mode) {
   // hook-on/off  -> UserPromptSubmit (main-session per-turn reminder)
   // subhook-on/off -> SubagentStart  (one-time injection into every spawned subagent, incl. background)
   case 'hook-on':
-  case 'subhook-on': {
+  case 'subhook-on':
+  case 'sesshook-on': {
     if (!arg) { console.error(`${mode} requires a hook command`); process.exit(2); }
-    const event = mode === 'subhook-on' ? 'SubagentStart' : 'UserPromptSubmit';
+    const event = mode === 'subhook-on' ? 'SubagentStart' : mode === 'sesshook-on' ? 'SessionStart' : 'UserPromptSubmit';
     s.hooks = s.hooks || {};
     const arr = Array.isArray(s.hooks[event]) ? s.hooks[event] : [];
     if (!arr.some(e => entryHasHook(e, arg))) {
@@ -76,9 +77,10 @@ switch (mode) {
     break;
   }
   case 'hook-off':
-  case 'subhook-off': {
+  case 'subhook-off':
+  case 'sesshook-off': {
     if (!arg) { console.error(`${mode} requires a hook command`); process.exit(2); }
-    const event = mode === 'subhook-off' ? 'SubagentStart' : 'UserPromptSubmit';
+    const event = mode === 'subhook-off' ? 'SubagentStart' : mode === 'sesshook-off' ? 'SessionStart' : 'UserPromptSubmit';
     if (s.hooks && Array.isArray(s.hooks[event])) {
       s.hooks[event] = s.hooks[event].filter(e => !entryHasHook(e, arg));
       if (s.hooks[event].length === 0) delete s.hooks[event];

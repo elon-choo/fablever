@@ -26,6 +26,12 @@ HOOK_CMD='$HOME/.claude/hooks/fable-reinject.sh'
 SUBHOOK_SRC="${REPO}/claude-code/hooks/fable-subagent.js"
 SUBHOOK_DST="${CLAUDE_DIR}/hooks/fable-subagent.js"
 SUBHOOK_CMD='node $HOME/.claude/hooks/fable-subagent.js'
+ONBOARD_SRC="${REPO}/claude-code/hooks/fable-onboard.js"
+ONBOARD_DST="${CLAUDE_DIR}/hooks/fable-onboard.js"
+ONBOARD_CMD='node $HOME/.claude/hooks/fable-onboard.js'
+MODELCHK_SRC="${REPO}/claude-code/hooks/fable-model-check.js"
+MODELCHK_DST="${CLAUDE_DIR}/hooks/fable-model-check.js"
+MODELCHK_CMD='node $HOME/.claude/hooks/fable-model-check.js'
 STYLE_HEADER="${REPO}/claude-code/output-styles/Fable.header.md"
 STYLE_DST="${CLAUDE_DIR}/output-styles/Fable.md"
 GOVERNOR="${REPO}/profiles/full.md"
@@ -84,7 +90,9 @@ if [ "$UNINSTALL" = "1" ]; then
   node "$MERGE" style-off "$SETTINGS" Fable 2>/dev/null || true
   node "$MERGE" hook-off    "$SETTINGS" "$HOOK_CMD" 2>/dev/null || true
   node "$MERGE" subhook-off "$SETTINGS" "$SUBHOOK_CMD" 2>/dev/null || true
-  rm -f "$HOOK_DST" "$SUBHOOK_DST" "$STYLE_DST"
+  node "$MERGE" sesshook-off "$SETTINGS" "$ONBOARD_CMD" 2>/dev/null || true
+  node "$MERGE" sesshook-off "$SETTINGS" "$MODELCHK_CMD" 2>/dev/null || true
+  rm -f "$HOOK_DST" "$SUBHOOK_DST" "$ONBOARD_DST" "$MODELCHK_DST" "$STYLE_DST"
   rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG"
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
@@ -130,6 +138,19 @@ if [ "$DO_SUBAGENT" = "1" ]; then
   echo "  subagent  -> SubagentStart hook registered (reaches every subagent incl. background; FABLE_PROFILE=off to disable)"
 else
   echo "  subagent  -> file staged at ${SUBHOOK_DST} but NOT registered (--no-subagent)"
+fi
+
+# 4b) SessionStart hooks (default ON): first-run onboarding (asks the user for defaults until
+#     configured) + daily model-freshness notice. Both fail-open; FABLE_ONBOARD/FABLE_MODELCHECK=off.
+cp "$ONBOARD_SRC" "$ONBOARD_DST"; chmod +x "$ONBOARD_DST"
+cp "$MODELCHK_SRC" "$MODELCHK_DST"; chmod +x "$MODELCHK_DST"
+if [ "$DO_SUBAGENT" = "1" ]; then
+  node "$MERGE" sesshook-on "$SETTINGS" "$ONBOARD_CMD"
+  node "$MERGE" sesshook-on "$SETTINGS" "$MODELCHK_CMD"
+  echo "  onboard   -> SessionStart hook registered (first run asks your defaults; FABLE_ONBOARD=off to skip)"
+  echo "  modelchk  -> SessionStart hook registered (daily latest-model check, ~0 tokens; FABLE_MODELCHECK=off)"
+else
+  echo "  onboard   -> files staged but NOT registered (--no-subagent)"
 fi
 
 # 5) optional main-session anti-decay hook (opt-in)
@@ -206,7 +227,7 @@ cat <<'XMENU'
 XMENU
 
 if [ "$XVERIFY" = "openrouter" ] || [ "$XVERIFY" = "codex" ]; then
-  printf '{\n  "mode": "%s",\n  "models": ["openai/gpt-4o", "google/gemini-2.5-pro"],\n  "n": 1\n}\n' "$XVERIFY" > "$XVERIFY_CFG"
+  printf '{\n  "mode": "%s",\n  "models": ["openai/gpt-5.5", "google/gemini-3.1-pro-preview"],\n  "n": 1\n}\n' "$XVERIFY" > "$XVERIFY_CFG"
   echo "  xverify   -> ENABLED ($XVERIFY) -> $XVERIFY_CFG  (the orchestrate skill reads this and passes crossModel)"
   if [ "$XVERIFY" = "openrouter" ]; then
     if have claude && ! claude mcp list 2>/dev/null | grep -q '^fable-fusion\b'; then
@@ -229,12 +250,19 @@ HOOK_NOTE=""
 [ "$WITH_HOOK" = "1" ] && HOOK_NOTE="  Hook off:    export FABLE_PROFILE=off   (or)  touch ${PROFILE_DST_DIR}/OFF"
 cat <<EOF
 
-Installed. Restart Claude Code (or run /clear) so the output style and MCP server load.
+Installed.  Next: RESTART Claude Code (or run /clear).
 
-  Always-on:   the Fable working style now layers onto every new session, every project,
-               and is injected into every spawned subagent (incl. background) via SubagentStart.
-  Verify:      /config -> Output style should show "Fable"; /mcp should list fable-profile.
-  Disable:     ./install.sh --uninstall   (or set outputStyle back in ~/.claude/settings.json)
+  >> First time? Just restart and start working normally. On your first session, fablever will
+     ASK YOU two quick setup questions (cost mode, and whether to add a cross-model reviewer) and
+     save your answers — no config files to edit by hand. New to AI/API keys? That's fine: the
+     default needs NO key and costs nothing extra. Say "skip" to take the recommended defaults.
+
+  What's on now:
+  Always-on:   the Fable working style layers onto every session, project, and subagent.
+  Cost dial:   FABLE_ULTRA=auto (default: cheap; spends only on high-stakes reviews) | on | off.
+  Verify:      /config -> Output style shows "Fable"; /mcp lists fable-profile.
+  Full guide:  whitepaper/09-running-it.md  (keys, login, modes, kill switches).
+  Disable:     export FABLE_PROFILE=off   ·   remove: ./install.sh --uninstall
 ${HOOK_NOTE}
 
   This is a STYLE transplant, not a capability transplant: it recovers Fable's restraint,

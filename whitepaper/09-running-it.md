@@ -7,6 +7,16 @@ and [`../orchestration/MODELS.md`](../orchestration/MODELS.md) in the repo.
 
 ---
 
+## 9.0 First run — it asks you (no manual config)
+
+You don't have to read the rest of this page to start. The first time you open Claude Code after
+installing, fablever notices it isn't configured and **asks you two quick questions** — your cost
+mode (`auto` / `on` / `off`) and whether to add a cross-model reviewer (Claude-only by default,
+needs no key, $0). Your answers are saved under `~/.claude/fable-profile/` and the prompt never
+repeats. New to API keys? The default needs none — say **"skip"** to take the recommended
+defaults. Re-run setup anytime by deleting `~/.claude/fable-profile/onboarded`; silence the prompt
+with `FABLE_ONBOARD=off`.
+
 ## 9.1 Does it need a key? (mostly no)
 
 | Feature | Needs a key? | Which |
