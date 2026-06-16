@@ -9,10 +9,16 @@ Methodology and its limits: [§2](02-methodology.md) and [§6](06-limitations.md
 
 ## 3.1 Headline
 
-> **A cost-no-object, cross-model "diverge-wide-then-adjudicate" pipeline (ULTRA V1) caught
+> **A cost-no-object, cross-model "diverge-wide-then-adjudicate" pipeline (ULTRA) caught
 > 18/18 planted defects — a=1.0, b=1.0, c=1.0 — under a robust 5-judge cross-model panel,
 > at precision ≈ 0.63. No cheaper single-agent config and no same-family panel reached
 > that; every one of them missed deep-reasoning (c) defects that ULTRA caught.**
+
+That peak recall used **GPT-5.2 + Gemini-2.5-pro**. A 2026-06-16 re-run on the **latest
+models (GPT-5.5 + Gemini-3.1-pro-preview)** scored **16/18 at precision 0.74** — the newer
+models traded ~2 deep-reasoning catches for higher precision, *not* more recall (§3.3). Each
+number in this whitepaper is labelled with the models that produced it; relabeling without
+re-running would be fabrication.
 
 This is a **defect-catch** result on a small fixture, not a productivity claim. Read it
 with [§6.1](06-limitations.md).
@@ -57,10 +63,11 @@ draws **∪** Gemini-2.5-pro (full + deep) → **one GPT-5.2 adjudicator** per a
 
 | Config | Recall /18 | a | b | c (deep) | Precision | Gen+adj agents | Candidates |
 |--------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **V1 — wide-gen → single adjudication** | **18 (1.000)** | 1.0 | 1.0 | **1.0** | **0.63** | 78 | 417 |
+| **V1 — wide-gen → single adjudication** (GPT-5.2 + Gemini-2.5-pro) | **18 (1.000)** | 1.0 | 1.0 | **1.0** | 0.63 | 78 | 417 |
 | V2 — V1 + GPT-5.2 deep-gen escalation | 16 (0.889) | 1.0 | 1.0 | 0.667 | 0.67 | 84 | 455 |
+| V3 — **latest models** (GPT-5.5 + Gemini-3.1-pro-preview) | 16 (0.889) | 1.0 | 1.0 | 0.667 | **0.74** | 78 | 402 |
 
-Two results, both adversarial:
+Three results, all adversarial:
 
 1. **V1 leads the frontier (on this fixture).** 18/18 recall **and** precision 0.63 — a
    *floor* set by the 3-per-task key, cleaner than the raw draw arm (0.35–0.44) and
@@ -76,6 +83,18 @@ Two results, both adversarial:
    two real deep-reasoning catches, buying only a small precision gain. **Simpler won.**
    This is recorded, not hidden: the escalation was a genuine attempt to reach 18/18 + higher
    precision, and the rigorous panel showed it backfired.
+
+3. **Newest models ≠ higher recall (re-run 2026-06-16).** V1's pipeline re-run with the
+   latest models — **GPT-5.5** adjudicator + a **4× GPT-5.5 / 1× Gemini-3.1-pro-preview**
+   judge panel, with Gemini-3.1-pro-preview generation — scored **16/18 (0.889)** at the
+   **highest precision of any run, 0.742**. The newer models *traded* ~2 deep-reasoning (c)
+   catches for cleaner output: GPT-5.5 adjudicated more selectively (24 confirmed vs 32) and
+   Gemini-3.1 surfaced fewer candidates (46 vs 61), so two c-defects (in h4, h6) never reached
+   the confirmed list. On this single n=6 run, "latest" buys **precision, not recall** — a
+   measured result, not an assumption that a newer model is strictly better. The peak recall
+   (18/18) was produced with GPT-5.2 + Gemini-2.5-pro; both are honest single-run results, and
+   the project's everyday config now pins the latest models ([`orchestration/MODELS.md`](../orchestration/MODELS.md))
+   while this whitepaper keeps each number labelled with the models that produced it.
 
 ### Single-judge variance — why the panel matters
 

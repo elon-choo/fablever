@@ -111,6 +111,23 @@ finding — open an issue.
   links resolved. The audit is itself part of the evidence: the write-up was attacked before
   publication, and the attacks that landed were applied.
 
+## Experiment 9 — re-run on the latest models · 2026-06-16 · **newest ≠ better, kept**
+
+- **Question.** The published run used GPT-5.2 + Gemini-2.5-pro. With newer models now
+  live (GPT-5.5, Gemini-3.1-pro-preview), does "latest" raise the ceiling?
+- **Method.** Re-ran V1's pipeline: Opus candidates reused (Claude worker unchanged),
+  **Gemini-3.1-pro-preview** generation, a **GPT-5.5** adjudicator, and a **4× GPT-5.5 / 1×
+  Gemini-3.1-pro-preview** judge panel. 402 candidates → 24 confirmed.
+- **Result.** **16/18 (0.889)** recall at precision **0.742** — the **highest precision of any
+  run**, but two deep-reasoning (c) catches below the 18/18 peak. GPT-5.5 confirmed fewer
+  (24 vs 32) and Gemini-3.1 generated fewer candidates (46 vs 61), so two c-defects (h4, h6)
+  never reached the confirmed list.
+- **Decision.** Recorded as-is: on this single n=6 run the newer models buy **precision, not
+  recall**. The everyday config now pins the latest models (a newer model is preferred once it
+  passes the eval gate — see [`../orchestration/MODELS.md`](../orchestration/MODELS.md)), but
+  the whitepaper keeps each number labelled with the models that produced it. "Newest" is not
+  assumed strictly better; it is measured — and here it wasn't, on recall.
+
 ---
 
 ## What these experiments do NOT prove (carried, not hidden)

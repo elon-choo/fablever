@@ -34,6 +34,21 @@ function fableSystemPrompt() {
   } catch (_) { return ''; }
 }
 
+// Default cross-model refuters: read the latest VALIDATED pins from orchestration/models.json
+// (the single source of truth) and map to OpenRouter slugs, so "workers = always latest" follows
+// the registry. Fail-safe: any error falls back to a current hardcoded pair, never throws.
+function defaultXverifyModels() {
+  const fallback = ['openai/gpt-5.5', 'google/gemini-2.5-pro'];
+  try {
+    const reg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'orchestration', 'models.json'), 'utf8'));
+    const a = reg.active || {};
+    const out = [];
+    if (a.adjudicator) out.push('openai/' + a.adjudicator);
+    if (a.worker_gemini) out.push('google/' + a.worker_gemini);
+    return out.length ? out : fallback;
+  } catch (_) { return fallback; }
+}
+
 const TOOLS = [{
   name: 'fable_fusion',
   description:
@@ -164,7 +179,7 @@ async function runCrossVerify(args) {
   if (!args || typeof args.artifact !== 'string' || !args.artifact.trim()) {
     return { isError: true, text: 'fable_cross_verify requires a non-empty "artifact".' };
   }
-  const models = (Array.isArray(args.models) && args.models.length ? args.models : ['openai/gpt-4o', 'google/gemini-2.5-pro']).slice(0, 4);
+  const models = (Array.isArray(args.models) && args.models.length ? args.models : defaultXverifyModels()).slice(0, 4);
   const lens = (typeof args.lens === 'string' && args.lens.trim()) ? args.lens.trim() : 'overall correctness, security, and missing/edge cases';
   const sys = 'You are an independent adversarial reviewer from a different model family. Try to REFUTE the ' +
     'artifact through the given lens. Reply with ONLY a JSON object: {"refuted": boolean, "confidence": ' +
