@@ -51,6 +51,29 @@ export OPENROUTER_API_KEY=sk-or-v1-... # optional aggregator: one key, many mode
 키는 `~/.zshrc`에 두고, **절대 키를 커밋하지 말라**. 유일한 네트워크/키 표면은 의존성이 없는
 `fusion/fusion-server.js`이다(내장 `fetch`, npm 의존성 없음, postinstall 없음).
 
+### 4가지 리뷰어 프리셋 — 하나를 고르고, 언제든 바꾸고, 그것이 기본값으로 유지된다
+
+대부분의 사람은 이미 ChatGPT 계정을 가지고 있으므로, 두 번째 프리셋은 **API 키가 전혀 없이도**
+GPT 리뷰어를 추가한다. 첫 실행 설정에서 하나를 고르라고 묻고, 그 선택은 지속된다.
+
+| 프리셋 | 무엇을 추가하는가 | 무엇을 해야 하는가 |
+|--------|--------------|------------------|
+| **claude-only** *(기본값)* | 없음 — 같은 계열의 Claude 패널 | 없음 ($0, 키 없음, 로그인 없음) |
+| **gpt-oauth** | 당신의 **ChatGPT 로그인**을 통한 GPT 리뷰어(codex MCP) | codex로 ChatGPT에 로그인 — **API 키 없음** |
+| **gpt-oauth+gemini-api** | ChatGPT 로그인을 통한 GPT **+** Gemini | ChatGPT 로그인 + `GEMINI_API_KEY` 하나 |
+| **gpt-api+gemini-api** | API 키를 통한 GPT **+** Gemini | `OPENROUTER_API_KEY` 하나(둘 다 커버) |
+
+```bash
+node orchestration/lib/xverify-preset.mjs show          # list presets (your default is marked ▶)
+node orchestration/lib/xverify-preset.mjs set gpt-oauth  # change anytime — persists as the new default
+node orchestration/lib/xverify-preset.mjs doctor         # checks if the needed key is set (never prints it)
+```
+
+**보안 & "나머지는 AI가 한다":** 설정은 모든 구성을 당신 대신 기록해준다. 당신은 환원 불가능한
+인간의 단계 — *키를 발급하거나* *로그인하는* 것 — 만 한다. **절대 API 키를 채팅에 붙여넣지 말라**;
+키는 당신이 직접 `~/.zshrc`에 추가하고(`export GEMINI_API_KEY=...`) 새 세션을 시작하라. `doctor`는
+키가 *존재하는지* 여부(true/false)만 보고한다 — 값을 읽거나 출력(echo)하지 않는다.
+
 ## 9.3 비용 다이얼 — `FABLE_ULTRA` = `auto` | `on` | `off`
 
 무거운 교차 모델 / 패널 경로는 비싸다([§4](04-max-quality-config.md)). 이 스위치는 언제 그것을

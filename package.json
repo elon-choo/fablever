@@ -6,7 +6,7 @@
   "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && bash test/install-test.sh",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && bash test/install-test.sh",
     "test:mcp": "node test/mcp-test.js",
     "test:fusion": "node test/fusion-test.js",
     "test:orchestration": "node test/orchestration-test.js",
@@ -16,7 +16,10 @@
     "leaktest": "node tools/fable-leaktest.js",
     "model:check": "node orchestration/lib/model-freshness.mjs check",
     "model:status": "node orchestration/lib/model-freshness.mjs status",
-    "model:adopt": "node orchestration/lib/model-freshness.mjs adopt"
+    "model:adopt": "node orchestration/lib/model-freshness.mjs adopt",
+    "xverify:show": "node orchestration/lib/xverify-preset.mjs show",
+    "xverify:set": "node orchestration/lib/xverify-preset.mjs set",
+    "xverify:doctor": "node orchestration/lib/xverify-preset.mjs doctor"
   },
   "bin": { "fable-profile-mcp": "mcp/src/server.js" },
   "keywords": [

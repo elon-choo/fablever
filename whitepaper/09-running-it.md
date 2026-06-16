@@ -50,6 +50,29 @@ export OPENROUTER_API_KEY=sk-or-v1-... # optional aggregator: one key, many mode
 Put keys in `~/.zshrc`; **never commit a key**. The only network/key surface is the
 zero-dependency `fusion/fusion-server.js` (built-in `fetch`, no npm deps, no postinstall).
 
+### The 4 reviewer presets — pick one, change anytime, it stays your default
+
+Most people already have a ChatGPT account, so the second preset adds a GPT reviewer with **no
+API key at all**. The first-run setup asks you to choose one; your choice persists.
+
+| Preset | What it adds | What you must do |
+|--------|--------------|------------------|
+| **claude-only** *(default)* | nothing — same-family Claude panel | nothing ($0, no key, no login) |
+| **gpt-oauth** | a GPT reviewer via your **ChatGPT login** (codex MCP) | sign into ChatGPT via codex — **no API key** |
+| **gpt-oauth+gemini-api** | GPT via ChatGPT login **+** Gemini | ChatGPT login + a `GEMINI_API_KEY` |
+| **gpt-api+gemini-api** | GPT **+** Gemini via API keys | one `OPENROUTER_API_KEY` (covers both) |
+
+```bash
+node orchestration/lib/xverify-preset.mjs show          # list presets (your default is marked ▶)
+node orchestration/lib/xverify-preset.mjs set gpt-oauth  # change anytime — persists as the new default
+node orchestration/lib/xverify-preset.mjs doctor         # checks if the needed key is set (never prints it)
+```
+
+**Security & "the AI does the rest":** the setup writes all config for you. You only do the
+irreducible human steps — *issue a key* or *sign in*. **Never paste an API key into the chat**;
+add it to `~/.zshrc` yourself (`export GEMINI_API_KEY=...`) and start a new session. `doctor`
+reports only whether a key is *present* (true/false) — it never reads or echoes the value.
+
 ## 9.3 The cost dial — `FABLE_ULTRA` = `auto` | `on` | `off`
 
 The heavy cross-model / panel path is expensive ([§4](04-max-quality-config.md)). This switch

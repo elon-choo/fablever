@@ -226,25 +226,34 @@ cat <<'XMENU'
 ──────────────────────────────────────────────────────────────────────────────
 XMENU
 
-if [ "$XVERIFY" = "openrouter" ] || [ "$XVERIFY" = "codex" ]; then
-  printf '{\n  "mode": "%s",\n  "models": ["openai/gpt-5.5", "google/gemini-3.1-pro-preview"],\n  "n": 1\n}\n' "$XVERIFY" > "$XVERIFY_CFG"
-  echo "  xverify   -> ENABLED ($XVERIFY) -> $XVERIFY_CFG  (the orchestrate skill reads this and passes crossModel)"
-  if [ "$XVERIFY" = "openrouter" ]; then
+# map legacy aliases -> the 4 presets (preset names also accepted directly)
+case "$XVERIFY" in
+  off|claude-only)               PRESET=claude-only ;;
+  codex|gpt-oauth)               PRESET=gpt-oauth ;;
+  openrouter|gpt-api+gemini-api) PRESET=gpt-api+gemini-api ;;
+  gpt-oauth+gemini-api)          PRESET=gpt-oauth+gemini-api ;;
+  *) echo "  xverify   -> WARN: unknown value '$XVERIFY'; using claude-only" ; PRESET=claude-only ;;
+esac
+if node "$REPO/orchestration/lib/xverify-preset.mjs" set "$PRESET" >/dev/null 2>&1; then
+  echo "  xverify   -> preset '$PRESET' -> $XVERIFY_CFG  (change later: node orchestration/lib/xverify-preset.mjs set <preset>)"
+else
+  printf '{ "preset": "claude-only", "mode": "off" }\n' > "$XVERIFY_CFG"; echo "  xverify   -> claude-only (fallback)"
+fi
+case "$PRESET" in
+  gpt-api+gemini-api)
     if have claude && ! claude mcp list 2>/dev/null | grep -q '^fable-fusion\b'; then
       claude mcp add --transport stdio fable-fusion --scope user -- node "$FUSION_SERVER" \
-        && echo "  xverify   -> fable-fusion MCP registered (hosts the fable_cross_verify tool)" \
+        && echo "  xverify   -> fable-fusion MCP registered (hosts fable_cross_verify)" \
         || echo "  xverify   -> WARN: register fable-fusion manually (see fusion/README.md)"
     fi
-    [ -n "${OPENROUTER_API_KEY:-}" ] || echo "  xverify   -> NOTE: set OPENROUTER_API_KEY before using cross-verify."
-  else
-    echo "  xverify   -> NOTE: ensure the codex MCP is connected ('claude mcp list')."
-  fi
-elif [ "$XVERIFY" = "off" ]; then
-  printf '{ "mode": "off" }\n' > "$XVERIFY_CFG"
-  echo "  xverify   -> Claude-only (off). Cross-model path will not run (no overhead)."
-else
-  echo "  xverify   -> WARN: unknown value '$XVERIFY' (use openrouter|codex|off); leaving off." ; printf '{ "mode": "off" }\n' > "$XVERIFY_CFG"
-fi
+    [ -n "${OPENROUTER_API_KEY:-}" ] || echo "  xverify   -> NOTE: set OPENROUTER_API_KEY in ~/.zshrc (never paste a key into chat)." ;;
+  gpt-oauth)
+    echo "  xverify   -> NOTE: sign into ChatGPT via the codex MCP ('claude mcp list') — no API key needed." ;;
+  gpt-oauth+gemini-api)
+    echo "  xverify   -> NOTE: codex MCP for GPT + set GEMINI_API_KEY in ~/.zshrc for Gemini (never paste into chat)." ;;
+  claude-only)
+    echo "  xverify   -> Claude-only (no key/login, zero overhead)." ;;
+esac
 
 HOOK_NOTE=""
 [ "$WITH_HOOK" = "1" ] && HOOK_NOTE="  Hook off:    export FABLE_PROFILE=off   (or)  touch ${PROFILE_DST_DIR}/OFF"

@@ -46,14 +46,23 @@ Before launching `adversarial-verify` (or `judge-panel`), check whether cross-mo
 verification is enabled — it reduces the correlated blind spots a same-family Claude
 panel shares by adding a genuinely different-weights reviewer (GPT/Gemini).
 
-1. Read `~/.claude/fable-profile/xverify.json` (it may not exist → treat as off).
-2. If `mode` is `"openrouter"` or `"codex"`, pass it through to the recipe:
-   `args.crossModel = { provider: <mode>, models: <config.models or omit> }`.
-3. If `mode` is `"off"` or the file is absent, pass **nothing** — the recipe then runs
-   Claude-only with zero extra agents, zero network, zero overhead.
+1. Read `~/.claude/fable-profile/xverify.json` (it may not exist → treat as off). It carries a
+   `preset` plus a compatible `mode`. The user picks the preset via
+   `node orchestration/lib/xverify-preset.mjs set <preset>` (it persists as the default).
+2. Resolve by `mode`:
+   - `"off"` (preset **claude-only**) or file absent → pass **nothing**; Claude-only, zero overhead.
+   - `"codex"` (preset **gpt-oauth**) → `args.crossModel = { provider: "codex", models }` — the GPT
+     reviewer runs through the codex MCP on the user's ChatGPT login (no API key).
+   - `"openrouter"` (preset **gpt-api+gemini-api**) → `args.crossModel = { provider: "openrouter", models }`.
+   - `"codex+gemini"` (preset **gpt-oauth+gemini-api**) → run **both** legs: the GPT verdict via the
+     codex MCP, and a Gemini verdict via the Gemini API (`GEMINI_API_KEY`). Fold both into findings.
+3. Before using a key-based leg, confirm the key is present with
+   `node orchestration/lib/xverify-preset.mjs doctor` (it reports presence only, never the value). If a
+   required key/login is missing, skip that leg and tell the user what to provide — never block.
 
-Do not enable it yourself or hard-code a provider; the file is the single switch (set by
-`./install.sh --with-xverify=...` or edited by the user; `export FABLE_XVERIFY=off` force-disables).
+Do not enable it yourself or hard-code a provider; the file is the single switch (set by the
+preset command, `./install.sh --with-xverify=...`, or edited by the user; `export FABLE_XVERIFY=off`
+force-disables).
 The cross-model arm is **bonus coverage** — it never gates delivery, and it never becomes the
 A/B eval judge (that would leak the treatment; see `eval/README.md`).
 
