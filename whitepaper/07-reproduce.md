@@ -93,9 +93,10 @@ variance that motivates the panel — it is not the reporting path.
 - The **hard A/B**: the panel beats the single *baseline* on recall only slightly and
   does **not** beat its own A2/A_N controls — i.e. the recall gain is lens-taxonomy +
   draw-count, not parallel structure; the panel's structural win is precision.
-- **ULTRA V1**: a perfect **18/18** panel-majority recall at precision ≈ 0.63, leading
-  every single-arm config on the recall×precision frontier — at a deliberately high cost,
-  on the n=6 planted fixture.
+- **ULTRA**: on the latest models (GPT-5.5 + Gemini-3.1-pro-preview) **16/18** panel-majority
+  recall at precision **0.74** (highest of any config); on the prior models (GPT-5.2 +
+  Gemini-2.5-pro) a **18/18** recall peak at 0.63 — leading every single-arm config on the
+  recall×precision frontier, at a deliberately high cost, on the n=6 planted fixture.
 - Adding a GPT-5.2 deep-generation **escalation** (V2) does **not** help — it slightly
   trades recall for precision and nets out worse on recall. Simpler wins.
 

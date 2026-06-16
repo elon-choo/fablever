@@ -10,9 +10,9 @@ an issue.
 
 ## 6.1 The load-bearing one: this is defect-catch, not productivity
 
-The headline result — ULTRA V1 catching **18/18** planted defects — is a **recall number
-on a planted-defect fixture.** It is **not** a developer-productivity number, and nothing
-in this folder claims it is.
+The headline result — ULTRA catching **16/18** planted defects on the latest models (and a
+**18/18** peak on the prior models) — is a **recall number on a planted-defect fixture.** It
+is **not** a developer-productivity number, and nothing in this folder claims it is.
 
 - The project's standing rule **B4** forbids any productivity-magnitude claim before a
   pre-registered, developer-facing A/B is run. ULTRA does not satisfy that bar and does

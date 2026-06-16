@@ -5,13 +5,14 @@ when **correctness matters more than cost**: a security-critical review, a relea
 spec sign-off, an irreversible migration. It is deliberately expensive. For everyday work,
 use the cheap prompt-matched single agent instead (see [§4.4](#44-when-not-to-use-this)).
 
-The measured configuration is **ULTRA V1**: it caught **18/18** planted defects (every
-stratum, including deep-reasoning) at precision ≈ 0.63 under a robust 5-judge panel —
-leading every cheaper config and every same-family panel *on the n=6 author-planted
-fixture (single generation run; a defect-catch result, not productivity — see
-[§6.1](06-limitations.md))*. Critically, **V1 beat the "bigger" V2**: adding more
-generation hurt. The recipe below is V1, and the "do not over-build it" note is
-load-bearing.
+The measured configuration on the **latest models (GPT-5.5 + Gemini-3.1-pro-preview)** caught
+**16/18** planted defects at the **highest precision of any config (0.74)** under a robust
+5-judge panel; the prior-model run (GPT-5.2 + Gemini-2.5-pro) peaked at **18/18** recall at
+0.63 precision — newer models traded ~2 deep-reasoning catches for precision *(n=6
+author-planted, single generation run; a defect-catch result, not productivity — see
+[§6.1](06-limitations.md))*. Critically, the prior run also showed **V1 beat the "bigger" V2**:
+adding more generation hurt. The recipe below is that pipeline, and the "do not over-build it"
+note is load-bearing.
 
 ---
 

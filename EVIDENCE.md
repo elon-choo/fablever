@@ -49,7 +49,7 @@ is structurally harder to catch overclaiming than one that doesn't.
 |----------|----------------------|-----------|
 | **It is measured, not asserted** | Ships a pre-registered, stratified, model-swap, condition-blind eval harness — and the *results*, including a **null/negative** one it discloses. | `eval/ab-harness.mjs`, `eval/results-2026-06-15.md`, `eval/results-2026-06-15-hard.md` |
 | **The eval has controls** | 4 arms (baseline, prompt-matched, draw-matched, panel) that isolate structure from lens-taxonomy and draw-count confounds. Few "agent" tools control for these at all. | `eval/ab-harness.mjs`, `whitepaper/02-methodology.md` §2.2 |
-| **A best-case result, robustly judged** | A cost-no-object cross-model pipeline caught **18/18** planted defects under a **5-judge cross-model panel** (majority vote, not a single grader). | `whitepaper/03-results.md` §3.3, `whitepaper/04-max-quality-config.md` |
+| **A best-case result, robustly judged** | On the latest models (GPT-5.5 + Gemini-3.1-pro-preview) the cost-no-object pipeline caught **16/18** planted defects at the **highest precision of any config (0.74)** under a **5-judge cross-model panel**; the prior-model run peaked at **18/18** recall. Each number is labelled with the models that produced it. | `whitepaper/03-results.md` §3.3 |
 | **Orchestration is executed code, not prose** | Real `parallel()` barriers, schema-forced output, JS-owned gates — with live runtime tests, not "behave like X" text. | `orchestration/recipes/*.mjs`, `test/orchestration-runtime-test.js` |
 | **Cross-model decorrelation** | An off-by-default arm adds a different-weights reviewer (GPT/Gemini) to catch a class a same-family panel structurally can't. Zero overhead when off. | `fusion/fusion-server.js`, `whitepaper/01-what-this-is.md` §1.4 |
 | **Zero dependencies, supply-chain clean** | No npm deps, no `postinstall`/`prepare` scripts. The only network/key surface is one opt-in server. | `package.json`, `fusion/fusion-server.js` |
@@ -87,11 +87,12 @@ scrutiny.
 
 Full list: [`whitepaper/06-limitations.md`](whitepaper/06-limitations.md). The load-bearing ones:
 
-- The headline 18/18 is a **defect-catch** result on a **small (n=6), author-planted**
-  fixture with a **single generation run** — robustly *judged*, not a productivity number.
-- Precision ≈ 0.63 is a **floor** set by a 3-defects-per-task answer key, not a measured
-  hallucination rate (an adversarial refute pass dropped ~nothing — the extra findings are
-  real defects, not noise).
+- The headline (latest models: **16/18**; prior-model peak: **18/18**) is a **defect-catch**
+  result on a **small (n=6), author-planted** fixture with a **single generation run** —
+  robustly *judged*, not a productivity number. "Newest" did not raise recall here.
+- Precision (latest **0.74**, prior **0.63**) is a **floor** set by a 3-defects-per-task
+  answer key, not a measured hallucination rate (an adversarial refute pass dropped ~nothing —
+  the extra findings are real defects, not noise).
 - The orchestration recall gain is **lens-taxonomy + draw-count**, not "parallel structure";
   the panel's structural win is precision, and on easy tasks it is pure cost.
 - **Open items, not hidden:** an archived provenance snapshot (D2) and token/wall-clock

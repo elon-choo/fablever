@@ -87,12 +87,12 @@ Wide cross-model generation maximizes *recall*; a strong independent adjudicator
 
 ### Why a judge *panel*, not a single grader
 
-Matching a free-text defect to a planted one is a judgment call, and a single GPT-5.2
-judge has run-to-run variance: on the winning configuration one strict single-judge run
-scored 17/18 (it disputed one deep-reasoning catch) while the **5-judge majority scored
-18/18**. Headlining the single run — in either direction — would be exactly the
-methodological sloppiness this project exists to avoid. Every headline number in
-[§3 Results](03-results.md) is panel-majority, never a single judge.
+Matching a free-text defect to a planted one is a judgment call, and a single judge has
+run-to-run variance: on the prior-model peak run one strict single-judge pass scored 17/18
+(it disputed one deep-reasoning catch) while the **5-judge majority scored 18/18**. Headlining
+the single run — in either direction — would be exactly the methodological sloppiness this
+project exists to avoid. Every headline number in [§3 Results](03-results.md) is panel-majority
+(the latest-model run is panel-scored at 16/18), never a single judge.
 
 ---
 

@@ -6,13 +6,15 @@
 프롬프트 정합 단일 에이전트(prompt-matched single agent)를 사용하라
 (참조 [§4.4](#44-when-not-to-use-this)).
 
-측정된 구성은 **ULTRA V1**이다: 견고한 5심판단(5-judge panel) 하에서 정밀도(precision) ≈ 0.63으로
-심어둔 결함(defect) **18/18**개를(심층 추론(deep-reasoning)을 포함한 모든 계층(stratum)) 잡아냈으며 —
-*n=6 저자 심어둔(author-planted) 픽스처(fixture)에서(단일 생성 실행(single generation run);
-생산성이 아니라 결함 탐지(defect-catch) 결과다 — 참조
-[§6.1](06-limitations.md))* 모든 더 저렴한 구성과 모든 동일 계열(same-family) 패널을 앞섰다.
-결정적으로, **V1이 "더 큰" V2를 이겼다**: 생성을 더 추가하니 오히려 손해였다. 아래 레시피는
-V1이며, "과도하게 만들지 말라(do not over-build it)"는 주석은 핵심을 담고 있다(load-bearing).
+**최신 모델(GPT-5.5 + Gemini-3.1-pro-preview)**에서 측정된 구성은 견고한 5심판단(5-judge
+panel) 하에서 **어떤 구성보다도 높은 정밀도(0.74)**로 심어둔 결함(planted defect) **16/18**개를
+잡아냈다; 이전 모델 실행(GPT-5.2 + Gemini-2.5-pro)은 정밀도 0.63에서 재현율 **18/18**로 정점을
+찍었다 — 더 새로운 모델들은 심층추론(deep-reasoning) 포착 ~2개를 정밀도와 맞바꿨다 *(n=6
+저자 심어둔(author-planted), 단일 생성 실행(single generation run); 생산성이 아니라 결함 탐지
+(defect-catch) 결과다 — 참조 [§6.1](06-limitations.md))*. 결정적으로, 이전 실행은 또한 **V1이
+"더 큰" V2를 이겼음**을 보여줬다: 생성을 더 추가하니 오히려 손해였다. 아래 레시피는 그
+파이프라인이며, "과도하게 만들지 말라(do not over-build it)"는 주석은 핵심을 담고 있다
+(load-bearing).
 
 ---
 

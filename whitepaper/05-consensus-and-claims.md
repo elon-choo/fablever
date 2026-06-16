@@ -92,8 +92,9 @@ the quality ceiling, and does it survive rigorous judging?*
   **5-model cross-family panel** (majority vote), specifically to defeat single-judge
   variance.
 - **Adversarially stress-tested the result three ways**, and recorded what each found:
-  1. **Single vs panel judge** — a single strict judge said 17/18; the panel majority said
-     **18/18**. Lesson: never headline a single judge. (Reported number = panel.)
+  1. **Single vs panel judge** (prior-model run) — a single strict judge said 17/18; the panel
+     majority said **18/18**. Lesson: never headline a single judge. (Reported number = panel;
+     the latest-model run is panel-scored at 16/18 @ 0.74 precision — see [§3.3](03-results.md).)
   2. **Escalation (push harder)** — adding a GPT-5.2 deep-generation pass *lowered* recall
      to 16/18. Recorded as a **failed** improvement attempt; the simpler config is the
      winner.
