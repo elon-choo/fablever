@@ -119,7 +119,7 @@ export function doctor(preset = current()) {
         : codexState === null ? 'could not verify (claude CLI not found) — see docs/API-KEYS.md § Set up the codex MCP'
         : authed === false ? 'codex MCP registered but you are NOT signed in — run: codex login'
         : authed === true ? 'codex MCP registered + signed in ✓'
-        : 'codex MCP registered ✓ (could not confirm sign-in; if the GPT reviewer fails, run: codex login)';
+        : 'codex MCP registered ✓ (codex CLI not found here to confirm sign-in; if the GPT reviewer fails, run: codex login)';
       return { ...n, satisfied, hint };
     }
     return { ...n, satisfied: null, hint: n.what };
@@ -138,6 +138,10 @@ const isMain = (() => {
 if (isMain) {
   const cmd = process.argv[2] || 'show';
   const presetList = Object.keys(PRESETS).join(', ');
+  // gentle signal: if the saved config exists but is corrupt, current() silently falls back —
+  // tell the user instead of pretending their edit took.
+  try { if (fs.existsSync(CFG)) JSON.parse(fs.readFileSync(CFG, 'utf8')); }
+  catch { console.error(`warning: ${CFG} is unreadable/corrupt — using default "${DEFAULT_PRESET}". Fix the file or run: set <preset>`); }
   const cur = current();
   if (cmd === 'show') {
     console.log('Cross-model reviewer presets (current default marked ▶):\n');

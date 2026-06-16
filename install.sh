@@ -297,6 +297,7 @@ case "$LANG_CODE" in
 ✅ 설치 완료. 다음 단계는 하나뿐 — Claude Code를 재시작하세요(또는 /clear).
    첫 세션에서 fablever가 간단한 설정 질문 2개를 물어봅니다. 그냥 "skip"이라고 답하면
    안전한 기본값으로 시작됩니다 — API 키가 필요 없고 추가 비용도 없습니다.
+   (아래 영어 안내는 참고용입니다. 한국어 백서: whitepaper/ko/)
 L
   ;;
   ja) cat <<'L'
@@ -304,6 +305,7 @@ L
 ✅ インストール完了。次にやることは一つだけ — Claude Code を再起動してください（または /clear）。
    最初のセッションで fablever が簡単な設定の質問を2つします。「skip」と答えれば
    安全な初期設定で始まります — APIキーは不要で、追加費用もありません。
+   （以下の英語は参考用の詳細です。）
 L
   ;;
   zh) cat <<'L'
@@ -311,6 +313,7 @@ L
 ✅ 安装完成。下一步只有一个 — 重启 Claude Code（或 /clear）。
    首次会话中 fablever 会问你两个简单的设置问题。直接回答 "skip"
    即可使用安全的默认设置 — 无需 API 密钥，也不产生额外费用。
+   （下面的英文为参考详情。）
 L
   ;;
   es) cat <<'L'
@@ -318,6 +321,7 @@ L
 ✅ Instalación completa. El único paso siguiente: reinicia Claude Code (o /clear).
    En tu primera sesión, fablever te hará 2 preguntas rápidas de configuración. Responde
    "skip" para los valores por defecto seguros — sin clave API y sin coste adicional.
+   (Los detalles en inglés siguen abajo.)
 L
   ;;
   fr) cat <<'L'
@@ -325,6 +329,7 @@ L
 ✅ Installation terminée. Seule étape suivante : redémarre Claude Code (ou /clear).
    Lors de ta première session, fablever te posera 2 questions de configuration rapides.
    Réponds « skip » pour les réglages par défaut sûrs — sans clé API ni coût supplémentaire.
+   (Les détails en anglais suivent ci-dessous.)
 L
   ;;
   de) cat <<'L'
@@ -332,6 +337,7 @@ L
 ✅ Installation abgeschlossen. Einziger nächster Schritt: starte Claude Code neu (oder /clear).
    In deiner ersten Sitzung stellt fablever 2 kurze Einrichtungsfragen. Antworte mit
    "skip" für die sicheren Standardwerte — kein API-Schlüssel, keine Zusatzkosten.
+   (Englische Details folgen unten.)
 L
   ;;
   pt) cat <<'L'
@@ -339,6 +345,7 @@ L
 ✅ Instalação concluída. Único próximo passo: reinicie o Claude Code (ou /clear).
    Na sua primeira sessão, o fablever fará 2 perguntas rápidas de configuração. Responda
    "skip" para os padrões seguros — sem chave de API e sem custo adicional.
+   (Os detalhes em inglês seguem abaixo.)
 L
   ;;
 esac

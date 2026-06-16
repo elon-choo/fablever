@@ -77,7 +77,8 @@ export GEMINI_API_KEY=...        # GOOGLE_API_KEY is also accepted
 export OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
-Put these in `~/.zshrc` (this machine uses zsh) so they persist, **or** pass them to the
+Put these in the rc file your login shell actually reads — `~/.zshrc` (zsh, the macOS default) or
+`~/.bashrc` / `~/.bash_profile` (bash, most Linux), then open a new session — **or** pass them to the
 fusion module's config. **Never commit a key**; never paste one into a doc or an issue.
 
 ### Choosing a provider path

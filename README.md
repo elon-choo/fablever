@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
 
+> 🌐 **한국어:** 백서 [`whitepaper/ko/`](whitepaper/ko/) · 근거 요약 [`EVIDENCE.ko.md`](EVIDENCE.ko.md). 설치 후 안내(설치 스크립트·온보딩)는 사용자 언어로 자동 표시됩니다. · **Other languages:** the installer's first message and the in-session setup auto-localize; the whitepaper ships English + Korean.
+
 Apply Anthropic's documented **Fable working-style guidance** as an always-on output style in
 [Claude Code](https://claude.com/claude-code) (and any MCP client), so **any** Claude model — Opus,
 Sonnet, Haiku — works more the way Fable does: decisive, outcome-first, restrained, evidence-grounded,
