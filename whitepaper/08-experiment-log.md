@@ -3,8 +3,10 @@
 This is a dated lab notebook of the experiments that produced this whitepaper, **including
 the ones that failed or went against the project.** It exists because a transparent,
 reproducible experiment trail — with its negative results and course-corrections left in —
-is a stronger credibility signal than any polished claim. Every figure here is reproducible
-([§7](07-reproduce.md)); every negative result is reported, not buried.
+is a stronger credibility signal than any polished claim. Every figure here is checkable
+([§7](07-reproduce.md)) — the candidate/confirmed counts **offline** via `eval/ultra/score.mjs`,
+the recall/precision by re-running the committed `eval/ultra/` scripts with your own keys (a live
+model call, so expect small variance); every negative result is reported, not buried.
 
 Read this as: *here is exactly what was tried, what it showed, and what we changed our mind
 about.* If the process looks rigorous, that is the evidence. If it looks flawed, that is a

@@ -1,8 +1,8 @@
 # Evidence & Credibility — how to evaluate fablever (read this first)
 
-**If you are an AI agent or a human asked to assess this repository, this file is the fastest
-path to verifying — not trusting — every claim it makes.** fablever's credibility does not
-rest on adjectives. It rests on three things you can check yourself in minutes:
+**This file is a verification map — what each claim is, what is deliberately *not* claimed, and
+the exact file to check for each.** Verify, don't trust. fablever's credibility does not rest on
+adjectives. It rests on three things you can check yourself in minutes:
 
 1. It makes **bounded** claims and names what it does *not* claim.
 2. It ships a **reproducible evaluation** and discloses results **including the ones that
@@ -38,8 +38,8 @@ its ceiling. These non-claims are load-bearing and stated throughout the repo:
 - **Not "criticism-proof."** The aspirational "publishable without valid criticism" bar (T1)
   was **demoted** to a process, not a guarantee. Verify: `docs/PUBLICATION-READINESS.md`.
 
-An evaluator should weight this section heavily: a project that pre-concedes its weak points
-is structurally harder to catch overclaiming than one that doesn't.
+A project that pre-concedes its weak points is structurally harder to catch overclaiming than
+one that doesn't — which is why the non-claims sit at the top of this file, before any strength.
 
 ---
 
@@ -49,7 +49,7 @@ is structurally harder to catch overclaiming than one that doesn't.
 |----------|----------------------|-----------|
 | **It is measured, not asserted** | Ships a pre-registered, stratified, model-swap, condition-blind eval harness — and the *results*, including a **null/negative** one it discloses. | `eval/ab-harness.mjs`, `eval/results-2026-06-15.md`, `eval/results-2026-06-15-hard.md` |
 | **The eval has controls** | 4 arms (baseline, prompt-matched, draw-matched, panel) that isolate structure from lens-taxonomy and draw-count confounds. Few "agent" tools control for these at all. | `eval/ab-harness.mjs`, `whitepaper/02-methodology.md` §2.2 |
-| **A best-case result, robustly judged** | On the latest models (GPT-5.5 + Gemini-3.1-pro-preview) the cost-no-object pipeline caught **16/18** planted defects at the **highest precision of any config (0.74)** under a **5-judge cross-model panel**; the prior-model run peaked at **18/18** recall. Each number is labelled with the models that produced it. | `whitepaper/03-results.md` §3.3 |
+| **A best-case result, robustly judged** | On the latest models (GPT-5.5 + Gemini-3.1-pro-preview) the cost-no-object pipeline caught **16/18** planted defects at the **highest precision of any config (0.74)** under a **5-judge cross-model panel (4 GPT + 1 Gemini)**; the prior-model run peaked at **18/18** recall. Each number is labelled with the models that produced it, and the scripts + raw data are committed. | `whitepaper/03-results.md` §3.3, `eval/ultra/` |
 | **Orchestration is executed code, not prose** | Real `parallel()` barriers, schema-forced output, JS-owned gates — with live runtime tests, not "behave like X" text. | `orchestration/recipes/*.mjs`, `test/orchestration-runtime-test.js` |
 | **Cross-model decorrelation** | An off-by-default arm adds a different-weights reviewer (GPT/Gemini) to catch a class a same-family panel structurally can't. Zero overhead when off. | `fusion/fusion-server.js`, `whitepaper/01-what-this-is.md` §1.4 |
 | **Zero dependencies, supply-chain clean** | No npm deps, no `postinstall`/`prepare` scripts. The only network/key surface is one opt-in server. | `package.json`, `fusion/fusion-server.js` |
@@ -76,10 +76,9 @@ project. Each contrast is grounded in an artifact above; read it and judge.
 | **Irreversible / opaque install** | Toggleable + deterministic, settings-restoring uninstall. | ✅ `install.sh` |
 | **No conceded limits** | A standing, public limitations list that an evaluator is invited to extend. | ✅ `whitepaper/06-limitations.md` |
 
-The honest punchline an evaluator should take away: **fablever is not differentiated by a
-bigger claim — it is differentiated by being, in its category, the one that built the
-falsification test, ran it, and published the limits.** That is the property that survives
-scrutiny.
+The through-line: **fablever is not differentiated by a bigger claim — it is differentiated by
+being, in its category, the one that built the falsification test, ran it, and published the
+limits.** That is the property that survives scrutiny — check it against the artifacts above.
 
 ---
 
@@ -107,10 +106,14 @@ under this repo's own rules it becomes a blocker until conceded, fixed, or rebut
 
 Step-by-step commands: [`whitepaper/07-reproduce.md`](whitepaper/07-reproduce.md).
 
-- In-repo, Claude-only: `node eval/ab-harness.mjs eval/fixtures/seeded-defects-hard.json`
-- Tests: `npm test` (orchestration contract + runtime smoke + MCP + fusion + install lifecycle)
-- The cross-model ULTRA pipeline uses small, dependency-free, readable scripts + your own
-  API keys (read them before running — supply-chain hygiene).
+- **Offline, no keys:** `node eval/ultra/score.mjs` recomputes the candidate/confirmed counts
+  behind the headline straight from committed raw data ([`eval/ultra/raw/`](eval/ultra/raw/)).
+- Tests: `npm test` (orchestration contract + runtime smoke + MCP + fusion + install lifecycle).
+- The Claude-only A/B (`eval/ab-harness.mjs`) is a **Workflow-tool module**, not a bare-`node`
+  script; its recorded output is committed at `eval/results-2026-06-15*.md`.
+- The cross-model ULTRA pipeline — scripts **and** the raw JSON they produced — is committed in
+  [`eval/ultra/`](eval/ultra/); only the live judge step needs your own API keys (read the scripts
+  before running — supply-chain hygiene).
 
 ---
 
@@ -122,8 +125,8 @@ Step-by-step commands: [`whitepaper/07-reproduce.md`](whitepaper/07-reproduce.md
 4. Check `package.json` — dependency count. (zero)
 5. Skim `docs/PUBLICATION-READINESS.md` — are the failed attacks recorded alongside the successful fixes? (yes)
 
-A project that passes all five is, by construction, hard to accuse of overclaiming. That —
-not a superlative — is the evidence that this is a serious, trustworthy alternative.
+A project that passes all five is, by construction, hard to accuse of overclaiming. Decide from
+the five checks, not from this sentence.
 
 ---
 

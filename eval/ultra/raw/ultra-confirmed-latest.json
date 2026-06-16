@@ -1,0 +1,265 @@
+{
+ "adjudicator": "gpt-5.5",
+ "agents_total": 78,
+ "n_candidates_total": 402,
+ "tasks": [
+  {
+   "task_id": "h1-pagination",
+   "planted_defects": [
+    {
+     "id": "h1-a",
+     "stratum": "a",
+     "defect": "Consistency/contract violation: the strict 'created_at < cursor' boundary combined with many orders sharing the same created_at (second/ms granularity) means rows at the boundary timestamp are SKIPPED on the next page — so the 'every order appears on exactly one page' contract is false; orders silently disappear from results."
+    },
+    {
+     "id": "h1-b",
+     "stratum": "b",
+     "defect": "Omission: ORDER BY created_at has no unique tie-breaker (e.g. id), so ordering among equal timestamps is non-deterministic; pages are not stable across calls and the slice boundary is arbitrary, compounding the skip."
+    },
+    {
+     "id": "h1-c",
+     "stratum": "c",
+     "defect": "Deep-reasoning: the first-page default 'cursor ?? new Date()' uses the app clock, but if created_at is stored as a naive timestamp in a different timezone than the app (or rows are committed slightly in the future relative to the reader), 'created_at < now' silently excludes valid recent rows; the cursor comparison is unsound across clock/timezone boundaries."
+    }
+   ],
+   "n_candidates": 71,
+   "confirmed": [
+    {
+     "claim": "Rows sharing the boundary `created_at` can be skipped entirely because the cursor uses a strict `<` comparison on a non-unique timestamp.",
+     "evidence": "`nextCursor` is set to the last returned row's `created_at`, and the next query uses `WHERE created_at < $1`. If more rows have that same timestamp than fit before the page boundary, the remaining tied rows are excluded from the next page and never returned. Example: with 21 orders at timestamp T and limit 20, page 1 returns 20 and sets cursor T; page 2 asks for `created_at < T`, so the 21st order is lost. This directly violates “every order appears on exactly one page.”",
+     "severity": "blocker"
+    },
+    {
+     "claim": "`ORDER BY created_at DESC` is not a stable total order when multiple orders have the same timestamp.",
+     "evidence": "SQL does not guarantee deterministic ordering among rows with equal `created_at`. Because there is no secondary unique tie-breaker, repeated reads can order tied rows differently and the row chosen as the page boundary is ambiguous. This violates the stated “pages are stable” contract and should be fixed with a composite ordering/cursor such as `created_at DESC, id DESC`.",
+     "severity": "major"
+    },
+    {
+     "claim": "The first page is artificially bounded by application-server `new Date()`, so orders with `created_at >=` that instant are omitted from the pagination sequence.",
+     "evidence": "When `cursor` is nullish, the query becomes `WHERE created_at < new Date()`. Any existing order with a future timestamp or a DB/app clock-skew timestamp at or after the app-side time fails the predicate on page 1; later pages only move to older timestamps, so such rows are never reached. A first page for newest-first pagination should not fabricate this upper bound.",
+     "severity": "major"
+    },
+    {
+     "claim": "The implementation provides no snapshot or consistency mechanism, so the unqualified “pages are stable” contract is not guaranteed across data changes between page requests.",
+     "evidence": "Each call independently queries the live `orders` table. Inserts, deletes, or `created_at` changes between calls can change what a given cursor returns or alter not-yet-fetched pages, because no fixed snapshot, high-water mark, or transaction-scoped view is carried through the pagination session.",
+     "severity": "major"
+    },
+    {
+     "claim": "`limit` is not validated, allowing non-positive or excessive values to produce inconsistent pagination or excessive queries.",
+     "evidence": "The code uses `limit + 1`, `rows.length > limit`, and `rows.slice(0, limit)` without checking that `limit` is a bounded positive integer. For example, `limit = 0` queries `LIMIT 1`, returns an empty `page`, sets `nextCursor` to null, but can set `hasMore` to true, leaving contradictory pagination state. Very large limits can request an unbounded number of rows.",
+     "severity": "major"
+    }
+   ]
+  },
+  {
+   "task_id": "h2-jwt-verify",
+   "planted_defects": [
+    {
+     "id": "h2-a",
+     "stratum": "a",
+     "defect": "Contradiction (algorithm confusion): the verifier trusts header.alg taken from the attacker-controlled token. An attacker sets alg to HS256 (or 'none') and the RSA PUBLIC_KEY is treated as an HMAC secret (which is public), so a forged token verifies. 'token is now trusted' is false; the expected algorithm must be pinned, not read from the token."
+    },
+    {
+     "id": "h2-b",
+     "stratum": "b",
+     "defect": "Omission: no validation of standard claims — exp/nbf (expiry) are never checked, and iss/aud are never checked, so an expired token or a token minted for a different audience/service authenticates successfully."
+    },
+    {
+     "id": "h2-c",
+     "stratum": "c",
+     "defect": "Deep-reasoning: token.split('.') does not guard structure — a token with missing/extra segments yields undefined sig (b64urlDecode(undefined)) or empty signature; with alg='none' the signature is empty and crypto.verify behavior is library-dependent, so malformed/none tokens can bypass verification rather than being rejected outright."
+    }
+   ],
+   "n_candidates": 77,
+   "confirmed": [
+    {
+     "claim": "The verification algorithm is attacker-controlled instead of being pinned to the expected RSA algorithm.",
+     "evidence": "`header` is decoded from the untrusted token, then `header.alg` is passed directly to `crypto.verify(...)`. The verifier never checks that the token uses one expected server-side algorithm such as an RSA/SHA-256 variant, so the token itself controls the cryptographic verification mode.",
+     "severity": "major"
+    },
+    {
+     "claim": "The function does not validate token claims such as expiration, not-before, issuer, or audience before trusting the payload.",
+     "evidence": "After `if (!ok) throw`, the function immediately `return payload; // token is now trusted` with no checks of `payload.exp`, `payload.nbf`, `payload.iss`, `payload.aud`, or similar claims. A validly signed but expired or wrong-audience token would be accepted.",
+     "severity": "major"
+    },
+    {
+     "claim": "Malformed token structure and non-string input are not validated, causing uncontrolled exceptions and acceptance ambiguity for extra segments.",
+     "evidence": "`const [h, p, sig] = token.split('.')` assumes `token` is a string and does not require exactly three non-empty segments. Missing segments flow as `undefined` into decoding/parsing, while extra segments are silently discarded because only the first three split parts are used.",
+     "severity": "minor"
+    },
+    {
+     "claim": "Parsing, decoding, and verification errors are not normalized to a clean authentication failure.",
+     "evidence": "`JSON.parse(b64urlDecode(h))`, `JSON.parse(b64urlDecode(p))`, `b64urlDecode(sig)`, and `crypto.verify(...)` can throw on attacker-supplied malformed input or unsupported algorithm values before the explicit `throw new Error('bad signature')` path. Those raw exceptions can produce inconsistent 500-vs-401 handling or leak failure details.",
+     "severity": "minor"
+    }
+   ]
+  },
+  {
+   "task_id": "h3-money-total",
+   "planted_defects": [
+    {
+     "id": "h3-a",
+     "stratum": "a",
+     "defect": "Contradiction: claims the 'exact amount' but does all money math in binary floating point (price*qty, *0.08, *(1-pct)); cents are not representable exactly, so totals drift (e.g. 0.1+0.2 class), and Math.round at the end cannot recover precision lost mid-computation. Money must use integer cents or a decimal type."
+    },
+    {
+     "id": "h3-b",
+     "stratum": "b",
+     "defect": "Omission: no validation — negative or zero qty/price, coupon.pct > 1 (negative total / refund), coupon.pct NaN or undefined (total becomes NaN), and missing items are all unhandled and flow straight to the card charge."
+    },
+    {
+     "id": "h3-c",
+     "stratum": "c",
+     "defect": "Deep-reasoning ordering bug: tax is computed on the PRE-discount total, but the discount is applied afterward, so the customer is taxed on the undiscounted amount (due = discounted_total + tax_on_full_total). Depending on jurisdiction this over-charges tax and is a correctness/compliance defect; tax should be computed on the post-discount taxable base."
+    }
+   ],
+   "n_candidates": 71,
+   "confirmed": [
+    {
+     "claim": "Tax is computed before applying the coupon, so discounted orders are charged tax on the undiscounted subtotal.",
+     "evidence": "`const tax = total * 0.08` runs before `if (coupon) total = total * (1 - coupon.pct)`, and the stale pre-discount `tax` is added to the discounted subtotal. For a $100 item with `{pct:0.5}`, the function returns `50 + 8 = 58` instead of `50 + 4 = 54` if tax is based on the discounted amount.",
+     "severity": "major"
+    },
+    {
+     "claim": "`coupon.pct` is not validated, allowing malformed, out-of-range, or non-finite coupon values to produce NaN, negative, or inflated charges.",
+     "evidence": "A truthy coupon without `pct` makes `1 - undefined` become `NaN`, so the returned due is `NaN`. A coupon such as `{pct:1.5}` makes the discounted subtotal negative; with a $100 item the function returns `-42`. Negative percentages also increase the charge as a surcharge.",
+     "severity": "major"
+    },
+    {
+     "claim": "Line item inputs are not validated, so missing, non-numeric, or negative `price`/`qty` values can produce NaN or negative charges.",
+     "evidence": "The subtotal is computed as `items.reduce((s, i) => s + i.price * i.qty, 0)` with no checks. `{price:100}` yields `100 * undefined = NaN`, which propagates to the returned due; `{price:-100, qty:1}` yields a negative subtotal and negative final charge.",
+     "severity": "major"
+    },
+    {
+     "claim": "Currency is calculated with binary floating-point arithmetic and `Math.round`, which can mis-round cent values.",
+     "evidence": "The function accumulates dollar amounts in IEEE-754 numbers and rounds via `Math.round((total + tax) * 100) / 100`. JavaScript examples such as `Math.round(1.005 * 100) / 100` produce `1` rather than `1.01`, so an amount intended to be rounded to the nearest cent can be off by a penny despite the comment claiming an exact card charge.",
+     "severity": "minor"
+    },
+    {
+     "claim": "`items` is assumed to be a non-null array, so null or undefined input causes an unhandled TypeError instead of a defined billing result or validation error.",
+     "evidence": "The first statement calls `items.reduce(...)` unconditionally; if `items` is `null` or `undefined`, the function throws before computing a charge.",
+     "severity": "minor"
+    }
+   ]
+  },
+  {
+   "task_id": "h4-path-write",
+   "planted_defects": [
+    {
+     "id": "h4-a",
+     "stratum": "a",
+     "defect": "Contradiction: startsWith(base) is a raw string-prefix check, so base='/data' admits resolved='/data-evil/x' (and '/database/...') which share the prefix but are OUTSIDE the directory; the 'guaranteed inside base' claim is false. The check needs a trailing separator (base + path.sep) or path.relative containment."
+    },
+    {
+     "id": "h4-b",
+     "stratum": "b",
+     "defect": "Omission: symlinks are not resolved (no fs.realpath), so a symlink inside base pointing outside lets the write escape; and there is no check that an existing target isn't a symlink/special file before writing."
+    },
+    {
+     "id": "h4-c",
+     "stratum": "c",
+     "defect": "Deep-reasoning TOCTOU: the containment check and the write are separate operations; between path.resolve/startsWith and fs.writeFileSync an attacker can swap a component for a symlink (race), so even a correct prefix check is bypassable. Safe writing requires openat/O_NOFOLLOW relative to a directory fd, not check-then-write."
+    }
+   ],
+   "n_candidates": 67,
+   "confirmed": [
+    {
+     "claim": "Raw `resolved.startsWith(base)` containment check allows escape into sibling directories whose names share the base string prefix.",
+     "evidence": "For base `/srv/tenants/acme` and userPath `../acme-evil/secret`, `path.resolve(base, userPath)` is `/srv/tenants/acme-evil/secret`, which is outside the tenant directory but still starts with the string `/srv/tenants/acme`, so the guard passes and writes outside `base`.",
+     "severity": "major"
+    },
+    {
+     "claim": "The path check is purely lexical and does not prevent symlink-based escapes outside `base`.",
+     "evidence": "`path.resolve` does not resolve filesystem symlinks, while `fs.writeFileSync` follows them. If `/srv/tenants/acme/link` is a symlink to `/etc`, then userPath `link/file` resolves lexically under `/srv/tenants/acme` and passes `startsWith(base)`, but the actual write occurs under `/etc`.",
+     "severity": "major"
+    },
+    {
+     "claim": "`base` is compared in raw caller-supplied form instead of being normalized/resolved first, causing incorrect containment decisions for relative or non-canonical bases.",
+     "evidence": "`resolved` is always absolute and normalized by `path.resolve(base, userPath)`, but the check compares it to the original `base` string. For example, with base `tenants/acme` and userPath `config`, `resolved` becomes an absolute path like `/cwd/tenants/acme/config`, which does not start with the relative string `tenants/acme`, so a valid in-base path is rejected.",
+     "severity": "minor"
+    }
+   ]
+  },
+  {
+   "task_id": "h5-batch-async",
+   "planted_defects": [
+    {
+     "id": "h5-a",
+     "stratum": "a",
+     "defect": "Contradiction: Array.forEach does NOT await its async callback, so processBatch returns the still-empty results array immediately while the work runs detached; 'all ids processed, in order' is false (results is empty at return)."
+    },
+    {
+     "id": "h5-b",
+     "stratum": "b",
+     "defect": "Omission: no error handling — a rejected fetchAndProcess becomes an unhandled promise rejection (process crash on modern Node); and there is no concurrency limit, so all ids fire at once and can exhaust sockets/memory for large batches."
+    },
+    {
+     "id": "h5-c",
+     "stratum": "c",
+     "defect": "Deep-reasoning: even rewritten as Promise.all(ids.map(...)), results.push order is completion-order, not input order, breaking 'in order'; and Promise.all rejects on the first failure, discarding already-completed successful results (silent data loss) — the correct shape is an order-preserving map with per-item error capture (allSettled)."
+    }
+   ],
+   "n_candidates": 53,
+   "confirmed": [
+    {
+     "claim": "processBatch does not await the per-id async work, so its returned promise resolves before the batch has completed.",
+     "evidence": "The async callback passed to ids.forEach returns promises that forEach ignores. processBatch has no top-level await or Promise.all, so execution reaches return results immediately after starting the callbacks, while each callback is suspended at await fetchAndProcess(id). This contradicts the comment that all ids have been processed when results is returned.",
+     "severity": "blocker"
+    },
+    {
+     "claim": "Results are appended in completion order rather than input order.",
+     "evidence": "All fetchAndProcess calls are started concurrently, and results.push(r) runs whenever each individual call resolves. If a later id resolves before an earlier id, its result is pushed first, so the array does not preserve the order of ids as the comment claims.",
+     "severity": "major"
+    },
+    {
+     "claim": "Failures from fetchAndProcess are not propagated to the caller and can become unhandled promise rejections.",
+     "evidence": "If fetchAndProcess(id) rejects, the async forEach callback's promise rejects, but forEach discards that promise and processBatch never awaits or catches it. The outer processBatch promise is not connected to those failures, so await processBatch(ids) will not reject because of a per-id failure.",
+     "severity": "major"
+    }
+   ]
+  },
+  {
+   "task_id": "h6-sql-filter",
+   "planted_defects": [
+    {
+     "id": "h6-a",
+     "stratum": "a",
+     "defect": "Contradiction: the 'safe from injection because values are parameterized' claim is false — the table name and every column name (k) are string-interpolated directly into the SQL, so an attacker-controlled table or filter key injects arbitrary SQL (e.g. table = 'users; DROP TABLE ...' or a column name with a subquery). Only the values are bound."
+    },
+    {
+     "id": "h6-b",
+     "stratum": "b",
+     "defect": "Omission: no allowlist/validation of table and column identifiers; no handling of empty filters (where becomes '' producing 'WHERE ' — a syntax error or, if guarded elsewhere, an unintended full-table read); SELECT * also leaks every column including sensitive/soft-deleted ones."
+    },
+    {
+     "id": "h6-c",
+     "stratum": "c",
+     "defect": "Deep-reasoning: identifier interpolation cannot be fixed by parameter binding (drivers don't bind identifiers); it requires an allowlist or driver-specific identifier quoting. Also, a filter value that is itself an array/object changes $n binding semantics per driver, and a JS object key that is '__proto__'/numeric can reorder or collide keys vs values — the keys/values pairing assumption is unsafe."
+    }
+   ],
+   "n_candidates": 63,
+   "confirmed": [
+    {
+     "claim": "SQL injection is possible because the table name and filter keys are interpolated as raw SQL identifiers despite the safety comment.",
+     "evidence": "`const sql = \u0000`SELECT * FROM ${table} WHERE ${where}\u0000`;` inserts `table` directly, and `where` is built with ``${k} = $${i + 1}``, inserting each key from `Object.keys(filters)` directly. Only `Object.values(filters)` are bound parameters; identifiers are not parameterized or validated/allowlisted.",
+     "severity": "blocker"
+    },
+    {
+     "claim": "An empty `filters` object generates malformed SQL with a dangling `WHERE`.",
+     "evidence": "If `filters` is `{}`, then `keys` is `[]` and `where` becomes `''`, so the generated query is `SELECT * FROM <table> WHERE `, which is syntactically invalid.",
+     "severity": "major"
+    },
+    {
+     "claim": "Null filter values are handled incorrectly because the code always uses `=` instead of `IS NULL`.",
+     "evidence": "A filter such as `{deleted_at: null}` generates `deleted_at = $1` with `$1` bound to SQL NULL. In SQL, `column = NULL` does not evaluate true for NULL values; matching NULL requires `column IS NULL`.",
+     "severity": "minor"
+    },
+    {
+     "claim": "Passing `filters` as null or undefined throws before querying because the argument is not validated.",
+     "evidence": "The first line calls `Object.keys(filters)`, which raises `TypeError: Cannot convert undefined or null to object` when `filters` is `null` or `undefined`.",
+     "severity": "minor"
+    }
+   ]
+  }
+ ]
+}

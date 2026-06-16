@@ -6,7 +6,7 @@
   "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && bash test/install-test.sh",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && bash test/install-test.sh",
     "test:mcp": "node test/mcp-test.js",
     "test:fusion": "node test/fusion-test.js",
     "test:orchestration": "node test/orchestration-test.js",
@@ -14,6 +14,7 @@
     "test:model": "node test/model-test.mjs",
     "test:install": "bash test/install-test.sh",
     "leaktest": "node tools/fable-leaktest.js",
+    "ultra:score": "node eval/ultra/score.mjs",
     "model:check": "node orchestration/lib/model-freshness.mjs check",
     "model:status": "node orchestration/lib/model-freshness.mjs status",
     "model:adopt": "node orchestration/lib/model-freshness.mjs adopt",
