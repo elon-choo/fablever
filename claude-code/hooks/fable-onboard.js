@@ -46,6 +46,12 @@ try {
     'until setup is done. PRINCIPLE: do ALL the configuration yourself; ask the user ONLY for the ' +
     'irreducible human steps (issuing an API key, or signing in). Assume they may be new to AI/keys. ' +
     'Run this as a short, friendly setup before their first task.\n\n' +
+    'LANGUAGE — speak the user\'s language. Detect the language the user writes in and deliver this ' +
+    'ENTIRE setup (questions, the preset names\' explanations, key/login guidance, confirmations) in ' +
+    'THAT language, translated naturally — do not dump English at a non-English user. If they have not ' +
+    'written yet, open with a one-line greeting and switch to whatever language they reply in. Keep ' +
+    'commands, file paths, env-var names, and preset IDs (claude-only / gpt-oauth / …) verbatim; ' +
+    'translate the prose around them.\n\n' +
     'STEP 0 — stop the nag first. Immediately create the file ' + flag + ' (any content). Do this BEFORE ' +
     'anything else so that even if later steps are skipped or error, this prompt never repeats and the ' +
     'session is never blocked (the install already wrote working defaults: cost mode "auto", reviewer ' +

@@ -24,7 +24,8 @@ try {
     const cands = (st.candidates || []).filter(Boolean);
     if (cands.length) {
       const lines = cands.map(c => `  • ${c.candidate} (newer than pinned ${c.current} for role ${c.role})`).join('\n');
-      notice = `[fablever] A newer verification model may be available:\n${lines}\n` +
+      notice = `[fablever — if you surface this to the user, do it in their language; keep commands/ids verbatim]\n` +
+        `A newer verification model may be available:\n${lines}\n` +
         `It is NOT in use yet — adoption is eval-gated to protect reproducibility. To validate & adopt:\n` +
         `  node orchestration/lib/model-freshness.mjs adopt <role> <id>\n` +
         `(See orchestration/MODELS.md. Published whitepaper numbers keep their original models.)`;

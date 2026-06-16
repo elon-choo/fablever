@@ -274,6 +274,63 @@ esac
 
 HOOK_NOTE=""
 [ "$WITH_HOOK" = "1" ] && HOOK_NOTE="  Hook off:    export FABLE_PROFILE=off   (or)  touch ${PROFILE_DST_DIR}/OFF"
+
+# Localized post-install handoff — the terminal output is the FIRST UX moment, before the in-session
+# agent can translate anything. Print the one essential next-action in the user's language (from the
+# locale), then the English detail block below. Falls back to English for unlisted locales.
+LANG_CODE="$(printf '%s' "${LANG:-${LC_ALL:-${LC_MESSAGES:-}}}" | cut -d. -f1 | cut -d_ -f1 | tr '[:upper:]' '[:lower:]')"
+case "$LANG_CODE" in
+  ko) cat <<'L'
+
+✅ 설치 완료. 다음 단계는 하나뿐 — Claude Code를 재시작하세요(또는 /clear).
+   첫 세션에서 fablever가 간단한 설정 질문 2개를 물어봅니다. 그냥 "skip"이라고 답하면
+   안전한 기본값으로 시작됩니다 — API 키가 필요 없고 추가 비용도 없습니다.
+L
+  ;;
+  ja) cat <<'L'
+
+✅ インストール完了。次にやることは一つだけ — Claude Code を再起動してください（または /clear）。
+   最初のセッションで fablever が簡単な設定の質問を2つします。「skip」と答えれば
+   安全な初期設定で始まります — APIキーは不要で、追加費用もありません。
+L
+  ;;
+  zh) cat <<'L'
+
+✅ 安装完成。下一步只有一个 — 重启 Claude Code（或 /clear）。
+   首次会话中 fablever 会问你两个简单的设置问题。直接回答 "skip"
+   即可使用安全的默认设置 — 无需 API 密钥，也不产生额外费用。
+L
+  ;;
+  es) cat <<'L'
+
+✅ Instalación completa. El único paso siguiente: reinicia Claude Code (o /clear).
+   En tu primera sesión, fablever te hará 2 preguntas rápidas de configuración. Responde
+   "skip" para los valores por defecto seguros — sin clave API y sin coste adicional.
+L
+  ;;
+  fr) cat <<'L'
+
+✅ Installation terminée. Seule étape suivante : redémarre Claude Code (ou /clear).
+   Lors de ta première session, fablever te posera 2 questions de configuration rapides.
+   Réponds « skip » pour les réglages par défaut sûrs — sans clé API ni coût supplémentaire.
+L
+  ;;
+  de) cat <<'L'
+
+✅ Installation abgeschlossen. Einziger nächster Schritt: starte Claude Code neu (oder /clear).
+   In deiner ersten Sitzung stellt fablever 2 kurze Einrichtungsfragen. Antworte mit
+   "skip" für die sicheren Standardwerte — kein API-Schlüssel, keine Zusatzkosten.
+L
+  ;;
+  pt) cat <<'L'
+
+✅ Instalação concluída. Único próximo passo: reinicie o Claude Code (ou /clear).
+   Na sua primeira sessão, o fablever fará 2 perguntas rápidas de configuração. Responda
+   "skip" para os padrões seguros — sem chave de API e sem custo adicional.
+L
+  ;;
+esac
+
 cat <<EOF
 
 Installed.  Next: RESTART Claude Code (or run /clear).
