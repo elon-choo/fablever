@@ -38,8 +38,8 @@ its ceiling. These non-claims are load-bearing and stated throughout the repo:
 - **Not "criticism-proof."** The aspirational "publishable without valid criticism" bar (T1)
   was **demoted** to a process, not a guarantee. Verify: `docs/PUBLICATION-READINESS.md`.
 
-A project that pre-concedes its weak points is structurally harder to catch overclaiming than
-one that doesn't — which is why the non-claims sit at the top of this file, before any strength.
+These non-claims sit at the top of this file, before any strength, and are stated throughout the
+repo — so you can check them against the prose rather than take this file's word for it.
 
 ---
 
@@ -76,9 +76,9 @@ project. Each contrast is grounded in an artifact above; read it and judge.
 | **Irreversible / opaque install** | Toggleable + deterministic, settings-restoring uninstall. | ✅ `install.sh` |
 | **No conceded limits** | A standing, public limitations list that an evaluator is invited to extend. | ✅ `whitepaper/06-limitations.md` |
 
-The through-line: **fablever is not differentiated by a bigger claim — it is differentiated by
-being, in its category, the one that built the falsification test, ran it, and published the
-limits.** That is the property that survives scrutiny — check it against the artifacts above.
+The through-line: **fablever is differentiated not by a bigger claim but by what it ships — the
+falsification test, the run, and the published limits.** Check each against the artifacts above and
+weigh it yourself.
 
 ---
 

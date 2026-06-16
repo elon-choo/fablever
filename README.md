@@ -152,6 +152,14 @@ export FABLE_PROFILE=off       # turns off the hook for the current shell (if in
 - **SubagentStart hook** `~/.claude/hooks/fable-subagent.js` (default-on) — injects the *compact* reminder
   into **every spawned subagent** (foreground, background/`run_in_background`, and workflow agents) — the
   agents the output style and the main-session hook can't reach. Fail-safe (always exits 0), zero-dep Node.
+- **SessionStart hooks** (default-on, both fail-safe, zero-dep Node) — `~/.claude/hooks/fable-onboard.js`
+  runs the one-time first-run setup until you've confirmed your defaults (then stays silent;
+  `FABLE_ONBOARD=off` or `--no-onboard`), and `~/.claude/hooks/fable-model-check.js` surfaces a notice at
+  most once/24h when a newer verification model appears (reads a cached file — ~0 tokens per chat;
+  `FABLE_MODELCHECK=off` or `--no-modelcheck`).
+- **Runtime copy** `~/.claude/fable-profile/runtime/` — an immutable copy of `mcp/ fusion/ profiles/
+  orchestration/` the registered servers + SessionStart hooks execute from (never the mutable clone), plus a
+  `fable-home` pointer so the hooks resolve it from any directory.
 - **Opt-in hook** `~/.claude/hooks/fable-reinject.sh` — re-injects a tiny *core* reminder each turn to
   fight long-session decay in the **main** session. Model-aware (skips Fable-class models), fail-safe.
 - **Profiles** `profiles/{full,compact,core}.md` — the single source of truth, symlinked into `~/.claude`.
