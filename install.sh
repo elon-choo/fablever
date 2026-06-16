@@ -42,6 +42,8 @@ MCP_REMOVE="${REPO}/claude-code/lib/mcp-remove.js"
 MCP_SERVER="${RUNTIME_DIR}/mcp/src/server.js"
 FUSION_SERVER="${RUNTIME_DIR}/fusion/fusion-server.js"
 XVERIFY_CFG="${PROFILE_DST_DIR}/xverify.json"
+MODE_CFG="${PROFILE_DST_DIR}/mode.json"
+FABLE_HOME_PTR="${PROFILE_DST_DIR}/fable-home"
 
 usage() {
   cat <<'USAGE'
@@ -59,6 +61,8 @@ Usage: ./install.sh [options]
                    panel shares. OFF by default (zero overhead when off). =openrouter needs an
                    OPENROUTER_API_KEY + the fusion MCP; =codex uses the codex MCP. See orchestration/xverify.md.
   --no-subagent    skip the SubagentStart hook (don't inject into subagents)
+  --no-onboard     skip the first-run onboarding SessionStart hook
+  --no-modelcheck  skip the daily latest-model-check SessionStart hook
   --no-style       install the style file but don't set it as the default (pick "Fable" in /config)
   --no-mcp         skip registering the MCP server
   --uninstall      remove everything; restores prior settings
@@ -68,7 +72,7 @@ After installing, restart Claude Code (or /clear). Disable anytime: export FABLE
 USAGE
 }
 
-WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0; XVERIFY=off
+WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0; XVERIFY=off; DO_ONBOARD=1; DO_MODELCHK=1
 for a in "$@"; do
   case "$a" in
     --with-hook)      WITH_HOOK=1 ;;
@@ -78,6 +82,8 @@ for a in "$@"; do
     --no-style)    SET_STYLE=0 ;;
     --no-mcp)      DO_MCP=0 ;;
     --no-subagent) DO_SUBAGENT=0 ;;
+    --no-onboard)    DO_ONBOARD=0 ;;
+    --no-modelcheck) DO_MODELCHK=0 ;;
     --uninstall)   UNINSTALL=1 ;;
     -h|--help)     usage; exit 0 ;;
     *) echo "unknown flag: $a" >&2; usage >&2; exit 2 ;;
@@ -93,7 +99,7 @@ if [ "$UNINSTALL" = "1" ]; then
   node "$MERGE" sesshook-off "$SETTINGS" "$ONBOARD_CMD" 2>/dev/null || true
   node "$MERGE" sesshook-off "$SETTINGS" "$MODELCHK_CMD" 2>/dev/null || true
   rm -f "$HOOK_DST" "$SUBHOOK_DST" "$ONBOARD_DST" "$MODELCHK_DST" "$STYLE_DST"
-  rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG"
+  rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG" "$MODE_CFG" "$FABLE_HOME_PTR"
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
   if have claude; then
@@ -144,13 +150,17 @@ fi
 #     configured) + daily model-freshness notice. Both fail-open; FABLE_ONBOARD/FABLE_MODELCHECK=off.
 cp "$ONBOARD_SRC" "$ONBOARD_DST"; chmod +x "$ONBOARD_DST"
 cp "$MODELCHK_SRC" "$MODELCHK_DST"; chmod +x "$MODELCHK_DST"
-if [ "$DO_SUBAGENT" = "1" ]; then
+if [ "$DO_ONBOARD" = "1" ]; then
   node "$MERGE" sesshook-on "$SETTINGS" "$ONBOARD_CMD"
-  node "$MERGE" sesshook-on "$SETTINGS" "$MODELCHK_CMD"
-  echo "  onboard   -> SessionStart hook registered (first run asks your defaults; FABLE_ONBOARD=off to skip)"
-  echo "  modelchk  -> SessionStart hook registered (daily latest-model check, ~0 tokens; FABLE_MODELCHECK=off)"
+  echo "  onboard   -> SessionStart hook registered (first run asks your defaults; FABLE_ONBOARD=off or --no-onboard to skip)"
 else
-  echo "  onboard   -> files staged but NOT registered (--no-subagent)"
+  echo "  onboard   -> file staged but NOT registered (--no-onboard)"
+fi
+if [ "$DO_MODELCHK" = "1" ]; then
+  node "$MERGE" sesshook-on "$SETTINGS" "$MODELCHK_CMD"
+  echo "  modelchk  -> SessionStart hook registered (daily latest-model check, ~0 tokens; FABLE_MODELCHECK=off or --no-modelcheck)"
+else
+  echo "  modelchk  -> file staged but NOT registered (--no-modelcheck)"
 fi
 
 # 5) optional main-session anti-decay hook (opt-in)
@@ -162,15 +172,18 @@ else
   echo "  hook      -> file staged at ${HOOK_DST} but NOT registered (re-run with --with-hook to enable)"
 fi
 
-# 4.5) SEC-1: copy the MCP runtime to an IMMUTABLE location so the registered server does NOT
+# 4.5) SEC-1: copy the runtime to an IMMUTABLE location so the registered servers/hooks do NOT
 #       execute from the mutable clone dir (where a stray edit/pull/compromise would change what
-#       auto-runs every session). Copy the servers AND the profiles they read via relative paths,
-#       preserving the layout the servers expect. Re-running install.sh refreshes this copy.
-if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ]; then
+#       auto-runs every session). Copy the servers + the profiles they read AND orchestration/ —
+#       the SessionStart hooks (onboarding xverify-preset.mjs, daily model-freshness.mjs) and the
+#       fusion model registry (models.json) all resolve out of here, NOT the clone, so they work
+#       from any cwd after the user restarts. Re-running install.sh refreshes this copy.
+if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ] || [ "$DO_ONBOARD" = "1" ] || [ "$DO_MODELCHK" = "1" ]; then
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true   # refresh cleanly so files deleted from the repo don't persist stale
   mkdir -p "$RUNTIME_DIR"
-  cp -R "${REPO}/mcp" "${REPO}/fusion" "${REPO}/profiles" "$RUNTIME_DIR"/ 2>/dev/null || true
-  echo "  mcp-copy  -> runtime copied to $RUNTIME_DIR (immutable; re-run install to refresh)"
+  cp -R "${REPO}/mcp" "${REPO}/fusion" "${REPO}/profiles" "${REPO}/orchestration" "$RUNTIME_DIR"/ 2>/dev/null || true
+  printf '%s\n' "$RUNTIME_DIR" > "$FABLE_HOME_PTR"   # pointer the hooks read to find orchestration/ from any cwd
+  echo "  runtime   -> copied to $RUNTIME_DIR (immutable; incl. orchestration/ for the SessionStart hooks; re-run to refresh)"
 fi
 
 # 5) register the MCP server globally (portable on-demand tools + subagent-reachable profile)
@@ -239,6 +252,8 @@ if node "$REPO/orchestration/lib/xverify-preset.mjs" set "$PRESET" >/dev/null 2>
 else
   printf '{ "preset": "claude-only", "mode": "off" }\n' > "$XVERIFY_CFG"; echo "  xverify   -> claude-only (fallback)"
 fi
+# seed the cost-mode default so the skip/defaults onboarding path needs ZERO command execution
+[ -f "$MODE_CFG" ] || { printf '{ "ultra": "auto" }\n' > "$MODE_CFG"; echo "  mode      -> $MODE_CFG seeded {\"ultra\":\"auto\"}  (change: export FABLE_ULTRA=on|off|auto)"; }
 case "$PRESET" in
   gpt-api+gemini-api)
     if have claude && ! claude mcp list 2>/dev/null | grep -q '^fable-fusion\b'; then

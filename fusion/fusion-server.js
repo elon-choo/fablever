@@ -38,7 +38,7 @@ function fableSystemPrompt() {
 // (the single source of truth) and map to OpenRouter slugs, so "workers = always latest" follows
 // the registry. Fail-safe: any error falls back to a current hardcoded pair, never throws.
 function defaultXverifyModels() {
-  const fallback = ['openai/gpt-5.5', 'google/gemini-2.5-pro'];
+  const fallback = ['openai/gpt-5.5', 'google/gemini-3.1-pro-preview'];
   try {
     const reg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'orchestration', 'models.json'), 'utf8'));
     const a = reg.active || {};
