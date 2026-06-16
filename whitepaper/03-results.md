@@ -5,6 +5,13 @@ defect), against the hard fixture (`eval/fixtures/seeded-defects-hard.json`: 6 a
 18 planted defects, stratified **a** contradiction / **b** omission / **c** deep-reasoning).
 Methodology and its limits: [§2](02-methodology.md) and [§6](06-limitations.md).
 
+> **What "recall" and "precision" mean.** *Recall* = of the defects that are actually there,
+> what fraction did we catch (did we miss any)? 16 of 18 planted = 16/18 ≈ 0.89. *Precision* =
+> of the defects we reported, what fraction are real (any false alarms)? They **trade off** —
+> catching more tends to add false alarms (↑recall, ↓precision); filtering harder tends to miss
+> some (↑precision, ↓recall) — so both are always reported. (Precision here is a **floor**: the
+> answer key lists only 3 defects per task, so genuine extra findings count against it — §3.3.)
+
 ---
 
 ## 3.1 Headline
