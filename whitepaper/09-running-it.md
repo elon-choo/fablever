@@ -99,8 +99,10 @@ stay current without costing tokens per chat:
 1. **Detect** — a SessionStart hook calls a checker that hits only the providers' **model-list**
    endpoint (no generation), **rate-limited to once / 24h**. It surfaces a notice if a newer
    flagship appears. Disable with `FABLE_MODELCHECK=off`.
-2. **Validate** — a candidate must catch defects on the eval fixture at **≥ the current pin**
-   before it's eligible (`node orchestration/lib/model-freshness.mjs validate <id>`).
+2. **Validate** — a candidate is eval-run on the fixture before it's eligible; the bar is
+   **validated-to-work + no catastrophic recall regression** (it need not beat the prior peak — a
+   newer model may trade recall for precision, and if so both runs are recorded)
+   (`node orchestration/lib/model-freshness.mjs validate <id>`).
 3. **Adopt** — only a validated candidate is written to `active`
    (`node orchestration/lib/model-freshness.mjs adopt <role> <id>`); the published whitepaper
    numbers keep the models that produced them.

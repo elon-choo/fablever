@@ -64,9 +64,17 @@ This project has two distinct parts, and it's worth being clear about which does
 The full reasoning behind this split — and its honest limits — is in
 [`docs/ORCHESTRATION-RESEARCH.md`](docs/ORCHESTRATION-RESEARCH.md). The honest headline:
 **scaffolding is a multiplier on base competence, never a substitute** — the ceiling is
-"closer to Fable," never "equal to Fable," and the *size* of the gain is **not** claimed
-until the eval harness ([`eval/`](eval/)) measures it under a model swap (it has not run
-yet). Start with [`orchestration/README.md`](orchestration/README.md).
+"closer to Fable," never "equal to Fable." The **defect-catch** A/B *has* run (with the
+Opus→Sonnet placebo swap; results in [`eval/`](eval/), published including a negative one), but
+the *size of a developer-**productivity** gain* is **not** claimed — that A/B has **not** been run.
+Start with [`orchestration/README.md`](orchestration/README.md).
+
+What *is* measured: on the project's **n=6 author-planted** defect fixture, the cost-no-object ULTRA
+pipeline caught **16/18** planted defects (latest models) at the **highest precision of any config
+(0.74)** under a 5-judge cross-model panel (4 GPT + 1 Gemini); the prior-model run peaked at
+**18/18**. That is a **defect-catch** result on a small single-run fixture, **not** a productivity
+number — scripts + raw data in [`eval/ultra/`](eval/ultra/) (`node eval/ultra/score.mjs` checks the
+counts offline), full table in [`whitepaper/03-results.md`](whitepaper/03-results.md).
 
 ## Why these traits — the style gap, illustrated
 
@@ -103,12 +111,18 @@ Options:
 
 | flag | effect |
 |---|---|
-| *(none)* | output style set as default (always-on) + **SubagentStart hook** (reaches every subagent) + MCP registered |
+| *(none)* | output style as default (always-on) + **SubagentStart hook** (reaches every subagent) + **two SessionStart hooks** (first-run onboarding + daily model-check, both fail-open) + MCP registered |
 | `--with-hook` | also add the opt-in per-turn re-injection hook for the main session (see "Why opt-in") |
 | `--no-subagent` | skip the SubagentStart hook (don't inject into subagents) |
+| `--no-onboard` | skip the first-run onboarding SessionStart hook |
+| `--no-modelcheck` | skip the daily latest-model-check SessionStart hook |
 | `--no-style` | install the style file but don't set it default (pick "Fable" in `/config`) |
 | `--no-mcp` | skip the MCP server |
 | `--uninstall` | remove everything; restores prior settings |
+
+Every hook is fail-open (exits 0 on any error) and individually disablable by env var
+(`FABLE_ONBOARD=off`, `FABLE_MODELCHECK=off`, `FABLE_PROFILE=off`); `--uninstall` removes them all
+and restores prior settings. What lands on your machine and how to reverse it: §"What gets installed".
 
 The installer **backs up `settings.json`** before any edit and only ever touches `outputStyle` and its own
 hook entry — every other hook, permission, and setting is left untouched. Verify it yourself:

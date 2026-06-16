@@ -29,8 +29,9 @@ A prompt that says "orchestrate like Fable" is placebo — it biases surface tok
 not pre-token control flow. These recipes are **real programs**: a real `parallel()`
 barrier, real schema-forced output, real JS-owned stopping rules and gates. That is
 the kind of property an on/off test can detect — real control flow *can* persist under a
-worker-model swap where prose cannot; whether THESE recipes actually do is what `eval/` has
-yet to measure (the A/B has not run).
+worker-model swap where prose cannot. The **defect-catch** A/B *has* run with that Opus→Sonnet
+swap (see [`../eval/`](../eval/), including a published negative result); what has **not** run is a
+developer-**productivity** A/B, so the *magnitude* of any real-world gain stays unclaimed.
 
 ## How to run
 

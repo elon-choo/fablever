@@ -22,8 +22,8 @@ a capability one — it changes *how* a model works, not its reasoning ceiling.
   win is **precision**. On easy/saturated tasks the panel is **pure cost** (~5× regression).
 - When **cost is no object**, a cross-model **"diverge-wide-then-adjudicate"** pipeline (ULTRA)
   on the **latest models (GPT-5.5 + Gemini-3.1-pro-preview)** caught **16/18** planted defects
-  at the **highest precision of any config (0.74)** under a **5-judge cross-model panel**. The
-  prior-model run (GPT-5.2 + Gemini-2.5-pro) peaked at **18/18** recall at precision 0.63 — the
+  at the **highest precision of any config (0.74)** under a **5-judge cross-model panel (4 GPT + 1
+  Gemini)**. The prior-model run (GPT-5.2 + Gemini-2.5-pro) peaked at **18/18** recall at precision 0.63 — the
   newer models traded ~2 deep-reasoning catches for precision. *(n=6 author-planted, single
   generation run; a defect-catch result, not productivity.)*
 - Pushing *harder* (a second generation escalation) **lowered** recall to 16/18 — recorded

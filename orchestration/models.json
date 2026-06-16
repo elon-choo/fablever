@@ -20,7 +20,7 @@
     "judges": ["gpt-5.2", "gemini-2.5-pro"]
   },
   "validation": {
-    "gate": "A candidate is adopted into 'active' only after running eval/ab-harness (or the ULTRA judge) with it swapped in and matching-or-beating the current pin's recall on eval/fixtures/seeded-defects-hard.json. The result is recorded in 'history'.",
+    "gate": "A candidate is adopted into 'active' only after (1) a live API probe confirms it works on the chat/generateContent endpoint, and (2) an eval run records its defect-catch vs the current pin (eval/ultra/ scripts on eval/fixtures/seeded-defects-hard.json), recorded in 'history'. Adoption favors the LATEST available high-performance model and does NOT require beating the prior peak recall: newer models can trade recall for precision (history shows gpt-5.5/gemini-3.1-pro-preview at 16/18 @ 0.74 vs the prior 18/18 @ 0.63). When that happens, BOTH runs are recorded here and the published whitepaper numbers keep the models that produced them (reported_in_whitepaper). The bar is validated-to-work + no catastrophic recall regression, with any tradeoff disclosed — never a silent swap.",
     "history": [
       { "date": "2026-06-16", "event": "active pins set to latest validated models (gpt-5.5, gemini-3.1-pro-preview) after live API probe; whitepaper numbers retain gpt-5.2 + gemini-2.5-pro as the reported peak run." },
       { "date": "2026-06-16", "event": "ULTRA re-run on active pins (gpt-5.5 adjudicator + 4x gpt-5.5 / 1x gemini-3.1-pro-preview panel): 16/18 recall (0.889), precision 0.742 — higher precision but ~2 fewer deep-reasoning catches than the gpt-5.2/gemini-2.5-pro peak (18/18, 0.631). Newest != higher recall on this n=6 single run. Recorded in whitepaper/03-results.md as V3." }

@@ -17,9 +17,10 @@ Methodology and its limits: [§2](02-methodology.md) and [§6](06-limitations.md
 ## 3.1 Headline
 
 > **A cost-no-object, cross-model "diverge-wide-then-adjudicate" pipeline (ULTRA) caught
-> 18/18 planted defects — a=1.0, b=1.0, c=1.0 — under a robust 5-judge cross-model panel,
-> at precision ≈ 0.63. No cheaper single-agent config and no same-family panel reached
-> that; every one of them missed deep-reasoning (c) defects that ULTRA caught.**
+> 18/18 planted defects — a=1.0, b=1.0, c=1.0 — under a robust 5-judge cross-model panel
+> (4 GPT + 1 Gemini, majority vote per planted defect), at precision ≈ 0.63. No cheaper
+> single-agent config and no same-family panel reached that; every one of them missed
+> deep-reasoning (c) defects that ULTRA caught.**
 
 That peak recall used **GPT-5.2 + Gemini-2.5-pro**. A 2026-06-16 re-run on the **latest
 models (GPT-5.5 + Gemini-3.1-pro-preview)** scored **16/18 at precision 0.74** — the newer
@@ -66,7 +67,7 @@ cost truly doesn't matter, the ULTRA frontier below.
 
 Pipeline (full detail in [§2.3](02-methodology.md)): Claude Opus 7-lens panel + 3 deep
 draws **∪** Gemini-2.5-pro (full + deep) → **one GPT-5.2 adjudicator** per artifact →
-**5-judge cross-model panel** scores vs planted.
+**5-judge cross-model panel (4 GPT + 1 Gemini)** scores vs planted.
 
 | Config | Recall /18 | a | b | c (deep) | Precision | Gen+adj agents | Candidates |
 |--------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|

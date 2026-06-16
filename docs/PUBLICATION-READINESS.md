@@ -64,10 +64,11 @@ the verify loop, to decorrelate the same-family blind spot. Zero overhead when o
   refutation depth, per-idea quality, and off-catalog graph design stay weights-bound.
 - **B4** **No magnitude/productivity number is claimed.** The eval harness
   (`eval/ab-harness.mjs`) is pre-registered, stratified (a/b/c + divergent), model-swap,
-  condition-blind — and HAS NOT BEEN RUN. (It also does not yet instrument tokens or
-  wall-clock, so the decision rule's cost clauses are not yet enforceable — COST-3.)
-  Until it shows a replicated, judge-scored gain at non-degraded cost, no orchestration
-  magnitude claim ships.
+  condition-blind. The **defect-catch** A/B HAS been run (see `eval/results-2026-06-15*.md`,
+  published including a negative result); what has **not** been run is a developer-**productivity**
+  A/B, and the harness does not yet instrument tokens or wall-clock (so the decision rule's cost
+  clauses are not yet enforceable — COST-3). Until a replicated, judge-scored *productivity* gain at
+  non-degraded cost is shown, no orchestration magnitude claim ships.
 - **B5** The RED runtime gate is **leaf-ungameable but orchestrator-gameable** (a
   hollow rubber-stamp skeptic satisfies the existence check). Stated as such; evidence
   quality is scored offline only, never at the runtime gate.
@@ -119,9 +120,9 @@ the verify loop, to decorrelate the same-family blind spot. Zero overhead when o
   launch post (OSS-3). The public face is the disclosed limitations list, not a claim
   of invulnerability.
 - **T2 (productivity) — DEMOTED.** "Demonstrably improves productivity" directly
-  contradicts B4 (no magnitude before the A/B) and the A/B has not run. **Demoted
-  form:** *productivity improvement is a hypothesis with mechanism support; magnitude
-  is unmeasured and the bundled A/B can falsify it.* Moreover **cost-direction**
+  contradicts B4 (no magnitude before a productivity A/B), and that productivity A/B has
+  not run (the defect-catch A/B has). **Demoted form:** *productivity improvement is a
+  hypothesis with mechanism support; magnitude is unmeasured and the bundled A/B can falsify it.* Moreover **cost-direction**
   (does the panel beat a strong solo pass *per unit cost*?) is **not** established by
   mechanism either. The A/B's `caught_per_agent` is a first **agent-count proxy** for it,
   but true token/wall-clock cost-direction needs **call-site** instrumentation the Workflow

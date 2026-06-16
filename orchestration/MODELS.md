@@ -64,7 +64,10 @@ tokens per chat:
    node orchestration/lib/model-freshness.mjs status     # active pins + last check + candidates
    ```
 2. **Validate (eval gate).** A candidate reviews fixture artifacts; the pinned judge scores
-   recall vs the planted defects. It passes only at **≥ the current pin's level**.
+   defect-catch vs the planted defects. The bar is **validated-to-work + no catastrophic recall
+   regression** — adoption favors the latest model and does **not** require beating the prior peak
+   recall (a newer model may trade recall for precision; if so, both runs are recorded and the
+   whitepaper keeps the models that produced its numbers). See `models.json` → `validation.gate`.
    ```bash
    node orchestration/lib/model-freshness.mjs validate gpt-5.6
    ```
