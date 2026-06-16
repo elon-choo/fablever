@@ -54,6 +54,7 @@
 | **페일세이프, 되돌릴 수 있음** | 훅은 오류 시 열린 채 실패; `FABLE_PROFILE=off`로 비활성화; `install.sh --uninstall`이 이전 설정을 결정적으로 복원. | `install.sh`, `claude-code/hooks/fable-subagent.js`, `claude-code/lib/mcp-remove.js` |
 | **적대적으로 검토됨, 기록으로 남음** | 3라운드 × (Claude 전문가 페르소나 + GPT + Gemini) 합의, **실패한 공격까지 함께 기록**. | `docs/PUBLICATION-READINESS.md` |
 | **출처(provenance)** | Anthropic의 *공개된* Fable 프롬프팅 가이드에서 증류(역공학 아님, 유출 콘텐츠 아님). | `docs/RESEARCH.md`, `NOTICE` |
+| **투명한 실험 기록** | 날짜별 실험 로그 전체를 공개 — 실패하거나 **프로젝트에 불리하게 나온 실행**(포화 픽스처에서의 패배, 역효과를 낸 에스컬레이션)까지 포함. | [`whitepaper/08-experiment-log.md`](whitepaper/08-experiment-log.md) |
 
 ---
 

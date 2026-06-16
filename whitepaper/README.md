@@ -46,6 +46,7 @@ productivity number — and that distinction is the entire discipline.
 | 5 | [Consensus & claims ledger](05-consensus-and-claims.md) | the full claims table + multi-model/persona verdict + the ULTRA round |
 | 6 | [Limitations & threats to validity](06-limitations.md) | the longest-lived page; every conceded gap |
 | 7 | [Reproduce](07-reproduce.md) | run every number yourself |
+| 8 | [Experiment log](08-experiment-log.md) | the dated lab notebook — every run, including the failed and negative ones |
 
 ---
 
