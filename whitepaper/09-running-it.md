@@ -39,7 +39,9 @@ The most common confusion, stated plainly:
   Studio (aistudio.google.com).
 - **The one OAuth/account-login exception:** routing the GPT reviewer through the **codex MCP**
   (`mcp__codex__codex`) runs under your **ChatGPT login** — no OpenAI API key needed (covers the
-  GPT reviewer only, not Gemini). Enable: `install.sh --with-xverify=codex`.
+  GPT reviewer only, not Gemini). Enable: `install.sh --with-xverify=codex`. One-time setup (install
+  the codex CLI, `codex login`, register the MCP) is in [`../docs/API-KEYS.md`](../docs/API-KEYS.md)
+  § Set up the codex MCP.
 
 ```bash
 export OPENAI_API_KEY=sk-proj-...    # platform.openai.com/api-keys  (NOT chatgpt.com)
@@ -58,7 +60,7 @@ API key at all**. The first-run setup asks you to choose one; your choice persis
 | Preset | What it adds | What you must do |
 |--------|--------------|------------------|
 | **claude-only** *(default)* | nothing — same-family Claude panel | nothing ($0, no key, no login) |
-| **gpt-oauth** | a GPT reviewer via your **ChatGPT login** (codex MCP) | sign into ChatGPT via codex — **no API key** |
+| **gpt-oauth** | a GPT reviewer via your **ChatGPT login** (codex MCP) | set up codex (3 cmds, [docs/API-KEYS.md](../docs/API-KEYS.md)) — **no API key** |
 | **gpt-oauth+gemini-api** | GPT via ChatGPT login **+** Gemini | ChatGPT login + a `GEMINI_API_KEY` |
 | **gpt-api+gemini-api** | GPT **+** Gemini via API keys | one `OPENROUTER_API_KEY` (covers both) |
 

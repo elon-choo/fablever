@@ -232,7 +232,7 @@ cat <<'XMENU'
                        default). Needs OPENROUTER_API_KEY. Different weights => decorrelated.
                        enable:  ./install.sh --with-xverify=openrouter
    [C] + Codex MCP     cost: uses your ChatGPT/Codex subscription quota (no OpenRouter key).
-                       Needs the codex MCP connected.  enable:  ./install.sh --with-xverify=codex
+                       Setup (3 cmds): docs/API-KEYS.md § Set up the codex MCP.  enable: ./install.sh --with-xverify=codex
 
  OFF by default. When off, the cross-model path NEVER runs — zero extra agents, zero network,
  zero overhead on the base system. Toggle anytime: export FABLE_XVERIFY=off
@@ -263,9 +263,11 @@ case "$PRESET" in
     fi
     [ -n "${OPENROUTER_API_KEY:-}" ] || echo "  xverify   -> NOTE: set OPENROUTER_API_KEY in ~/.zshrc (never paste a key into chat)." ;;
   gpt-oauth)
-    echo "  xverify   -> NOTE: sign into ChatGPT via the codex MCP ('claude mcp list') — no API key needed." ;;
+    echo "  xverify   -> GPT reviewer via ChatGPT login (NO API key). One-time setup (3 commands):"
+    echo "                 npm i -g @openai/codex  &&  codex login  &&  claude mcp add --transport stdio codex --scope user -- codex mcp-server"
+    echo "               then 'claude mcp list' should show  codex ✔ Connected.  Details: docs/API-KEYS.md (§ Set up the codex MCP)." ;;
   gpt-oauth+gemini-api)
-    echo "  xverify   -> NOTE: codex MCP for GPT + set GEMINI_API_KEY in ~/.zshrc for Gemini (never paste into chat)." ;;
+    echo "  xverify   -> NOTE: GPT via codex MCP (setup: docs/API-KEYS.md § Set up the codex MCP) + set GEMINI_API_KEY in ~/.zshrc (never paste a key into chat)." ;;
   claude-only)
     echo "  xverify   -> Claude-only (no key/login, zero overhead)." ;;
 esac

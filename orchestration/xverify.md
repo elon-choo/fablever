@@ -18,7 +18,7 @@ untouched.
 |---|---|---|
 | **[A] Claude-only** *(default)* | nothing to configure | $0 extra, no network. Same family → shared blind spots. |
 | **[B] OpenRouter** | `./install.sh --with-xverify=openrouter` | ~1 OpenRouter call per extra model per verify (GPT + Gemini by default). Needs `OPENROUTER_API_KEY`. |
-| **[C] Codex MCP** | `./install.sh --with-xverify=codex` | uses your ChatGPT/Codex subscription quota (no OpenRouter key). Needs the codex MCP connected. |
+| **[C] Codex MCP** | `./install.sh --with-xverify=codex` | uses your ChatGPT/Codex subscription quota (no OpenRouter key). Needs the codex MCP connected — one-time setup (3 commands) in [`../docs/API-KEYS.md`](../docs/API-KEYS.md) § Set up the codex MCP. |
 
 The installer prints this menu every run and writes your choice to
 `~/.claude/fable-profile/xverify.json`.

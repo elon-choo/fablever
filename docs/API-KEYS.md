@@ -43,6 +43,25 @@ instead of the OpenAI API, it runs under your **codex CLI / ChatGPT authenticati
 separate OpenAI API key needed. This is the only "use my account login" route, and it only
 covers the GPT reviewer, not Gemini. fablever supports it: `install.sh --with-xverify=codex`.
 
+#### Set up the codex MCP (the no-API-key GPT reviewer)
+
+The codex MCP is OpenAI's official **Codex CLI** ([github.com/openai/codex](https://github.com/openai/codex))
+running as a local MCP server under your ChatGPT login. You need a **ChatGPT account**
+(Plus/Pro/Team/Enterprise) — **no OpenAI API key**. Three commands, once:
+
+```bash
+npm install -g @openai/codex      # OpenAI's official Codex CLI (verify scripts before global installs)
+codex login                       # opens a browser — sign in with your ChatGPT account
+claude mcp add --transport stdio codex --scope user -- codex mcp-server
+claude mcp list                   # confirm the line:  codex … ✔ Connected
+```
+
+Then `./install.sh --with-xverify=codex` (or pick **gpt-oauth** in first-run setup) routes the GPT
+reviewer through it. Check status anytime with `codex login status` and `codex doctor`. If
+`claude mcp list` does **not** show `codex ✔ Connected`, the GPT reviewer is not wired yet — re-run
+`codex login` and the `claude mcp add` line above. This is the **only** preset that does not touch
+an API key.
+
 ---
 
 ## 3 · How to get & set each key
