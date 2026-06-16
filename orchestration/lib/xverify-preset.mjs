@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 // Best-effort: is the codex MCP set up? Returns true / false / null(unverifiable). Prevents a
 // false green light on gpt-oauth when codex was never connected. Fast path = read the Claude Code
@@ -128,7 +129,13 @@ export function doctor(preset = current()) {
   return { preset, label: p.label, ready: items.every(i => i.satisfied === true), items };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Robust "is this the entry script?" check — resolve argv[1] through symlinks (e.g. a HOME under
+// /tmp or /var on macOS) so the CLI still runs when the invocation path traverses a symlink.
+const isMain = (() => {
+  try { return import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href; }
+  catch { return import.meta.url === `file://${process.argv[1]}`; }
+})();
+if (isMain) {
   const cmd = process.argv[2] || 'show';
   const presetList = Object.keys(PRESETS).join(', ');
   const cur = current();
@@ -160,7 +167,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     t(PRESETS['claude-only'].needs.length === 0, 'claude-only needs nothing');
     const d = doctor('gpt-api+gemini-api');
     t(d.items[0].env === 'OPENROUTER_API_KEY', 'doctor reports the key name');
-    t(!JSON.stringify(d).includes(process.env.OPENROUTER_API_KEY || ' NOKEY '), 'doctor never echoes a key value');
+    t(!JSON.stringify(d).includes(process.env.OPENROUTER_API_KEY || ' NOKEY '), 'doctor never echoes a key value');
     t(doctor('claude-only').ready === true, 'claude-only is ready with zero needs');
     const _save = process.env.OPENROUTER_API_KEY; delete process.env.OPENROUTER_API_KEY;
     t(doctor('gpt-api+gemini-api').ready === false, 'missing key => not ready (no false green light)');

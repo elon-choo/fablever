@@ -145,7 +145,10 @@ function fableStatus() {
   const ultra = (process.env.FABLE_ULTRA || (mode && mode.ultra) || 'auto').toLowerCase();
   const xv = readJSONsafe(path.join(fdir, 'xverify.json'));
   const preset = (xv && xv.preset) || 'claude-only';
-  const xverifyOff = (process.env.FABLE_XVERIFY || '').toLowerCase() === 'off' || (xv && xv.mode === 'off');
+  // The reviewer is the PRESET name (claude-only is itself a valid choice = same-family, no cross-model).
+  // Only an explicit FABLE_XVERIFY=off env override means "cross-model disabled".
+  const envXvOff = (process.env.FABLE_XVERIFY || '').toLowerCase() === 'off';
+  const reviewer = envXvOff ? `off (FABLE_XVERIFY=off; saved preset: ${preset})` : preset;
   const env = {};
   for (const k of ['FABLE_PROFILE', 'FABLE_ULTRA', 'FABLE_ONBOARD', 'FABLE_MODELCHECK', 'FABLE_XVERIFY', 'FABLE_FUSION']) if (process.env[k]) env[k] = process.env[k];
   const status = {
@@ -153,14 +156,14 @@ function fableStatus() {
     hooks_quieted_by_env: profileOff,
     cost_mode: ultra,
     cost_mode_source: process.env.FABLE_ULTRA ? 'env FABLE_ULTRA' : (mode ? 'mode.json' : 'default'),
-    cross_model_reviewer: xverifyOff ? 'off' : preset,
+    cross_model_reviewer: reviewer,
     env_overrides: env,
   };
   const lines = [
     `Fable style: ${styleActive ? 'ON (always-on output style is the active style)' : 'NOT the active output style — pick "Fable" in /config'}` +
       (profileOff ? '  [FABLE_PROFILE=off quiets the hooks; the style itself still applies]' : ''),
     `Cost mode (ULTRA): ${ultra}  (from ${status.cost_mode_source}) — change: export FABLE_ULTRA=auto|on|off  or edit ${path.join(fdir, 'mode.json')}`,
-    `Cross-model reviewer: ${status.cross_model_reviewer} — change: node <fablever>/orchestration/lib/xverify-preset.mjs set <preset>`,
+    `Cross-model reviewer: ${reviewer}${reviewer === 'claude-only' ? ' (same-family Claude panel; no cross-model by design)' : ''} — change: node <fablever>/orchestration/lib/xverify-preset.mjs set <preset>`,
   ];
   if (Object.keys(env).length) lines.push(`Env overrides in effect: ${Object.entries(env).map(([k, v]) => `${k}=${v}`).join(', ')}`);
   return { summary: lines.join('\n'), status };
