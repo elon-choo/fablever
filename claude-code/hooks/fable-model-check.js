@@ -15,31 +15,43 @@ try {
   if ((process.env.FABLE_MODELCHECK || '').toLowerCase() === 'off') process.exit(0);
 
   const home = os.homedir();
-  const statePath = path.join(home, '.claude', 'fable-profile', 'model-check.json');
+  const baseDir = path.join(home, '.claude', 'fable-profile');
+  const statePath = path.join(baseDir, 'model-check.json');
+  const notifiedPath = path.join(baseDir, 'model-notified.json'); // hook-owned; refresh child never touches it
 
-  // 1) read cached candidates (instant) -> build a notice if any newer model was detected
+  // Resolve the ABSOLUTE model-freshness.mjs path (used for both the displayed command and the spawn),
+  // so the "to adopt" command the user sees actually runs from their cwd.
+  const candidatesFor = [
+    process.env.FABLE_HOME && path.join(process.env.FABLE_HOME, 'orchestration/lib/model-freshness.mjs'),
+    path.join(baseDir, 'runtime/orchestration/lib/model-freshness.mjs'),
+    path.join(__dirname, '../../orchestration/lib/model-freshness.mjs'),
+  ].filter(Boolean);
+  const script = candidatesFor.find(p => { try { return fs.existsSync(p); } catch { return false; } });
+  const adoptCmd = (script ? `node ${/[\s'"]/.test(script) ? JSON.stringify(script) : script}` : 'node <fablever>/orchestration/lib/model-freshness.mjs') + ' adopt <role> <id>';
+
+  // 1) notice for NEW candidates only — never re-nag the same model every session.
   let notice = '';
   try {
     const st = JSON.parse(fs.readFileSync(statePath, 'utf8'));
     const cands = (st.candidates || []).filter(Boolean);
-    if (cands.length) {
-      const lines = cands.map(c => `  • ${c.candidate} (newer than pinned ${c.current} for role ${c.role})`).join('\n');
+    let notified = [];
+    try { notified = JSON.parse(fs.readFileSync(notifiedPath, 'utf8')) || []; } catch (_) {}
+    const seen = new Set(notified.map(String));
+    const fresh = cands.filter(c => !seen.has(`${c.role}:${c.candidate}`));
+    if (fresh.length) {
+      const lines = fresh.map(c => `  • ${c.candidate} (newer than pinned ${c.current} for role ${c.role})`).join('\n');
       notice = `[fablever — if you surface this to the user, do it in their language; keep commands/ids verbatim]\n` +
         `A newer verification model may be available:\n${lines}\n` +
         `It is NOT in use yet — adoption is eval-gated to protect reproducibility. To validate & adopt:\n` +
-        `  node orchestration/lib/model-freshness.mjs adopt <role> <id>\n` +
-        `(See orchestration/MODELS.md. Published whitepaper numbers keep their original models.)`;
+        `  ${adoptCmd}\n` +
+        `(See orchestration/MODELS.md. Published whitepaper numbers keep their original models.) Shown once per model.`;
+      // record so the same candidate never re-fires (the refresh child rewrites model-check.json, not this file)
+      try { fs.mkdirSync(baseDir, { recursive: true }); fs.writeFileSync(notifiedPath, JSON.stringify([...seen, ...fresh.map(c => `${c.role}:${c.candidate}`)])); } catch (_) {}
     }
   } catch (_) { /* no state yet -> no notice */ }
 
   // 2) best-effort: trigger the daily-rate-limited refresh in a DETACHED child (never blocks).
   try {
-    const candidatesFor = [
-      process.env.FABLE_HOME && path.join(process.env.FABLE_HOME, 'orchestration/lib/model-freshness.mjs'),
-      path.join(home, '.claude/fable-profile/runtime/orchestration/lib/model-freshness.mjs'),
-      path.join(__dirname, '../../orchestration/lib/model-freshness.mjs'),
-    ].filter(Boolean);
-    const script = candidatesFor.find(p => { try { return fs.existsSync(p); } catch { return false; } });
     if (script) {
       const child = spawn(process.execPath, [script, 'check'], { detached: true, stdio: 'ignore' });
       child.unref();

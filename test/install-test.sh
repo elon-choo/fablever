@@ -39,6 +39,12 @@ assert 'const fs=require("fs");const t=fs.readFileSync(process.env.SB+"/.claude/
 assert 'const fs=require("fs");process.exit(fs.readFileSync(process.env.SB+"/.claude/fable-profile/full.md","utf8").length>500?0:1)' "profile symlink resolves"
 assert 'const fs=require("fs");process.exit(fs.readdirSync(process.env.SB+"/.claude").some(f=>f.startsWith("settings.json.fable-bak-"))?0:1)' "settings.json backed up before write"
 
+echo "# preset preservation on a plain re-run (do not silently reset the user's choice)"
+HOME="$SB" bash "$REPO/install.sh" --no-mcp --with-xverify=gpt-oauth >/dev/null 2>&1
+assert 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(process.env.SB+"/.claude/fable-profile/xverify.json","utf8"));process.exit(x.preset==="gpt-oauth"?0:1)' "explicit --with-xverify sets the preset"
+HOME="$SB" bash "$REPO/install.sh" --no-mcp >/dev/null 2>&1
+assert 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(process.env.SB+"/.claude/fable-profile/xverify.json","utf8"));process.exit(x.preset==="gpt-oauth"?0:1)' "plain re-run PRESERVES the chosen preset (not reset to claude-only)"
+
 echo "# --with-hook (idempotent)"
 HOME="$SB" bash "$REPO/install.sh" --no-mcp --with-hook >/dev/null
 HOME="$SB" bash "$REPO/install.sh" --no-mcp --with-hook >/dev/null   # run twice

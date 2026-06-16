@@ -13,6 +13,7 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const readline = require('readline');
 
@@ -130,6 +131,41 @@ function fableLint(text) {
 // ---------------------------------------------------------------------------
 // Capability definitions
 // ---------------------------------------------------------------------------
+// fable_status — read-only snapshot of whether fablever is active and how it is configured.
+// Answers the everyday "is it on / what mode / which preset am I in" that has no slash-command surface.
+function readJSONsafe(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } }
+function fableStatus() {
+  const home = os.homedir();
+  const cdir = path.join(home, '.claude');
+  const fdir = path.join(cdir, 'fable-profile');
+  const settings = readJSONsafe(path.join(cdir, 'settings.json')) || {};
+  const styleActive = settings.outputStyle === 'Fable';
+  const profileOff = (process.env.FABLE_PROFILE || '').toLowerCase() === 'off';
+  const mode = readJSONsafe(path.join(fdir, 'mode.json'));
+  const ultra = (process.env.FABLE_ULTRA || (mode && mode.ultra) || 'auto').toLowerCase();
+  const xv = readJSONsafe(path.join(fdir, 'xverify.json'));
+  const preset = (xv && xv.preset) || 'claude-only';
+  const xverifyOff = (process.env.FABLE_XVERIFY || '').toLowerCase() === 'off' || (xv && xv.mode === 'off');
+  const env = {};
+  for (const k of ['FABLE_PROFILE', 'FABLE_ULTRA', 'FABLE_ONBOARD', 'FABLE_MODELCHECK', 'FABLE_XVERIFY', 'FABLE_FUSION']) if (process.env[k]) env[k] = process.env[k];
+  const status = {
+    style_active: styleActive,
+    hooks_quieted_by_env: profileOff,
+    cost_mode: ultra,
+    cost_mode_source: process.env.FABLE_ULTRA ? 'env FABLE_ULTRA' : (mode ? 'mode.json' : 'default'),
+    cross_model_reviewer: xverifyOff ? 'off' : preset,
+    env_overrides: env,
+  };
+  const lines = [
+    `Fable style: ${styleActive ? 'ON (always-on output style is the active style)' : 'NOT the active output style — pick "Fable" in /config'}` +
+      (profileOff ? '  [FABLE_PROFILE=off quiets the hooks; the style itself still applies]' : ''),
+    `Cost mode (ULTRA): ${ultra}  (from ${status.cost_mode_source}) — change: export FABLE_ULTRA=auto|on|off  or edit ${path.join(fdir, 'mode.json')}`,
+    `Cross-model reviewer: ${status.cross_model_reviewer} — change: node <fablever>/orchestration/lib/xverify-preset.mjs set <preset>`,
+  ];
+  if (Object.keys(env).length) lines.push(`Env overrides in effect: ${Object.entries(env).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+  return { summary: lines.join('\n'), status };
+}
+
 const TOOLS = [
   {
     name: 'get_fable_profile',
@@ -149,6 +185,11 @@ const TOOLS = [
       properties: { text: { type: 'string', description: 'The draft response or plan to check.' } },
       required: ['text'],
     },
+  },
+  {
+    name: 'fable_status',
+    description: 'Report whether fablever is active right now and how it is configured: is the Fable output style on, the current cost mode (auto/on/off and where it comes from), the cross-model reviewer preset, and any FABLE_* env overrides. Read-only (reads local config). Use to answer the user\'s "is fablever on / what mode am I in / which reviewer preset / how do I change it".',
+    inputSchema: { type: 'object', properties: {} },
   },
 ];
 
@@ -211,6 +252,10 @@ function handle(msg) {
         if (name === 'fable_lint') {
           if (typeof args.text !== 'string') return error(id, -32602, 'fable_lint requires a "text" string argument');
           return result(id, { content: [{ type: 'text', text: JSON.stringify(fableLint(args.text), null, 2) }] });
+        }
+        if (name === 'fable_status') {
+          const s = fableStatus();
+          return result(id, { content: [{ type: 'text', text: `${s.summary}\n\n${JSON.stringify(s.status, null, 2)}` }] });
         }
         return error(id, -32602, `Unknown tool: ${name}`);
       } catch (e) {

@@ -68,17 +68,18 @@ Usage: ./install.sh [options]
   --uninstall      remove everything; restores prior settings
   -h, --help       show this help
 
-After installing, restart Claude Code (or /clear). Disable anytime: export FABLE_PROFILE=off
+After installing, restart Claude Code (or /clear). Quiet the hooks: export FABLE_PROFILE=off
+(the always-on style stays — switch it in /config or run --uninstall to remove it too).
 USAGE
 }
 
-WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0; XVERIFY=off; DO_ONBOARD=1; DO_MODELCHK=1
+WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0; XVERIFY=off; DO_ONBOARD=1; DO_MODELCHK=1; XVERIFY_EXPLICIT=0
 for a in "$@"; do
   case "$a" in
     --with-hook)      WITH_HOOK=1 ;;
     --with-fusion)    WITH_FUSION=1 ;;
-    --with-xverify)   XVERIFY=openrouter ;;
-    --with-xverify=*) XVERIFY="${a#*=}" ;;
+    --with-xverify)   XVERIFY=openrouter; XVERIFY_EXPLICIT=1 ;;
+    --with-xverify=*) XVERIFY="${a#*=}"; XVERIFY_EXPLICIT=1 ;;
     --no-style)    SET_STYLE=0 ;;
     --no-mcp)      DO_MCP=0 ;;
     --no-subagent) DO_SUBAGENT=0 ;;
@@ -100,6 +101,7 @@ if [ "$UNINSTALL" = "1" ]; then
   node "$MERGE" sesshook-off "$SETTINGS" "$MODELCHK_CMD" 2>/dev/null || true
   rm -f "$HOOK_DST" "$SUBHOOK_DST" "$ONBOARD_DST" "$MODELCHK_DST" "$STYLE_DST"
   rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG" "$MODE_CFG" "$FABLE_HOME_PTR"
+  rm -f "$PROFILE_DST_DIR/onboarded" "$PROFILE_DST_DIR/model-check.json" "$PROFILE_DST_DIR/model-notified.json"  # so a later re-install re-onboards cleanly
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
   if have claude; then
@@ -181,7 +183,7 @@ fi
 if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ] || [ "$DO_ONBOARD" = "1" ] || [ "$DO_MODELCHK" = "1" ]; then
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true   # refresh cleanly so files deleted from the repo don't persist stale
   mkdir -p "$RUNTIME_DIR"
-  cp -R "${REPO}/mcp" "${REPO}/fusion" "${REPO}/profiles" "${REPO}/orchestration" "$RUNTIME_DIR"/ 2>/dev/null || true
+  cp -R "${REPO}/mcp" "${REPO}/fusion" "${REPO}/profiles" "${REPO}/orchestration" "${REPO}/docs" "$RUNTIME_DIR"/ 2>/dev/null || true
   printf '%s\n' "$RUNTIME_DIR" > "$FABLE_HOME_PTR"   # pointer the hooks read to find orchestration/ from any cwd
   echo "  runtime   -> copied to $RUNTIME_DIR (immutable; incl. orchestration/ for the SessionStart hooks; re-run to refresh)"
 fi
@@ -247,14 +249,24 @@ case "$XVERIFY" in
   gpt-oauth+gemini-api)          PRESET=gpt-oauth+gemini-api ;;
   *) echo "  xverify   -> WARN: unknown value '$XVERIFY'; using claude-only" ; PRESET=claude-only ;;
 esac
-if node "$REPO/orchestration/lib/xverify-preset.mjs" set "$PRESET" >/dev/null 2>&1; then
-  echo "  xverify   -> preset '$PRESET' -> $XVERIFY_CFG  (change later: node orchestration/lib/xverify-preset.mjs set <preset>)"
+# Only (over)write the preset when the user EXPLICITLY chose one (--with-xverify), or when no
+# preset exists yet. A plain re-run (refresh runtime / after git pull) must PRESERVE the user's
+# existing choice instead of silently resetting it to claude-only.
+if [ "$XVERIFY_EXPLICIT" = "1" ] || [ ! -f "$XVERIFY_CFG" ]; then
+  if node "$REPO/orchestration/lib/xverify-preset.mjs" set "$PRESET" >/dev/null 2>&1; then
+    echo "  xverify   -> preset '$PRESET' -> $XVERIFY_CFG  (change later: node orchestration/lib/xverify-preset.mjs set <preset>)"
+  else
+    printf '{ "preset": "claude-only", "mode": "off" }\n' > "$XVERIFY_CFG"; echo "  xverify   -> claude-only (fallback)"
+  fi
 else
-  printf '{ "preset": "claude-only", "mode": "off" }\n' > "$XVERIFY_CFG"; echo "  xverify   -> claude-only (fallback)"
+  KEEP="$(node "$REPO/orchestration/lib/xverify-preset.mjs" current 2>/dev/null || echo '?')"
+  echo "  xverify   -> kept your existing preset '$KEEP' (re-run with --with-xverify=<preset> to change)"
+  PRESET="$KEEP"
 fi
 # seed the cost-mode default so the skip/defaults onboarding path needs ZERO command execution
 [ -f "$MODE_CFG" ] || { printf '{ "ultra": "auto" }\n' > "$MODE_CFG"; echo "  mode      -> $MODE_CFG seeded {\"ultra\":\"auto\"}  (change: export FABLE_ULTRA=on|off|auto)"; }
-case "$PRESET" in
+# per-preset setup notes — only when the user explicitly chose this run (not on a plain re-run)
+[ "$XVERIFY_EXPLICIT" = "1" ] && case "$PRESET" in
   gpt-api+gemini-api)
     if have claude && ! claude mcp list 2>/dev/null | grep -q '^fable-fusion\b'; then
       claude mcp add --transport stdio fable-fusion --scope user -- node "$FUSION_SERVER" \
@@ -345,7 +357,8 @@ Installed.  Next: RESTART Claude Code (or run /clear).
   Cost dial:   FABLE_ULTRA=auto (default: cheap; spends only on high-stakes reviews) | on | off.
   Verify:      /config -> Output style shows "Fable"; /mcp lists fable-profile.
   Full guide:  whitepaper/09-running-it.md  (keys, login, modes, kill switches).
-  Disable:     export FABLE_PROFILE=off   ·   remove: ./install.sh --uninstall
+  Quiet hooks: export FABLE_PROFILE=off   (the always-on STYLE stays; switch it in /config to drop it)
+  Remove all:  ./install.sh --uninstall   (restores your prior output style + settings)
 ${HOOK_NOTE}
 
   This is a STYLE transplant, not a capability transplant: it recovers Fable's restraint,

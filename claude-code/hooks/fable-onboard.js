@@ -17,6 +17,13 @@ try {
   const flag = path.join(dir, 'onboarded');
   if (fs.existsSync(flag)) process.exit(0); // already set up -> say nothing
 
+  // SessionStart fires on startup / resume / clear / compact. Only run first-run setup on a real
+  // start — never interrupt mid-work on a resume/compact. Fail-open: unknown source -> proceed.
+  try {
+    const input = fs.readFileSync(0, 'utf8');
+    if (input) { const src = (JSON.parse(input).source || '').toLowerCase(); if (src === 'resume' || src === 'compact') process.exit(0); }
+  } catch (_) { /* no stdin / parse fail -> proceed */ }
+
   // Resolve the ABSOLUTE path to the installed orchestration libs, so the commands the agent runs
   // work from ANY cwd after the user restarts (they will NOT be in the repo clone dir). install.sh
   // copies orchestration/ into the immutable runtime and writes a 'fable-home' pointer to it.
@@ -51,11 +58,14 @@ try {
     'THAT language, translated naturally — do not dump English at a non-English user. If they have not ' +
     'written yet, open with a one-line greeting and switch to whatever language they reply in. Keep ' +
     'commands, file paths, env-var names, and preset IDs (claude-only / gpt-oauth / …) verbatim; ' +
-    'translate the prose around them.\n\n' +
-    'STEP 0 — stop the nag first. Immediately create the file ' + flag + ' (any content). Do this BEFORE ' +
-    'anything else so that even if later steps are skipped or error, this prompt never repeats and the ' +
-    'session is never blocked (the install already wrote working defaults: cost mode "auto", reviewer ' +
-    '"claude-only" — both fully functional with no key).\n\n' +
+    'translate the prose around them. If you run a fablever CLI (e.g. xverify-preset show/doctor), ' +
+    'TRANSLATE its output for the user — never paste raw English preset lists or raw JSON into a ' +
+    'non-English chat; summarize it in their language.\n\n' +
+    'STEP 0 — respect the user\'s intent; this is OPTIONAL. The install already wrote working defaults ' +
+    '(cost mode "auto", reviewer "claude-only" — no key, $0, fully functional), and this prompt will ' +
+    'NOT appear again regardless of what happens next. So if the user signals they just want to work — ' +
+    'says "skip"/"later"/"not now", or simply gives you a task — STOP setup immediately, keep the ' +
+    'defaults, and do their request. Do NOT insist, repeat, or block their first task.\n\n' +
     'STEP 1 — cost mode. The installer already seeded ' + modeJson + ' as {"ultra":"auto"} (cheap by ' +
     'default, spends only on high-stakes reviews). Ask if they want "auto" (recommended), "on" (always ' +
     'max quality), or "off" (always cheapest). ONLY if they change it, rewrite ' + modeJson + ' as ' +
@@ -77,13 +87,24 @@ try {
     'actually reads (zsh: ~/.zshrc, bash: ~/.bashrc), e.g. ' +
     '`echo \'export OPENROUTER_API_KEY=...\' >> ~/.zshrc && source ~/.zshrc` (or GEMINI_API_KEY), then ' +
     'open a new session. Point them to where to GET the key (openrouter.ai/keys or aistudio.google.com).\n' +
-    '- For gpt-oauth there is NO key: the human step is installing the codex CLI and signing into ChatGPT. ' +
-    'The exact 3 commands are in docs/API-KEYS.md (§ "Set up the codex MCP"); relay them, do not improvise.\n' +
-    '- Verify with ' + cmd('doctor') + ' — it reports whether the needed key is PRESENT (true/false) and ' +
-    'NEVER prints the value. Do not echo key values yourself either.\n\n' +
-    'FINISH — confirm the onboarded flag exists (from STEP 0), then tell the user what was set, what (if ' +
-    'anything) they still must do (issue key / sign in), and how to change later (re-run the set command, ' +
-    'or export FABLE_ULTRA=...). Full guide: whitepaper/09-running-it.md.';
+    '- For gpt-oauth there is NO API key — the human step is installing the codex CLI and signing into ' +
+    'ChatGPT. Relay these EXACT three terminal commands (do not improvise): ' +
+    '(1) `npm install -g @openai/codex`  (2) `codex login`  (3) `claude mcp add --transport stdio codex ' +
+    '--scope user -- codex mcp-server` — then `claude mcp list` should show `codex ✔ Connected`. Confirm ' +
+    'each command succeeded before the next; if codex is already set up, skip.\n' +
+    '- Verify the chosen preset with ' + cmd('doctor') + ' — it reports whether the needed key is PRESENT ' +
+    '(true/false) and, for gpt-oauth, whether codex is registered AND signed in. It NEVER prints a key ' +
+    'value; do not echo key values yourself either. If doctor says "registered but NOT signed in", tell ' +
+    'them to run `codex login`.\n\n' +
+    'FINISH — tell the user what was set, what (if anything) they still must do (issue key / sign in), and ' +
+    'how to change later (re-run the set command, or export FABLE_ULTRA=...). For more detail, point them ' +
+    'to the guide IN THEIR LANGUAGE: https://github.com/elon-choo/fablever/blob/main/whitepaper/09-running-it.md ' +
+    '(Korean: .../whitepaper/ko/09-running-it.md). The first-run prompt is already done — it will not repeat.';
+
+  // Write the flag DETERMINISTICALLY here — so first-run setup is shown exactly ONCE and can never
+  // re-nag, regardless of whether the agent acts on it. The seeded defaults already work, so a user
+  // who ignores setup loses nothing; deleting ~/.claude/fable-profile/onboarded re-runs it on demand.
+  try { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(flag, 'shown\n'); } catch (_) {}
 
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: ctx },

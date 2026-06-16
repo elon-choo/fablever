@@ -115,7 +115,9 @@ stay current without costing tokens per chat:
 ## 9.5 Kill switches (everything is reversible)
 
 ```bash
-export FABLE_PROFILE=off       # disable the whole profile + hooks
+export FABLE_PROFILE=off       # turns off the fablever HOOKS (injections). NOTE: the always-on output
+                               # STYLE is static and stays — to also turn that off, switch output style
+                               # in /config, or run ./install.sh --uninstall for full removal.
 export FABLE_ULTRA=off         # always cheap path
 export FABLE_XVERIFY=off       # disable cross-model verification
 export FABLE_FUSION=off        # disable the OpenRouter fusion module

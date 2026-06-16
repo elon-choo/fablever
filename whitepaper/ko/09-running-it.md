@@ -118,7 +118,8 @@ node orchestration/lib/xverify-preset.mjs doctor         # checks if the needed 
 ## 9.5 킬 스위치(모든 것은 되돌릴 수 있다)
 
 ```bash
-export FABLE_PROFILE=off       # disable the whole profile + hooks
+export FABLE_PROFILE=off       # fablever 훅(주입)만 끈다. 주의: always-on 출력 스타일은 정적이라 이
+                               # 변수로는 안 꺼진다 — /config에서 출력 스타일을 바꾸거나 --uninstall로 제거.
 export FABLE_ULTRA=off         # always cheap path
 export FABLE_XVERIFY=off       # disable cross-model verification
 export FABLE_FUSION=off        # disable the OpenRouter fusion module

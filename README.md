@@ -25,7 +25,8 @@ and disciplined about stopping. Every project, every subagent, installable by an
 
 ```bash
 git clone https://github.com/elon-choo/fablever && cd fablever && ./install.sh
-# then restart Claude Code (or /clear). Disable anytime: export FABLE_PROFILE=off
+# then restart Claude Code (or /clear).
+# Turn off the hooks: export FABLE_PROFILE=off  ·  fully remove (incl. the always-on style): ./install.sh --uninstall
 ```
 
 **What it changes** — eight behaviors, distilled from the Fable guide (full text in
@@ -132,9 +133,15 @@ and asserts your existing hooks, permissions, and `effortLevel` survive and that
 ### Disable / remove
 
 ```bash
-export FABLE_PROFILE=off       # turns off the hook for the current shell (if installed)
-./install.sh --uninstall       # full removal
+export FABLE_PROFILE=off       # turns off the fablever HOOKS (injections) for this shell
+# The always-on output STYLE is static and is NOT env-toggleable — to turn it off too:
+#   • switch output style in /config (pick a non-Fable style), or
+./install.sh --uninstall       # full removal (restores your prior output style + settings)
 ```
+
+So `FABLE_PROFILE=off` quiets the injected reminders but leaves the Fable *style* layered on; use
+`/config` or `--uninstall` to remove the style. (Per-feature switches: `FABLE_ONBOARD=off`,
+`FABLE_MODELCHECK=off`, `FABLE_ULTRA=off`, `FABLE_XVERIFY=off`, `FABLE_FUSION=off`.)
 
 ## What gets installed
 
@@ -143,10 +150,12 @@ export FABLE_PROFILE=off       # turns off the hook for the current shell (if in
   Code's coding behavior. Cache-amortized; no execution surface.
 - **MCP server** `mcp/src/server.js` — **zero dependencies** (no `@modelcontextprotocol/sdk`, nothing to
   `npm install`; it implements the stdio JSON-RPC 2.0 handshake by hand — ~250 auditable lines, covered by
-  16 protocol tests — which is *why* there's no SDK dependency to trust). Exposes:
+  17 protocol tests — which is *why* there's no SDK dependency to trust). Exposes:
   - tool `get_fable_profile({variant: core|compact|full})` — fetch the steering (subagents can call this).
   - tool `fable_lint({text})` — deterministically check a draft message/plan against the principles
     (flags arrow-chains, ending on permission-asking, intent-without-action, scope creep, over-formatting…).
+  - tool `fable_status()` — is fablever on right now, what cost mode, which reviewer preset, and the
+    FABLE_* overrides in effect. The answer to "is it even on / how do I change it" from inside a session.
   - prompt `fable-mode` — inject the full profile on demand (`/mcp__fable-profile__fable-mode`).
   - resources `fable://profile/{full,compact,core}`.
 - **SubagentStart hook** `~/.claude/hooks/fable-subagent.js` (default-on) — injects the *compact* reminder
@@ -231,7 +240,7 @@ to use the codex MCP instead of an OpenRouter key). The installer prints the opt
 ## Verify
 
 ```bash
-node test/mcp-test.js                  # 16 MCP protocol checks
+node test/mcp-test.js                  # 17 MCP protocol checks
 node test/fusion-test.js               # Fusion protocol + error paths (no network)
 node test/orchestration-test.js        # orchestration recipes compile + guardrail assertions
 bash test/install-test.sh              # install/uninstall safety lifecycle

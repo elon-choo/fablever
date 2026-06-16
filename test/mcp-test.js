@@ -52,7 +52,10 @@ function check(name, cond, detail) {
   notify('notifications/initialized');
 
   const tools = await rpc('tools/list', {});
-  check('tools/list has get_fable_profile + fable_lint', tools.result && tools.result.tools.length === 2 && tools.result.tools.some(t => t.name === 'get_fable_profile') && tools.result.tools.some(t => t.name === 'fable_lint'), JSON.stringify(tools.result));
+  check('tools/list has get_fable_profile + fable_lint + fable_status', tools.result && tools.result.tools.length === 3 && ['get_fable_profile', 'fable_lint', 'fable_status'].every(n => tools.result.tools.some(t => t.name === n)), JSON.stringify(tools.result));
+
+  const status = await rpc('tools/call', { name: 'fable_status', arguments: {} });
+  check('fable_status returns a config snapshot', status.result && status.result.content && /cost_mode|Cost mode/.test(status.result.content[0].text), JSON.stringify(status.result || status.error));
 
   const prof = await rpc('tools/call', { name: 'get_fable_profile', arguments: { variant: 'core' } });
   check('get_fable_profile returns text content', prof.result && prof.result.content && prof.result.content[0].type === 'text' && prof.result.content[0].text.length > 20, JSON.stringify(prof.result || prof.error));
