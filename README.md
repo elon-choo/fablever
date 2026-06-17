@@ -37,6 +37,28 @@ node install.mjs        # universal installer — macOS, Linux, AND native Windo
 > needs **no API key** and costs nothing extra; on the first session it asks two quick setup questions
 > in your language.
 
+## First run — it sets itself up, in your language
+
+After you install and **restart Claude Code**, the first new session runs a short, friendly setup
+*before* your first task — the onboarding hook injects the instruction, the agent carries it out. It
+happens **once** and never nags again.
+
+- **In your language.** It detects the language you write in and runs the whole setup there (write in
+  Korean → it onboards in Korean).
+- **It asks just two things, and configures them for you:**
+  1. **Cost mode** — `auto` (default: cheap; spends only on high-stakes reviews) · `on` · `off`.
+  2. **Cross-model reviewer** — one of four presets: `claude-only` (default; no key, no login, $0) ·
+     `gpt-oauth` (a GPT reviewer via your **ChatGPT login** — *no API key*) · `gpt-oauth+gemini-api` ·
+     `gpt-api+gemini-api`.
+- **You only do the irreducible human step** — issue a key or sign in — and *only* if you pick a
+  paid/login preset. The agent writes all the config itself and **never asks you to paste a key into
+  the chat** (keys live in your shell env only; `doctor` checks presence, never the value).
+- **Just want to work?** Say **"skip"** (or just give it a task) — it stops immediately and proceeds
+  on the safe defaults: **no API key, $0**. It won't insist.
+
+It's an instruction injected to the agent, not a rigid wizard — a capable model like Claude Code
+follows it reliably. Full reference: [`whitepaper/09-running-it.md`](whitepaper/09-running-it.md) §9.0.
+
 **What it changes** — eight behaviors, distilled from the Fable guide (full text in
 [`profiles/full.md`](profiles/full.md)): act when you have enough info (recommend, don't survey) · lead
 with the outcome · don't over-build · report findings and stop when you're only asked · ground every
