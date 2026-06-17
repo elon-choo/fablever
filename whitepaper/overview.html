@@ -141,14 +141,15 @@
     <div class="steps">
       <div class="step"><div class="b"></div><div class="t"><h4>설치</h4><p><span class="kbd">git clone https://github.com/elon-choo/fablever &amp;&amp; cd fablever &amp;&amp; ./install.sh</span></p></div></div>
       <div class="step"><div class="b"></div><div class="t"><h4>Claude Code 재시작</h4><p>출력 스타일 “Fable”이 세션 시작 시 자동 적용 (매 턴·서브에이전트까지 훅으로 주입).</p></div></div>
-      <div class="step"><div class="b"></div><div class="t"><h4>그냥 평소처럼 사용</h4><p>설정·프롬프트 추가 작업 없음. 끄려면 <span class="kbd">export FABLE_PROFILE=off</span>, 완전 제거는 <span class="kbd">./install.sh --uninstall</span> (이전 설정 복원).</p></div></div>
+      <div class="step"><div class="b"></div><div class="t"><h4>첫 세션 — AI가 설정을 도와줍니다 (<b>당신의 언어로</b>)</h4><p>처음 켜면 fablever가 <b>당신이 쓰는 언어로</b> 딱 두 가지만 물어봅니다: 비용 모드(<span class="kbd">auto</span>/on/off)와 교차검증 리뷰어. 잘 모르면 <b>“skip”</b> 한마디면 안전한 기본값으로 시작 — <b>API 키 불필요·추가 비용 0</b>. 리뷰어는 4가지 프리셋에서 선택: Claude 단독($0) · GPT를 <b>ChatGPT 계정 로그인</b>으로(키 없이) · +Gemini · API 키. 답은 저장되어 다시 묻지 않습니다.</p></div></div>
+      <div class="step"><div class="b"></div><div class="t"><h4>그냥 평소처럼 사용</h4><p>추가 작업 없음. <b>지금 켜져 있나?</b> 싶으면 MCP 도구 <span class="kbd">fable_status</span>로 현재 상태(모드·프리셋)를 확인. 훅만 끄기 <span class="kbd">export FABLE_PROFILE=off</span> · 항상 켜진 스타일까지 완전 제거 <span class="kbd">./install.sh --uninstall</span>(이전 설정 복원).</p></div></div>
     </div>
   </div>
 
   <!-- EVIDENCE -->
   <div class="section">
     <h2>효과는? — 실측했습니다 (솔직하게)</h2>
-    <p class="lead">“말로만 좋다”가 아니라, 심어둔 결함(planted defect)으로 통제 실험을 돌렸습니다.</p>
+    <p class="lead">“말로만 좋다”가 아니라, 심어둔 결함(planted defect)으로 통제 실험을 돌렸습니다. 스크립트와 원시 데이터까지 저장소에 커밋했고(<span class="kbd">eval/ultra/</span>), 키 없이 <span class="kbd">node eval/ultra/score.mjs</span> 한 줄로 핵심 수치를 직접 검증할 수 있습니다 — “믿지 말고 돌려보라”.</p>
     <div class="grid g2">
       <div class="card">
         <h3>① 통제 A/B — 절제된 결론</h3>

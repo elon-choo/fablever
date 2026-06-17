@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
 
-> 🌐 **한국어:** 백서 [`whitepaper/ko/`](whitepaper/ko/) · 근거 요약 [`EVIDENCE.ko.md`](EVIDENCE.ko.md). 설치 후 안내(설치 스크립트·온보딩)는 사용자 언어로 자동 표시됩니다. · **Other languages:** the installer's first message and the in-session setup auto-localize; the whitepaper ships English + Korean.
+> 🌐 **한국어:** [`README.ko.md`](README.ko.md) (이 문서의 한국어판) · 백서 [`whitepaper/ko/`](whitepaper/ko/) · 근거 요약 [`EVIDENCE.ko.md`](EVIDENCE.ko.md). 설치 후 안내는 사용자 언어로 자동 표시됩니다. · **Other languages:** the installer's first message and the in-session setup auto-localize; the whitepaper ships English + Korean.
 
 Apply Anthropic's documented **Fable working-style guidance** as an always-on output style in
 [Claude Code](https://claude.com/claude-code) (and any MCP client), so **any** Claude model — Opus,
