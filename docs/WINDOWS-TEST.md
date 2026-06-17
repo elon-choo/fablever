@@ -72,6 +72,43 @@
 
 ---
 
+## 수정 후 재확인 (빠른 버전 — 하니스 수정 반영) — 복붙용
+
+> 1차 검증에서 발견된 테스트 하니스 버그를 고친 뒤(커밋 `0927ebf` 이상), **`npm test` 전체 체인이
+> Windows에서 끝까지 통과하는지**만 확인하는 짧은 버전입니다. 아래 마커 사이를 복사해 Windows Claude Code에 붙여넣으세요.
+
+===== 여기부터 복사 (재확인) =====
+
+당신은 **Windows 컴퓨터**에 있습니다. 오픈소스 도구 **fablever**를 **최신 코드로** 설치·테스트해, Windows에서 `npm test` 전체가 통과하는지 최종 확인해 주세요. **소스는 수정하지 말고**, 실제 출력/에러를 그대로 보고하세요.
+
+저장소: https://github.com/elon-choo/fablever
+
+1. **최신 코드** — 기존 클론이 있으면 그 폴더에서 `git pull`, 없으면 `git clone https://github.com/elon-choo/fablever` 후 이동. `git log -1 --format=%h` 로 HEAD가 `0927ebf` 또는 그 이후인지 확인해 보고.
+2. **전체 테스트** — 저장소 폴더에서 `npm test` 실행. **끝까지 통과(exit 0)** 하는지 각 줄과 함께 보고. 특히:
+   - `17/17 checks passed.` (mcp)
+   - `install-mjs selftest: 14/14`  ← 이번 수정의 핵심. **14/14** 여야 함.
+   - 마지막에 `install-test.sh: SKIPPED on native Windows ...` 가 나오고 `npm test` 가 **성공(exit 0)** 으로 끝나는지.
+   - `npm test` 의 **종료 코드**도 보고.
+3. **실제 설치** — `node install.mjs` 실행, "Installed." 확인.
+4. **(사람이 하는 실사용 확인)** 이제 **Claude Code를 재시작**(또는 `/clear`)하고 **새 세션에서 한국어로 아무 말이나** 입력해 보세요. 그러면 (i) 첫 세션 온보딩이 **한국어로** 설정 질문을 하는지, (ii) `/config` 에서 출력 스타일이 **Fable** 인지 확인해 알려주세요. (재시작이 필요해 자동화가 안 되니 직접 관찰한 내용을 적어주세요.)
+
+마지막으로 짧은 보고서를 출력:
+```
+# fablever Windows 최종 확인
+- HEAD 커밋:
+- npm test 종료코드(0=성공):
+  - mcp 17/17:
+  - install-mjs 14/14:
+  - 마지막 install-test.sh SKIPPED 줄 확인:
+- node install.mjs 설치:
+- (재시작 후) 온보딩 한국어 + /config = Fable:
+- 에러 원문(있으면 그대로):
+- 종합: 완전 동작 / 문제(어디)
+```
+실패가 있으면 실제 에러를 그대로. fablever 소스는 수정 금지.
+
+===== 여기까지 복사 (재확인) =====
+
 ## 보고서를 받은 뒤
 
 그 보고서를 저에게 그대로 주시면 — Windows에서 깨진 부분이 있으면 (예: 훅 command 경로 형태, `claude` CLI 해석, bash 의존 테스트) 바로 수정하겠습니다.
