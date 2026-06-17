@@ -106,7 +106,9 @@ with `--since <install-date>` after installing to check whether your own numbers
 
 **Requirements:** [Claude Code](https://claude.com/claude-code) and Node.js ≥ 18. **Platform: macOS,
 Linux, and native Windows** — `install.mjs` is pure Node, and every installed piece (output style, all
-hooks, MCP) is Node or plain text, so **Windows works without WSL**. (`install.sh` is the POSIX
+hooks, MCP) is Node or plain text, so **Windows works without WSL** (verified on Windows 11: clean
+install, all hook/runtime/MCP checks, idempotent re-install, and byte-identical restore on uninstall —
+the harness used is [`docs/WINDOWS-TEST.md`](docs/WINDOWS-TEST.md)). (`install.sh` is the POSIX
 convenience wrapper; the one opt-in `--with-hook` per-turn reminder is a bash script and is skipped on
 native Windows — the default SubagentStart + SessionStart Node hooks cover the main reach there.)
 

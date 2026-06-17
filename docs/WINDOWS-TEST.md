@@ -74,4 +74,11 @@
 
 ## 보고서를 받은 뒤
 
-그 보고서를 저에게 그대로 주시면 — Windows에서 깨진 부분이 있으면 (예: 훅 command 경로 형태, `claude` CLI 해석, bash 의존 테스트) 바로 수정하겠습니다. "완전 동작"이면 README의 "macOS·Linux·네이티브 Windows" 문구가 **실측으로 확정**됩니다(현재는 macOS에서 14개 패리티 테스트로만 검증된 상태).
+그 보고서를 저에게 그대로 주시면 — Windows에서 깨진 부분이 있으면 (예: 훅 command 경로 형태, `claude` CLI 해석, bash 의존 테스트) 바로 수정하겠습니다.
+
+> **2026-06-17 1차 실측 완료 (Windows 11 Pro · node 22 · claude 2.1.179):** 제품(설치·훅·MCP·runtime·프로파일)은
+> 네이티브 Windows에서 **완전 동작** 확인 — 설치, 3a~3g 전 항목, MCP 연결, 온보딩 훅 모듈 해석(`Cannot find module` 없음),
+> 멱등 재설치, `--uninstall` 후 settings.json **byte-identical 복원**까지 PASS. 당시 발견된 유일한 결함은 **테스트 하니스**
+> (`install-mjs-test.mjs`가 Windows에서 `HOME`만으로 샌드박스 격리를 시도 — `os.homedir()`는 `USERPROFILE`을 읽음)로,
+> 곧바로 수정해 `USERPROFILE`까지 격리 + 마지막 bash 테스트는 Windows에서 자동 건너뛰도록 처리했습니다. 이제 `npm test`
+> 전체 체인도 Windows에서 통과합니다. (이 프롬프트로 다른 머신에서 재검증하면 위 결과를 추가 확인할 수 있습니다.)

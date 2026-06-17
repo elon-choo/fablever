@@ -105,7 +105,8 @@ Fable은 더 간결하고, 서술 한 단위당 더 많이 행동하며, 덜 에
 
 **요구 사항:** [Claude Code](https://claude.com/claude-code)와 Node.js ≥ 18. **플랫폼: macOS·Linux·
 네이티브 Windows** — `install.mjs`는 순수 Node이고, 설치되는 모든 부품(출력 스타일·모든 훅·MCP)이
-Node 또는 평문이라 **Windows에서도 WSL 없이** 동작합니다. (`install.sh`는 POSIX용 편의 래퍼이며,
+Node 또는 평문이라 **Windows에서도 WSL 없이** 동작합니다(Windows 11에서 실측 확인 — 설치·훅/런타임/MCP
+검증·멱등 재설치·제거 후 byte-identical 복원까지. 검증 하니스: [`docs/WINDOWS-TEST.md`](docs/WINDOWS-TEST.md)). (`install.sh`는 POSIX용 편의 래퍼이며,
 유일한 옵트인 `--with-hook`(매 턴 리마인더)만 bash 스크립트라 네이티브 Windows에서는 건너뜁니다 —
 기본 SubagentStart + SessionStart Node 훅이 주요 도달 범위를 커버합니다.)
 

@@ -16,9 +16,13 @@ writeFileSync(settings, JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'comm
 
 let ok = 0, n = 0;
 const t = (cond, msg) => { n++; if (cond) { ok++; console.log('PASS:', msg); } else console.log('FAIL:', msg); };
-const run = (...args) => spawnSync(process.execPath, [INSTALL, ...args], { env: { ...process.env, HOME: SB }, encoding: 'utf8' });
+// Sandbox BOTH HOME (POSIX) and USERPROFILE — on Windows os.homedir() reads USERPROFILE, not HOME,
+// so overriding only HOME would let install.mjs escape to the real ~/.claude (verified on Win 11).
+const run = (...args) => spawnSync(process.execPath, [INSTALL, ...args], { env: { ...process.env, HOME: SB, USERPROFILE: SB }, encoding: 'utf8' });
 const J = () => JSON.parse(readFileSync(settings, 'utf8'));
 const F = p => path.join(SB, '.claude', p);
+const rd = p => { try { return readFileSync(p, 'utf8'); } catch { return ''; } };       // missing -> clean FAIL, not a crash
+const rj = p => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return {}; } };
 
 run('--no-mcp');
 t(J().outputStyle === 'Fable', 'install.mjs: outputStyle=Fable');
@@ -28,17 +32,17 @@ t(/fable-subagent/.test(JSON.stringify(J().hooks.SubagentStart || [])), 'install
 t(J().hooks.Stop && J().effortLevel === 'xhigh' && J().permissions.allow.length === 1, 'install.mjs: existing settings preserved');
 t(existsSync(F('fable-profile/runtime/orchestration/lib/xverify-preset.mjs')), 'install.mjs: orchestration copied into runtime');
 t(existsSync(F('fable-profile/fable-home')), 'install.mjs: fable-home pointer written');
-t(JSON.parse(readFileSync(F('fable-profile/mode.json'), 'utf8')).ultra === 'auto', 'install.mjs: mode.json seeded');
-t(readFileSync(F('fable-profile/full.md'), 'utf8').length > 500, 'install.mjs: profile resolves');
+t(rj(F('fable-profile/mode.json')).ultra === 'auto', 'install.mjs: mode.json seeded');
+t(rd(F('fable-profile/full.md')).length > 500, 'install.mjs: profile resolves');
 t(readdirSync(F('')).some(f => f.startsWith('settings.json.fable-bak-')), 'install.mjs: settings backed up');
 
 run('--no-mcp'); // idempotent
 t((JSON.stringify(J().hooks.SessionStart).match(/fable-onboard/g) || []).length === 1, 'install.mjs: idempotent (onboard once)');
 
 run('--no-mcp', '--with-xverify=gpt-oauth');
-t(JSON.parse(readFileSync(F('fable-profile/xverify.json'), 'utf8')).preset === 'gpt-oauth', 'install.mjs: explicit preset set');
+t(rj(F('fable-profile/xverify.json')).preset === 'gpt-oauth', 'install.mjs: explicit preset set');
 run('--no-mcp'); // plain re-run must preserve
-t(JSON.parse(readFileSync(F('fable-profile/xverify.json'), 'utf8')).preset === 'gpt-oauth', 'install.mjs: plain re-run preserves preset');
+t(rj(F('fable-profile/xverify.json')).preset === 'gpt-oauth', 'install.mjs: plain re-run preserves preset');
 
 run('--uninstall');
 const after = J();
