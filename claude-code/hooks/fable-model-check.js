@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // fablever SessionStart hook — surfaces a notice when a newer, not-yet-validated verification
-// model has been detected, and triggers the (daily-rate-limited) refresh in the background.
-// FAIL-OPEN and NON-BLOCKING: any error, or no candidates, prints nothing and exits 0.
-// Token cost per chat = ZERO: this reads a cached state file; the actual model-LIST call runs
-// at most once / 24h in a detached child. Disable with FABLE_MODELCHECK=off or FABLE_PROFILE=off.
+// model has been detected (read from a cached state file). FAIL-OPEN and NON-BLOCKING: any error,
+// or no candidates, prints nothing and exits 0.
+// DEFAULT = NO NETWORK, NO CREDENTIAL READ: the hook only READS a cached state file (ZERO chat
+// tokens, no key access). The model-LIST refresh — which inspects OPENAI_API_KEY/GEMINI_API_KEY/
+// GOOGLE_API_KEY and queries provider model-list endpoints — is OPT-IN via FABLE_MODELCHECK_REFRESH=on;
+// without it, refresh only happens when you run `npm run model:check` yourself.
+// Disable the whole hook with FABLE_MODELCHECK=off or FABLE_PROFILE=off.
 'use strict';
 const fs = require('fs');
 const os = require('os');
@@ -50,9 +53,14 @@ try {
     }
   } catch (_) { /* no state yet -> no notice */ }
 
-  // 2) best-effort: trigger the daily-rate-limited refresh in a DETACHED child (never blocks).
+  // 2) OPT-IN refresh: trigger the daily-rate-limited model-LIST refresh in a DETACHED child.
+  //    GATED behind FABLE_MODELCHECK_REFRESH=on so the DEFAULT install makes NO network call and
+  //    NO credential read — the refresh (model-freshness.mjs) inspects API keys and queries provider
+  //    model-list endpoints, which would otherwise contradict the "default hooks: no network, no
+  //    credential reads" guarantee. Without the opt-in, run `npm run model:check` manually.
   try {
-    if (script) {
+    const refreshOn = ['on', '1', 'true'].includes((process.env.FABLE_MODELCHECK_REFRESH || '').toLowerCase());
+    if (refreshOn && script) {
       const child = spawn(process.execPath, [script, 'check'], { detached: true, stdio: 'ignore' });
       child.unref();
     }

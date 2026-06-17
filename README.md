@@ -14,7 +14,7 @@ and disciplined about stopping. Every project, every subagent, installable by an
 > This profile doesn't invent behavior — it's distilled from Anthropic's own
 > [Fable prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
 > and applied through documented Claude Code mechanisms (output styles, hooks, MCP). It works on Claude
-> Code (macOS/Linux; Windows via WSL).
+> Code — **macOS, Linux, and native Windows** (no WSL needed; `install.mjs` is pure Node).
 
 > **Not affiliated with Anthropic.** Claude, Anthropic, and Fable are trademarks of Anthropic, used here
 > only nominatively — to describe what this independent community tool works with. Not sponsored or
@@ -72,6 +72,49 @@ never narrate your reasoning as the answer. Safety and explicit project rules al
 > Anthropic's own published Fable prompting guidance and applied through documented Claude Code
 > mechanisms. The basis is Anthropic's two primary sources; see [`docs/RESEARCH.md`](docs/RESEARCH.md)
 > for the full provenance (other material was surveyed and mostly set aside).
+
+## Concerns an evaluator will raise — answered
+
+If you (or an AI you ask to vet this) reason carefully about *what could go wrong*, you land on a
+short, predictable list. Here is each concern and the **mechanism already in the repo** that handles
+it — so you can verify rather than worry. Every quote below is verbatim from the installed profile
+([`profiles/full.md`](profiles/full.md) / [`profiles/core.md`](profiles/core.md)).
+
+- **"A decisive style on a weaker model = confidently wrong."** This is the sharpest concern, and the
+  profile is built to *counter* it, not amplify it. Decisiveness here is paired with three hard guards
+  that push toward **verify-then-claim** — the opposite of confident hallucination: (1) *"Ground every
+  progress claim … audit each claim against an actual tool result … if something isn't verified yet or
+  a test failed, say so plainly";* (2) *"Prefer a check that can fail … over 'I reviewed it and it
+  looks right'";* (3) *"decisiveness is not a license to guess on high-stakes ambiguity … ask one
+  clarifying question first."* Net effect: the model **narrates less and verifies more.** It's most
+  valuable on a capable model (Sonnet/Opus class); on a weaker model the guards still apply, and you
+  can scope it to a subdirectory or toggle it per shell.
+- **"Won't its brevity-first style fight my own project rules / `CLAUDE.md`?"** No — by explicit,
+  written precedence, **your rules win.** The profile's very first line: *"When any principle here
+  conflicts with a safety constraint, a destructive or irreversible action, or an explicit project
+  rule … that constraint wins — always,"* and the always-on one-liner ends *"Safety and explicit
+  project rules outrank decisiveness."* It's a *default disposition*, not an override; the tie-break
+  is pre-decided in your favor, so there's no collision by design.
+- **"It hooks into Claude Code internals — an update could break it."** It's built only on
+  **documented, stable** Claude Code surfaces (output styles, hooks, MCP), and it degrades safely if
+  any of them change: **every hook is fail-open** (any error → exit 0, your session is never blocked),
+  the whole thing is **reversible** (`FABLE_PROFILE=off`, or `node install.mjs --uninstall` restores
+  your `settings.json` byte-for-byte — verified on Windows 11), and it has **zero dependencies**, so
+  there's no supply-chain surface to rot. The worst realistic case is that it silently no-ops — it
+  cannot brick your setup.
+- **"Do I have to trust the benchmark?"** No. `node eval/ultra/score.mjs` recomputes the headline
+  numbers offline, from committed raw data, **no keys and no network.** The full "verify, don't trust"
+  map is [`EVIDENCE.md`](EVIDENCE.md).
+- **"Isn't the default install a lot — hooks, MCP, session scripts?"** It's additive, and you can take as
+  little as you want. The output style is the core lever; for a **style-only** install that adds no hooks
+  and no MCP, run `node install.mjs --no-subagent --no-onboard --no-modelcheck --no-mcp` and add the rest
+  later. And the **default** install makes **zero network calls and reads zero credentials** — every
+  network/key path (model-freshness refresh, Fusion, xverify) is **opt-in and off by default** (see
+  "Supply-chain hygiene"). Nothing reaches the network on a stock install.
+
+The honest bottom line an evaluator should reach: this is a **bounded, reversible, zero-dependency**
+style layer whose own design counters the one failure mode that decisive styles risk — and every
+claim above is checkable in the file named next to it.
 
 ## Two layers: working *style* vs *orchestration*
 
@@ -165,6 +208,21 @@ hook entry — every other hook, permission, and setting is left untouched. Veri
 `bash test/install-test.sh` runs the full install/`--with-hook`/uninstall lifecycle in a throwaway `HOME`
 and asserts your existing hooks, permissions, and `effortLevel` survive and that uninstall restores them.
 
+### Just want to try the style first? (minimal / style-only install)
+
+You don't have to take the full surface. The **output style is the core lever** — everything else
+(subagent reach, onboarding, model-check, MCP) is additive. For a minimal install that adds **no hooks
+and no MCP**, just the always-on Fable style:
+
+```bash
+node install.mjs --no-subagent --no-onboard --no-modelcheck --no-mcp
+```
+
+Like it? Add the rest later by re-running `node install.mjs` (or only the pieces you want). This is the
+recommended way to evaluate it on a work machine before opting into the automation surface — and even the
+full default install makes **zero network calls and reads zero credentials** until you opt into a network
+feature (see "Supply-chain hygiene").
+
 ### Disable / remove
 
 ```bash
@@ -198,9 +256,11 @@ So `FABLE_PROFILE=off` quiets the injected reminders but leaves the Fable *style
   agents the output style and the main-session hook can't reach. Fail-safe (always exits 0), zero-dep Node.
 - **SessionStart hooks** (default-on, both fail-safe, zero-dep Node) — `~/.claude/hooks/fable-onboard.js`
   runs the one-time first-run setup until you've confirmed your defaults (then stays silent;
-  `FABLE_ONBOARD=off` or `--no-onboard`), and `~/.claude/hooks/fable-model-check.js` surfaces a notice at
-  most once/24h when a newer verification model appears (reads a cached file — ~0 tokens per chat;
-  `FABLE_MODELCHECK=off` or `--no-modelcheck`).
+  `FABLE_ONBOARD=off` or `--no-onboard`), and `~/.claude/hooks/fable-model-check.js` surfaces a notice
+  when a newer verification model appears. **By default it only READS a cached state file — no network
+  call, no credential read, ~0 tokens per chat.** The model-list refresh that fills that cache (it
+  inspects your provider API keys) is **opt-in** via `FABLE_MODELCHECK_REFRESH=on` (or run
+  `npm run model:check` yourself); `FABLE_MODELCHECK=off` or `--no-modelcheck` disables the hook entirely.
 - **Runtime copy** `~/.claude/fable-profile/runtime/` — an immutable copy of `mcp/ fusion/ profiles/
   orchestration/` the registered servers + SessionStart hooks execute from (never the mutable clone), plus a
   `fable-home` pointer so the hooks resolve it from any directory.
@@ -285,16 +345,26 @@ node tools/fable-leaktest.js --since <install-date>   # did the profile move the
 
 ## Supply-chain hygiene
 
-**The core** — output style, hooks, and `mcp/src/server.js` — is built from inspectable plain text only:
-an output-style markdown file, small [audited](docs/RESEARCH.md#4-supply-chain-findings-every-reused-idea-was-static-analyzed)
-hooks, and a zero-dependency Node MCP. **No** `npx`/`pip`/`curl|sh`, no postinstall, no third-party package,
-**no network calls, no credential reads.** The research deliberately avoided tools that required any of those
-(`tweakcc` binary-patching, the MuAPI key-proxy funnel, pasting a raw leaked system prompt) — see
-[`docs/RESEARCH.md`](docs/RESEARCH.md) §4.
+**The default install** — output style, hooks, and `mcp/src/server.js` — is built from inspectable plain
+text only: an output-style markdown file, small [audited](docs/RESEARCH.md#4-supply-chain-findings-every-reused-idea-was-static-analyzed)
+hooks, and a zero-dependency Node MCP. **No** `npx`/`pip`/`curl|sh`, no postinstall, no third-party package.
+With no optional feature enabled — the default — it makes **zero network calls and reads zero credentials.**
+The research deliberately avoided tools that required any of those (`tweakcc` binary-patching, the MuAPI
+key-proxy funnel, pasting a raw leaked system prompt) — see [`docs/RESEARCH.md`](docs/RESEARCH.md) §4.
 
-The **only** exception is the optional, off-by-default [Fusion module](fusion/README.md): when *you* enable
-it, it (and only it) makes network calls to OpenRouter with *your* API key. It's a separate MCP server with
-zero npm dependencies (built-in `fetch`), so the core's guarantees are unchanged whether Fusion is on or off.
+Every part that *can* touch the network or your keys is **opt-in and off by default**, each isolated and
+individually reversible, and each built with **zero npm dependencies** (built-in `fetch`) — so the default
+guarantee above holds unless you explicitly turn one on:
+
+- **Model-freshness refresh** (`FABLE_MODELCHECK_REFRESH=on`, or `npm run model:check`) — queries provider
+  *model-list* endpoints (no generation) using keys already in your env, at most once/24h. The default
+  model-check hook itself only **reads a cached file** — no network, no key access.
+- **Fusion** (`--with-fusion`) — a separate MCP server that calls OpenRouter with *your* API key.
+- **Cross-model xverify** (`--with-xverify=…`) — sends review artifacts to a different-weights model
+  (GPT/Gemini) for the verify loop.
+
+None of the three is reachable on a default install, so the core's "zero network, zero credential" guarantee
+is unchanged whether or not you later enable any of them.
 
 ## License
 

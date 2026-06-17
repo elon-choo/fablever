@@ -50,7 +50,7 @@
 | **최선 사례 결과, 강건하게 채점됨** | 최신 모델(GPT-5.5 + Gemini-3.1-pro-preview)로 비용 무제한 파이프라인이 심어둔 결함 **16/18**개를 **5개 크로스모델 심판단(4 GPT + 1 Gemini)** 다수결에서 탐지, **정밀도 0.74(모든 구성 중 최고)**; 구모델 run 피크는 **18/18** 재현율. 각 수치는 그것을 만든 모델로 라벨되며, 스크립트 + 원시 데이터가 함께 커밋되어 있다. | `whitepaper/03-results.md` §3.3, `eval/ultra/` |
 | **오케스트레이션은 산문이 아니라 실행 코드** | 실제 `parallel()` 배리어, 스키마 강제 출력, JS가 소유한 게이트 — "X처럼 행동하라" 텍스트가 아니라 런타임 테스트가 있다. | `orchestration/recipes/*.mjs`, `test/orchestration-runtime-test.js` |
 | **크로스모델 비상관화** | 기본 OFF인 arm이 가중치가 다른 리뷰어(GPT/Gemini)를 더해, 같은 계열 패널이 구조적으로 못 보는 부류를 잡는다. 꺼두면 오버헤드 0. | `fusion/fusion-server.js`, `whitepaper/01-what-this-is.md` §1.4 |
-| **의존성 0, 공급망 청결** | npm 의존성 없음, `postinstall`/`prepare` 스크립트 없음. 유일한 네트워크/키 표면은 옵트인 서버 하나. | `package.json`, `fusion/fusion-server.js` |
+| **의존성 0, 공급망 청결** | npm 의존성 없음, `postinstall`/`prepare` 스크립트 없음. **기본 설치는 네트워크 호출 0·자격증명 읽기 0**이며, 모든 네트워크/키 경로(모델 신선도 갱신, Fusion, xverify)는 옵트인이며 기본 꺼짐. | `package.json`, `fusion/fusion-server.js`, `claude-code/hooks/fable-model-check.js` |
 | **페일세이프, 되돌릴 수 있음** | 훅은 오류 시 열린 채 실패; `FABLE_PROFILE=off`로 비활성화; `install.sh --uninstall`이 이전 설정을 결정적으로 복원. | `install.sh`, `claude-code/hooks/fable-subagent.js`, `claude-code/lib/mcp-remove.js` |
 | **적대적으로 검토됨, 기록으로 남음** | 3라운드 × (Claude 전문가 페르소나 + GPT + Gemini) 합의, **실패한 공격까지 함께 기록**. | `docs/PUBLICATION-READINESS.md` |
 | **출처(provenance)** | Anthropic의 *공개된* Fable 프롬프팅 가이드에서 증류(역공학 아님, 유출 콘텐츠 아님). | `docs/RESEARCH.md`, `NOTICE` |

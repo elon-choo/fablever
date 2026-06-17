@@ -97,9 +97,11 @@ node orchestration/lib/xverify-preset.mjs doctor         # checks if the needed 
 (pin)되어 있다(`active` = 최신 검증본; 현재 **GPT-5.5** + **Gemini-3.1-pro-preview** + Opus).
 이들은 대화당 토큰 비용 없이 최신 상태를 유지한다:
 
-1. **탐지(Detect)** — SessionStart 훅이 체커를 호출하는데, 이 체커는 제공자(provider)의
-   **모델 목록(model-list)** 엔드포인트만 친다(생성 없음). **24h당 1회로 속도 제한(rate-limited)**
-   된다. 더 새로운 플래그십이 나타나면 알림을 표시한다. `FABLE_MODELCHECK=off`로 비활성화한다.
+1. **탐지(Detect)** — SessionStart 훅은 더 새로운 플래그십이 나타나면 알림을 표시하며, **캐시된
+   상태 파일을 읽는다**: 기본값에서는 **네트워크 호출 없음, 자격증명 읽기 없음.** 그 캐시를 갱신하는
+   작업은 제공자(provider)의 **모델 목록(model-list)** 엔드포인트를 친다(생성 없음, 24h당 1회, 환경변수에
+   이미 있는 키 사용). 이 갱신은 `FABLE_MODELCHECK_REFRESH=on`으로 **옵트인**해야 동작한다(또는
+   `npm run model:check`를 직접 실행). 훅 자체는 `FABLE_MODELCHECK=off`로 끈다.
 2. **검증(Validate)** — 후보는 적격이 되기 전에 평가 픽스처(eval fixture)에서 평가 실행된다; 기준은
    **작동이 검증됨 + 치명적 재현율 퇴행 없음(validated-to-work + no catastrophic recall
    regression)**이다(직전 정점을 반드시 능가할 필요는 없다 — 더 새로운 모델이 재현율을 정밀도와

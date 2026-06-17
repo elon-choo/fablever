@@ -96,9 +96,11 @@ The models in use are pinned in [`../orchestration/models.json`](../orchestratio
 (`active` = latest validated; currently **GPT-5.5** + **Gemini-3.1-pro-preview** + Opus). They
 stay current without costing tokens per chat:
 
-1. **Detect** — a SessionStart hook calls a checker that hits only the providers' **model-list**
-   endpoint (no generation), **rate-limited to once / 24h**. It surfaces a notice if a newer
-   flagship appears. Disable with `FABLE_MODELCHECK=off`.
+1. **Detect** — a SessionStart hook surfaces a notice if a newer flagship appears, reading a
+   **cached state file**: **no network call and no credential read by default.** Refreshing that
+   cache queries the providers' **model-list** endpoint (no generation, ≤ once/24h, using keys
+   already in your env) and is **opt-in** via `FABLE_MODELCHECK_REFRESH=on` (or run
+   `npm run model:check` yourself). Disable the hook entirely with `FABLE_MODELCHECK=off`.
 2. **Validate** — a candidate is eval-run on the fixture before it's eligible; the bar is
    **validated-to-work + no catastrophic recall regression** (it need not beat the prior peak — a
    newer model may trade recall for precision, and if so both runs are recorded)

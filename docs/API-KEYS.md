@@ -97,11 +97,14 @@ fusion module's config. **Never commit a key**; never paste one into a doc or an
 - **Zero overhead when off.** With no cross-model arm enabled, fablever makes **no** network
   calls and needs **no** keys — the branch is the absence of an argument, not a flag checked
   and skipped. Toggle: `FABLE_XVERIFY=off`, `FABLE_FUSION=off`.
-- **The only network/key surface** is the zero-dependency `fusion/fusion-server.js` (built-in
-  `fetch`, no npm deps, no `postinstall`). Read it before trusting it with a key.
-- **The daily model-freshness check** ([`orchestration/MODELS.md`](../orchestration/MODELS.md))
-  uses only the providers' **model-list** endpoint (no generation) and runs at most **once per
-  24h** — effectively zero token cost, and it is skipped entirely if no key is set.
+- **Network/key surfaces are all opt-in; the default install reaches none of them.** The
+  cross-model arm's surface is the zero-dependency `fusion/fusion-server.js` (built-in `fetch`, no
+  npm deps, no `postinstall`) — read it before trusting it with a key.
+- **The model-freshness refresh** ([`orchestration/MODELS.md`](../orchestration/MODELS.md)) uses
+  only the providers' **model-list** endpoint (no generation), at most **once per 24h** —
+  effectively zero token cost. It is **opt-in** (`FABLE_MODELCHECK_REFRESH=on`, or
+  `npm run model:check`) and is skipped if no key is set; by default the model-check hook only
+  reads a cached file, with no network call and no credential read.
 - **A hostile artifact is a prompt-injection vector.** A cross-model "all clear" is bonus
   coverage, never authoritative — it never changes the runtime RED gate.
 
