@@ -26,10 +26,16 @@ and disciplined about stopping. Every project, every subagent, installable by an
 > [`whitepaper/`](whitepaper/) (English + [`whitepaper/ko/`](whitepaper/ko/)).
 
 ```bash
-git clone https://github.com/elon-choo/fablever && cd fablever && ./install.sh
+git clone https://github.com/elon-choo/fablever && cd fablever
+node install.mjs        # universal installer — macOS, Linux, AND native Windows (no WSL). On POSIX, ./install.sh also works.
 # then restart Claude Code (or /clear).
-# Turn off the hooks: export FABLE_PROFILE=off  ·  fully remove (incl. the always-on style): ./install.sh --uninstall
+# Turn off the hooks: export FABLE_PROFILE=off  ·  fully remove (incl. the always-on style): node install.mjs --uninstall
 ```
+
+> **Or just ask your AI.** Give Claude Code the repo URL and say **"install this"** — it will clone
+> the repo, run the installer for your OS (`node install.mjs`), and tell you to restart. The default
+> needs **no API key** and costs nothing extra; on the first session it asks two quick setup questions
+> in your language.
 
 **What it changes** — eight behaviors, distilled from the Fable guide (full text in
 [`profiles/full.md`](profiles/full.md)): act when you have enough info (recommend, don't survey) · lead
@@ -98,15 +104,18 @@ with `--since <install-date>` after installing to check whether your own numbers
 
 ## Install (this machine, always-on)
 
-**Requirements:** [Claude Code](https://claude.com/claude-code) and Node.js ≥ 18. Platform: macOS / Linux
-(the installer and the bash hook are POSIX shell; the MCP server and the SubagentStart hook are Node, so
-they also work on Windows — on Windows, install via WSL or set the output style + MCP up by hand, see below).
+**Requirements:** [Claude Code](https://claude.com/claude-code) and Node.js ≥ 18. **Platform: macOS,
+Linux, and native Windows** — `install.mjs` is pure Node, and every installed piece (output style, all
+hooks, MCP) is Node or plain text, so **Windows works without WSL**. (`install.sh` is the POSIX
+convenience wrapper; the one opt-in `--with-hook` per-turn reminder is a bash script and is skipped on
+native Windows — the default SubagentStart + SessionStart Node hooks cover the main reach there.)
 
 ```bash
 git clone https://github.com/elon-choo/fablever ~/work/fable-profile   # or wherever
 cd ~/work/fable-profile
-./install.sh                  # output style (default) + SubagentStart hook + MCP server
-./install.sh --help           # all options
+node install.mjs              # UNIVERSAL: macOS / Linux / Windows. Output style + hooks + MCP.
+#   POSIX users can also run ./install.sh (identical behavior).
+node install.mjs --help       # all options
 # restart Claude Code (or /clear) so the output style and MCP load
 ```
 

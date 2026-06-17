@@ -6,7 +6,7 @@
   "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && bash test/install-test.sh",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node test/install-mjs-test.mjs && bash test/install-test.sh",
     "test:mcp": "node test/mcp-test.js",
     "test:fusion": "node test/fusion-test.js",
     "test:orchestration": "node test/orchestration-test.js",
@@ -30,6 +30,6 @@
   "engines": { "node": ">=18" },
   "dependencies": {},
   "files": [
-    "profiles", "mcp", "fusion", "orchestration", "eval", "claude-code", "tools", "install.sh", "docs", "README.md", "LICENSE"
+    "profiles", "mcp", "fusion", "orchestration", "eval", "claude-code", "tools", "install.sh", "install.mjs", "docs", "README.md", "README.ko.md", "LICENSE"
   ]
 }
