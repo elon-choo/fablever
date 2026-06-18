@@ -1,0 +1,180 @@
+{
+  "model": "claude-opus-4-8",
+  "kk": 3,
+  "byTask": {
+    "E1-interval": {
+      "B": "3/3"
+    },
+    "E2-window": {
+      "B": "3/3"
+    },
+    "E3-query": {
+      "B": "3/3"
+    },
+    "E4-diff": {
+      "B": "3/3"
+    },
+    "E5-flatten": {
+      "B": "3/3"
+    },
+    "E6-round": {
+      "B": "3/3"
+    }
+  },
+  "agg": [
+    {
+      "cond": "B",
+      "n": 18,
+      "pass": 18,
+      "pct": 100,
+      "meanTurns": 5.4,
+      "launchFails": 0
+    }
+  ],
+  "data": [
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "E1-interval",
+      "turns": 7,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "E2-window",
+      "turns": 7,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "E3-query",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "E4-diff",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "E5-flatten",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "E6-round",
+      "turns": 6,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "E1-interval",
+      "turns": 4,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "E2-window",
+      "turns": 6,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "E3-query",
+      "turns": 7,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "E4-diff",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "E5-flatten",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "E6-round",
+      "turns": 4,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "E1-interval",
+      "turns": 4,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "E2-window",
+      "turns": 4,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "E3-query",
+      "turns": 6,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "E4-diff",
+      "turns": 6,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "E5-flatten",
+      "turns": 7,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "E6-round",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+Implement diff(a, b) in diff_count.js comparing two arrays as MULTISETS. Return { added, removed } where added lists elements present more times in b than in a (one entry per extra occurrence), and removed lists elements present more times in a than in b. Order each output by first appearance in b (added) / a (removed). Elements are primitives.

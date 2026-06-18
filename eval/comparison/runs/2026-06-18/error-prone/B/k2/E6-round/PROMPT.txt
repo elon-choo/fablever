@@ -1,0 +1,1 @@
+Implement round(x) in bankers.js using round-half-to-even (banker's rounding) to the nearest integer: when x is exactly halfway between two integers, round to the EVEN one. Otherwise round normally. Works for negatives. Examples: 0.5->0, 1.5->2, 2.5->2, 3.5->4.
