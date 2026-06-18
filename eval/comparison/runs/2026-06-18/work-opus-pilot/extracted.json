@@ -1,0 +1,134 @@
+{
+  "A0": {
+    "n": 6,
+    "clean": 6,
+    "regression": 0,
+    "incomplete": 0,
+    "cleanPct": 100,
+    "meanTurns": 4.7,
+    "meanOutTok": 1033,
+    "meanCost": 0.3,
+    "launchFails": 0
+  },
+  "A1": {
+    "n": 6,
+    "clean": 6,
+    "regression": 0,
+    "incomplete": 0,
+    "cleanPct": 100,
+    "meanTurns": 5.7,
+    "meanOutTok": 1608,
+    "meanCost": 0.3,
+    "launchFails": 0
+  },
+  "rows": [
+    {
+      "cond": "A0",
+      "task": "W1-validate",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 5,
+      "outTok": 965,
+      "cost": 0.28933500000000006
+    },
+    {
+      "cond": "A0",
+      "task": "W2-csv",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 5,
+      "outTok": 707,
+      "cost": 0.26472450000000003
+    },
+    {
+      "cond": "A0",
+      "task": "W3-response",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 5,
+      "outTok": 760,
+      "cost": 0.2820915
+    },
+    {
+      "cond": "A0",
+      "task": "W4-money",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 5,
+      "outTok": 1193,
+      "cost": 0.293728
+    },
+    {
+      "cond": "A0",
+      "task": "W5-greet",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 4,
+      "outTok": 867,
+      "cost": 0.268103
+    },
+    {
+      "cond": "A0",
+      "task": "W6-unique",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 4,
+      "outTok": 1706,
+      "cost": 0.2970965
+    },
+    {
+      "cond": "A1",
+      "task": "W1-validate",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 6,
+      "outTok": 2800,
+      "cost": 0.3682295
+    },
+    {
+      "cond": "A1",
+      "task": "W2-csv",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 6,
+      "outTok": 1358,
+      "cost": 0.34100549999999996
+    },
+    {
+      "cond": "A1",
+      "task": "W3-response",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 5,
+      "outTok": 638,
+      "cost": 0.2998825
+    },
+    {
+      "cond": "A1",
+      "task": "W4-money",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 6,
+      "outTok": 1564,
+      "cost": 0.3438725
+    },
+    {
+      "cond": "A1",
+      "task": "W5-greet",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 5,
+      "outTok": 1243,
+      "cost": 0.3164655
+    },
+    {
+      "cond": "A1",
+      "task": "W6-unique",
+      "k": 1,
+      "outcome": "clean",
+      "turns": 6,
+      "outTok": 2044,
+      "cost": 0.35879099999999997
+    }
+  ]
+}

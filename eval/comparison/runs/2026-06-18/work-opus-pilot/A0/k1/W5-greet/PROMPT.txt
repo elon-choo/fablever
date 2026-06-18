@@ -1,0 +1,1 @@
+In greet.js, add an optional second parameter `greeting` to greet(name, greeting); when provided it replaces "Hello", and when omitted the behavior is unchanged.

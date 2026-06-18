@@ -1,0 +1,135 @@
+{
+  "model": "claude-opus-4-8",
+  "kk": 1,
+  "A0": {
+    "n": 6,
+    "clean": 6,
+    "regr": 0,
+    "inc": 0,
+    "cleanPct": 100,
+    "meanTurns": null,
+    "meanOutTok": null,
+    "launchFails": 0
+  },
+  "A1": {
+    "n": 6,
+    "clean": 6,
+    "regr": 0,
+    "inc": 0,
+    "cleanPct": 100,
+    "meanTurns": null,
+    "meanOutTok": null,
+    "launchFails": 0
+  },
+  "elapsed_s": 326,
+  "data": [
+    {
+      "cond": "A0",
+      "task": "W1-validate",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A0",
+      "task": "W2-csv",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A0",
+      "task": "W3-response",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A0",
+      "task": "W4-money",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A0",
+      "task": "W5-greet",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A0",
+      "task": "W6-unique",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A1",
+      "task": "W1-validate",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A1",
+      "task": "W2-csv",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A1",
+      "task": "W3-response",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A1",
+      "task": "W4-money",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A1",
+      "task": "W5-greet",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    },
+    {
+      "cond": "A1",
+      "task": "W6-unique",
+      "k": 1,
+      "turns": null,
+      "outTok": null,
+      "launchFailed": false,
+      "outcome": "clean"
+    }
+  ]
+}

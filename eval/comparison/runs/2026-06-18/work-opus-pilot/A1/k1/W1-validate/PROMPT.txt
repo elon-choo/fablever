@@ -1,0 +1,1 @@
+In create_user.js, make createUser throw an Error when `age` is present and is not a positive integer (reject 0, negatives, and non-integers). Leave everything else as it is.

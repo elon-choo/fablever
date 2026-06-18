@@ -1,0 +1,1 @@
+In money.js, fix the formatting of negative amounts so that money(-123) returns "-$1.23" (the minus sign before the dollar sign).

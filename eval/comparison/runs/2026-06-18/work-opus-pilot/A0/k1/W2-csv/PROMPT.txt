@@ -1,0 +1,1 @@
+In to_csv.js, make toCSV wrap any field that contains a comma in double quotes. Fields without a comma stay exactly as they are.
