@@ -16,6 +16,7 @@ effort/verbosity. This is a well-earned null (multiple task sets, real runs), no
 | Work-quality (6 maintenance tasks, Opus) | clean-success (do ask + no regression) | A0 6/6 vs **A1 6/6** | **no quality gap** |
 | Efficiency (same, Opus) | turns / output tokens to clean | A0 4.7 turns / 1033 tok vs **A1 5.7 / 1608** | fablever **costs more** |
 | Communication (manipulation check, Opus) | final-message length | A0 70 words vs **A1 92** | fablever **not terser** here |
+| LLM-as-judge on code artifact (non-Claude GPT, Opus pilot) | pairwise quality winner | **plain 2, fablever 1, 3 ties** | no fablever advantage; slight plain edge (see `auto-judge-research.md`) |
 
 (n is small — work-quality is k=1, n=6 — so the negatives are directional. But nothing across five metrics
 points toward benefit; the only signals are parity or cost.)
