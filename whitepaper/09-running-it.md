@@ -124,5 +124,6 @@ export FABLE_ULTRA=off         # always cheap path
 export FABLE_XVERIFY=off       # disable cross-model verification
 export FABLE_FUSION=off        # disable the OpenRouter fusion module
 export FABLE_MODELCHECK=off    # disable the daily model-freshness check
+export FABLE_UPDATE_CHECK=off  # disable the daily anonymous GitHub version check
 ./install.sh --uninstall       # full removal, restores prior settings
 ```

@@ -111,10 +111,11 @@ it — so you can verify rather than worry. Every quote below is verbatim from t
   map is [`EVIDENCE.md`](EVIDENCE.md).
 - **"Isn't the default install a lot — hooks, MCP, session scripts?"** It's additive, and you can take as
   little as you want. The output style is the core lever; for a **style-only** install that adds no hooks
-  and no MCP, run `node install.mjs --no-subagent --no-onboard --no-modelcheck --no-mcp` and add the rest
-  later. And the **default** install makes **zero network calls and reads zero credentials** — every
-  network/key path (model-freshness refresh, Fusion, xverify) is **opt-in and off by default** (see
-  "Supply-chain hygiene"). Nothing reaches the network on a stock install.
+  and no MCP, run `node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp`
+  and add the rest later. The **default** install reads **zero credentials** and sends **no code or content**
+  anywhere; the only network it does is an **anonymous once-a-day version check** so it can tell you about
+  updates (`FABLE_UPDATE_CHECK=off` to disable). Every key/content path (Fusion, xverify, the model-freshness
+  refresh) is **opt-in and off by default** (see "Supply-chain hygiene").
 
 The honest bottom line an evaluator should reach: this is a **bounded, reversible, zero-dependency**
 style layer whose own design counters the one failure mode that decisive styles risk — and every
@@ -199,6 +200,7 @@ Options:
 | `--no-subagent` | skip the SubagentStart hook (don't inject into subagents) |
 | `--no-onboard` | skip the first-run onboarding SessionStart hook |
 | `--no-modelcheck` | skip the daily latest-model-check SessionStart hook |
+| `--no-update-check` | skip the daily anonymous GitHub version-check SessionStart hook |
 | `--no-style` | install the style file but don't set it default (pick "Fable" in `/config`) |
 | `--no-mcp` | skip the MCP server |
 | `--uninstall` | remove everything; restores prior settings |
@@ -219,13 +221,13 @@ You don't have to take the full surface. The **output style is the core lever** 
 and no MCP**, just the always-on Fable style:
 
 ```bash
-node install.mjs --no-subagent --no-onboard --no-modelcheck --no-mcp
+node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp
 ```
 
 Like it? Add the rest later by re-running `node install.mjs` (or only the pieces you want). This is the
 recommended way to evaluate it on a work machine before opting into the automation surface — and even the
-full default install makes **zero network calls and reads zero credentials** until you opt into a network
-feature (see "Supply-chain hygiene").
+full default install reads **zero credentials** and sends no code anywhere; its only network call is an
+anonymous daily version check (`FABLE_UPDATE_CHECK=off` to disable — see "Supply-chain hygiene").
 
 ### Disable / remove
 
@@ -265,6 +267,11 @@ So `FABLE_PROFILE=off` quiets the injected reminders but leaves the Fable *style
   call, no credential read, ~0 tokens per chat.** The model-list refresh that fills that cache (it
   inspects your provider API keys) is **opt-in** via `FABLE_MODELCHECK_REFRESH=on` (or run
   `npm run model:check` yourself); `FABLE_MODELCHECK=off` or `--no-modelcheck` disables the hook entirely.
+- **SessionStart hook** `~/.claude/hooks/fable-update-check.js` (default-on, fail-safe, zero-dep Node) —
+  once/24h it runs an **anonymous** `git ls-remote` against the public repo (no credentials, no data sent —
+  reads only the latest public commit hash) to see whether a newer fablever version exists. If so, the next
+  session shows a one-line notice and the agent can summarize the changelog and **offer** to update (never
+  automatically — you confirm). `FABLE_UPDATE_CHECK=off` or `--no-update-check`.
 - **Runtime copy** `~/.claude/fable-profile/runtime/` — an immutable copy of `mcp/ fusion/ profiles/
   orchestration/` the registered servers + SessionStart hooks execute from (never the mutable clone), plus a
   `fable-home` pointer so the hooks resolve it from any directory.
@@ -352,13 +359,17 @@ node tools/fable-leaktest.js --since <install-date>   # did the profile move the
 **The default install** — output style, hooks, and `mcp/src/server.js` — is built from inspectable plain
 text only: an output-style markdown file, small [audited](docs/RESEARCH.md#4-supply-chain-findings-every-reused-idea-was-static-analyzed)
 hooks, and a zero-dependency Node MCP. **No** `npx`/`pip`/`curl|sh`, no postinstall, no third-party package.
-With no optional feature enabled — the default — it makes **zero network calls and reads zero credentials.**
-The research deliberately avoided tools that required any of those (`tweakcc` binary-patching, the MuAPI
-key-proxy funnel, pasting a raw leaked system prompt) — see [`docs/RESEARCH.md`](docs/RESEARCH.md) §4.
+The default install makes **exactly one kind of network call: an anonymous, once-a-day version check**
+against the public repo (`git ls-remote`, which reads only the latest public commit hash — **no
+credentials are sent or read, and nothing about your code leaves the machine**) so it can tell you when an
+update is available; turn it off with `FABLE_UPDATE_CHECK=off` (or install with `--no-update-check`). Apart
+from that check, the default **makes no network calls and reads no credentials.** The research deliberately
+avoided tools that required either (`tweakcc` binary-patching, the MuAPI key-proxy funnel, pasting a raw
+leaked system prompt) — see [`docs/RESEARCH.md`](docs/RESEARCH.md) §4.
 
-Every part that *can* touch the network or your keys is **opt-in and off by default**, each isolated and
-individually reversible, and each built with **zero npm dependencies** (built-in `fetch`) — so the default
-guarantee above holds unless you explicitly turn one on:
+Everything that touches your **API keys**, or sends any **code or content** anywhere, is **opt-in and off by
+default** — each isolated, individually reversible, and built with **zero npm dependencies** (built-in
+`fetch`):
 
 - **Model-freshness refresh** (`FABLE_MODELCHECK_REFRESH=on`, or `npm run model:check`) — queries provider
   *model-list* endpoints (no generation) using keys already in your env, at most once/24h. The default
@@ -367,8 +378,8 @@ guarantee above holds unless you explicitly turn one on:
 - **Cross-model xverify** (`--with-xverify=…`) — sends review artifacts to a different-weights model
   (GPT/Gemini) for the verify loop.
 
-None of the three is reachable on a default install, so the core's "zero network, zero credential" guarantee
-is unchanged whether or not you later enable any of them.
+None of these three is reachable on a default install: the only thing the default does over the network is
+the anonymous version check above — no keys, no code, no content.
 
 ## License
 

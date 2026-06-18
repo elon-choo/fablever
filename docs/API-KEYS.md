@@ -94,10 +94,11 @@ fusion module's config. **Never commit a key**; never paste one into a doc or an
 
 ## 4 · Cost & safety notes
 
-- **Zero overhead when off.** With no cross-model arm enabled, fablever makes **no** network
-  calls and needs **no** keys — the branch is the absence of an argument, not a flag checked
-  and skipped. Toggle: `FABLE_XVERIFY=off`, `FABLE_FUSION=off`.
-- **Network/key surfaces are all opt-in; the default install reaches none of them.** The
+- **Zero overhead when off.** With no cross-model arm enabled, fablever needs **no** keys and makes
+  **no** cross-model network calls — the branch is the absence of an argument, not a flag checked and
+  skipped. (The only network the default does at all is an anonymous once/24h version check that uses
+  no key — `FABLE_UPDATE_CHECK=off` to disable.) Toggle: `FABLE_XVERIFY=off`, `FABLE_FUSION=off`.
+- **Key/content surfaces are all opt-in; the default install reaches none of them.** The
   cross-model arm's surface is the zero-dependency `fusion/fusion-server.js` (built-in `fetch`, no
   npm deps, no `postinstall`) — read it before trusting it with a key.
 - **The model-freshness refresh** ([`orchestration/MODELS.md`](../orchestration/MODELS.md)) uses

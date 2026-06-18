@@ -28,6 +28,8 @@ run('--no-mcp');
 t(J().outputStyle === 'Fable', 'install.mjs: outputStyle=Fable');
 const ss = JSON.stringify(J().hooks.SessionStart || []);
 t(/fable-onboard/.test(ss) && /fable-model-check/.test(ss), 'install.mjs: SessionStart onboard+modelcheck registered');
+t(/fable-update-check/.test(ss), 'install.mjs: SessionStart update-check registered');
+t(/fablever/.test(rj(F('fable-profile/installed-version.json')).repo_url || ''), 'install.mjs: installed-version.json recorded (repo_url)');
 t(/fable-subagent/.test(JSON.stringify(J().hooks.SubagentStart || [])), 'install.mjs: SubagentStart registered');
 t(J().hooks.Stop && J().effortLevel === 'xhigh' && J().permissions.allow.length === 1, 'install.mjs: existing settings preserved');
 t(existsSync(F('fable-profile/runtime/orchestration/lib/xverify-preset.mjs')), 'install.mjs: orchestration copied into runtime');

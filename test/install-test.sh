@@ -30,6 +30,8 @@ assert 'const s=require(process.env.SB+"/.claude/settings.json"); process.exit((
 assert 'const s=require(process.env.SB+"/.claude/settings.json"); process.exit(!s.hooks.UserPromptSubmit?0:1)' "UserPromptSubmit hook NOT added by default (opt-in)"
 assert 'const s=require(process.env.SB+"/.claude/settings.json"); const j=JSON.stringify(s.hooks.SubagentStart||[]); process.exit(/fable-subagent/.test(j)?0:1)' "SubagentStart hook registered by default (reaches subagents)"
 assert 'const s=require(process.env.SB+"/.claude/settings.json"); const j=JSON.stringify(s.hooks.SessionStart||[]); process.exit((/fable-onboard/.test(j)&&/fable-model-check/.test(j))?0:1)' "SessionStart hooks (onboard + model-check) registered by default"
+assert 'const s=require(process.env.SB+"/.claude/settings.json"); const j=JSON.stringify(s.hooks.SessionStart||[]); process.exit(/fable-update-check/.test(j)?0:1)' "SessionStart update-check hook registered by default"
+assert 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.env.SB+"/.claude/fable-profile/installed-version.json","utf8")); process.exit(/fablever/.test(v.repo_url||"")?0:1)' "installed-version.json recorded (repo_url)"
 assert 'const fs=require("fs"); process.exit(fs.existsSync(process.env.SB+"/.claude/hooks/fable-subagent.js")?0:1)' "fable-subagent.js installed"
 assert 'const fs=require("fs"); process.exit(fs.existsSync(process.env.SB+"/.claude/hooks/fable-onboard.js")?0:1)' "fable-onboard.js installed"
 assert 'const fs=require("fs"); process.exit(fs.existsSync(process.env.SB+"/.claude/fable-profile/runtime/orchestration/lib/xverify-preset.mjs")?0:1)' "orchestration copied into runtime (onboarding/model-check resolve from any cwd)"

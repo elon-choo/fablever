@@ -49,6 +49,8 @@ const hookCmd = (file, viaNode = true) => {
 const SUBHOOK = { src: path.join(REPO, 'claude-code/hooks/fable-subagent.js'), dst: path.join(HOOKS_DIR, 'fable-subagent.js'), cmd: hookCmd('fable-subagent.js') };
 const ONBOARD = { src: path.join(REPO, 'claude-code/hooks/fable-onboard.js'), dst: path.join(HOOKS_DIR, 'fable-onboard.js'), cmd: hookCmd('fable-onboard.js') };
 const MODELCHK = { src: path.join(REPO, 'claude-code/hooks/fable-model-check.js'), dst: path.join(HOOKS_DIR, 'fable-model-check.js'), cmd: hookCmd('fable-model-check.js') };
+const UPDATECHK = { src: path.join(REPO, 'claude-code/hooks/fable-update-check.js'), dst: path.join(HOOKS_DIR, 'fable-update-check.js'), cmd: hookCmd('fable-update-check.js') };
+const VERSION_FILE = path.join(PROFILE_DST_DIR, 'installed-version.json');
 const REINJECT = { src: path.join(REPO, 'claude-code/hooks/fable-reinject.sh'), dst: path.join(HOOKS_DIR, 'fable-reinject.sh'), cmd: hookCmd('fable-reinject.sh', false) };
 
 // ---- tiny cross-platform shell-free helpers ----
@@ -77,10 +79,11 @@ let XVERIFY = 'off', XVERIFY_EXPLICIT = 0;
 for (const a of args) { if (a === '--with-xverify') { XVERIFY = 'openrouter'; XVERIFY_EXPLICIT = 1; } else if (a.startsWith('--with-xverify=')) { XVERIFY = a.slice('--with-xverify='.length); XVERIFY_EXPLICIT = 1; } }
 const WITH_HOOK = has('--with-hook'), SET_STYLE = !has('--no-style'), DO_MCP = !has('--no-mcp');
 const DO_SUBAGENT = !has('--no-subagent'), DO_ONBOARD = !has('--no-onboard'), DO_MODELCHK = !has('--no-modelcheck'), WITH_FUSION = has('--with-fusion');
+const DO_UPDATECHK = !has('--no-update-check');
 const UNINSTALL = has('--uninstall');
-const KNOWN = new Set(['--with-hook', '--with-fusion', '--with-xverify', '--no-style', '--no-mcp', '--no-subagent', '--no-onboard', '--no-modelcheck', '--uninstall', '-h', '--help']);
+const KNOWN = new Set(['--with-hook', '--with-fusion', '--with-xverify', '--no-style', '--no-mcp', '--no-subagent', '--no-onboard', '--no-modelcheck', '--no-update-check', '--uninstall', '-h', '--help']);
 const unknown = args.find(a => !KNOWN.has(a) && !a.startsWith('--with-xverify='));
-if (has('-h') || has('--help')) { log('Fable Profile universal installer.  Usage: node install.mjs [--with-hook|--with-fusion|--with-xverify[=preset]|--no-mcp|--no-style|--no-subagent|--no-onboard|--no-modelcheck|--uninstall]'); process.exit(0); }
+if (has('-h') || has('--help')) { log('Fable Profile universal installer.  Usage: node install.mjs [--with-hook|--with-fusion|--with-xverify[=preset]|--no-mcp|--no-style|--no-subagent|--no-onboard|--no-modelcheck|--no-update-check|--uninstall]'); process.exit(0); }
 if (unknown) { process.stderr.write(`unknown flag: ${unknown}\n`); process.exit(2); }
 
 // ---- uninstall ----
@@ -91,8 +94,9 @@ if (UNINSTALL) {
   node([MERGE, 'subhook-off', SETTINGS, SUBHOOK.cmd]);
   node([MERGE, 'sesshook-off', SETTINGS, ONBOARD.cmd]);
   node([MERGE, 'sesshook-off', SETTINGS, MODELCHK.cmd]);
-  for (const f of [REINJECT.dst, SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, STYLE_DST]) rmf(f);
-  for (const f of ['full.md', 'compact.md', 'core.md', 'xverify.json', 'mode.json', 'fable-home', 'onboarded', 'onboard-shown-count', 'model-check.json', 'model-notified.json']) rmf(path.join(PROFILE_DST_DIR, f));
+  node([MERGE, 'sesshook-off', SETTINGS, UPDATECHK.cmd]);
+  for (const f of [REINJECT.dst, SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, STYLE_DST]) rmf(f);
+  for (const f of ['full.md', 'compact.md', 'core.md', 'xverify.json', 'mode.json', 'fable-home', 'onboarded', 'onboard-shown-count', 'model-check.json', 'model-notified.json', 'installed-version.json', 'update-check.json', 'update-notified.json']) rmf(path.join(PROFILE_DST_DIR, f));
   rmrf(RUNTIME_DIR);
   try { fs.rmdirSync(PROFILE_DST_DIR); } catch (_) {}
   if (haveClaude()) { claude(['mcp', 'remove', 'fable-profile', '--scope', 'user']); claude(['mcp', 'remove', 'fable-fusion', '--scope', 'user']); }
@@ -129,6 +133,9 @@ if (DO_ONBOARD) { node([MERGE, 'sesshook-on', SETTINGS, ONBOARD.cmd]); log('  on
 else log('  onboard   -> staged but NOT registered (--no-onboard)');
 if (DO_MODELCHK) { node([MERGE, 'sesshook-on', SETTINGS, MODELCHK.cmd]); log('  modelchk  -> SessionStart hook registered (daily latest-model check, ~0 tokens; FABLE_MODELCHECK=off or --no-modelcheck)'); }
 else log('  modelchk  -> staged but NOT registered (--no-modelcheck)');
+fs.copyFileSync(UPDATECHK.src, UPDATECHK.dst); chmodx(UPDATECHK.dst);
+if (DO_UPDATECHK) { node([MERGE, 'sesshook-on', SETTINGS, UPDATECHK.cmd]); log('  update    -> SessionStart hook registered (daily ANONYMOUS version check vs GitHub; no key/data; FABLE_UPDATE_CHECK=off or --no-update-check)'); }
+else log('  update    -> staged but NOT registered (--no-update-check)');
 
 // 5) opt-in per-turn reinject hook (bash; POSIX only)
 if (isWin) {
@@ -140,12 +147,18 @@ if (isWin) {
 }
 
 // 4.5) immutable runtime copy (servers + profiles + orchestration + docs) so hooks/MCP resolve from any cwd
-if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK) {
+if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK) {
   rmrf(RUNTIME_DIR); mkdirp(RUNTIME_DIR);
   for (const d of ['mcp', 'fusion', 'profiles', 'orchestration', 'docs']) cpR(path.join(REPO, d), path.join(RUNTIME_DIR, d));
   writeFile(FABLE_HOME_PTR, RUNTIME_DIR + '\n');
   log(`  runtime   -> copied to ${RUNTIME_DIR} (immutable; incl. orchestration/ for the SessionStart hooks)`);
 }
+
+// record the installed version (commit sha + repo url + clone path) so the update-check hook can compare
+// against the public repo. Best-effort: if this isn't a git clone, sha stays '' and the check no-ops.
+const git = a => { const r = spawnSync('git', a, { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); return (r.status === 0 && r.stdout) ? r.stdout.trim() : ''; };
+const normUrl = u => { u = (u || '').trim(); if (u.startsWith('git@github.com:')) u = 'https://github.com/' + u.slice('git@github.com:'.length); return u.replace(/\.git$/, ''); };
+writeFile(VERSION_FILE, JSON.stringify({ sha: git(['rev-parse', 'HEAD']), repo_url: normUrl(git(['config', '--get', 'remote.origin.url'])) || 'https://github.com/elon-choo/fablever', source_dir: REPO }, null, 2) + '\n');
 
 // 5b) register MCP (best-effort; print the command if claude is absent or it fails)
 function registerMcp(name, server, extra) {

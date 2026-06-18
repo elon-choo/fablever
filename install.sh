@@ -32,6 +32,9 @@ ONBOARD_CMD='node $HOME/.claude/hooks/fable-onboard.js'
 MODELCHK_SRC="${REPO}/claude-code/hooks/fable-model-check.js"
 MODELCHK_DST="${CLAUDE_DIR}/hooks/fable-model-check.js"
 MODELCHK_CMD='node $HOME/.claude/hooks/fable-model-check.js'
+UPDATECHK_SRC="${REPO}/claude-code/hooks/fable-update-check.js"
+UPDATECHK_DST="${CLAUDE_DIR}/hooks/fable-update-check.js"
+UPDATECHK_CMD='node $HOME/.claude/hooks/fable-update-check.js'
 STYLE_HEADER="${REPO}/claude-code/output-styles/Fable.header.md"
 STYLE_DST="${CLAUDE_DIR}/output-styles/Fable.md"
 GOVERNOR="${REPO}/profiles/full.md"
@@ -63,6 +66,7 @@ Usage: ./install.sh [options]
   --no-subagent    skip the SubagentStart hook (don't inject into subagents)
   --no-onboard     skip the first-run onboarding SessionStart hook
   --no-modelcheck  skip the daily latest-model-check SessionStart hook
+  --no-update-check  skip the daily anonymous GitHub version-check SessionStart hook
   --no-style       install the style file but don't set it as the default (pick "Fable" in /config)
   --no-mcp         skip registering the MCP server
   --uninstall      remove everything; restores prior settings
@@ -73,7 +77,7 @@ After installing, restart Claude Code (or /clear). Quiet the hooks: export FABLE
 USAGE
 }
 
-WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0; XVERIFY=off; DO_ONBOARD=1; DO_MODELCHK=1; XVERIFY_EXPLICIT=0
+WITH_HOOK=0; SET_STYLE=1; DO_MCP=1; UNINSTALL=0; DO_SUBAGENT=1; WITH_FUSION=0; XVERIFY=off; DO_ONBOARD=1; DO_MODELCHK=1; DO_UPDATECHK=1; XVERIFY_EXPLICIT=0
 for a in "$@"; do
   case "$a" in
     --with-hook)      WITH_HOOK=1 ;;
@@ -85,6 +89,7 @@ for a in "$@"; do
     --no-subagent) DO_SUBAGENT=0 ;;
     --no-onboard)    DO_ONBOARD=0 ;;
     --no-modelcheck) DO_MODELCHK=0 ;;
+    --no-update-check) DO_UPDATECHK=0 ;;
     --uninstall)   UNINSTALL=1 ;;
     -h|--help)     usage; exit 0 ;;
     *) echo "unknown flag: $a" >&2; usage >&2; exit 2 ;;
@@ -99,9 +104,11 @@ if [ "$UNINSTALL" = "1" ]; then
   node "$MERGE" subhook-off "$SETTINGS" "$SUBHOOK_CMD" 2>/dev/null || true
   node "$MERGE" sesshook-off "$SETTINGS" "$ONBOARD_CMD" 2>/dev/null || true
   node "$MERGE" sesshook-off "$SETTINGS" "$MODELCHK_CMD" 2>/dev/null || true
-  rm -f "$HOOK_DST" "$SUBHOOK_DST" "$ONBOARD_DST" "$MODELCHK_DST" "$STYLE_DST"
+  node "$MERGE" sesshook-off "$SETTINGS" "$UPDATECHK_CMD" 2>/dev/null || true
+  rm -f "$HOOK_DST" "$SUBHOOK_DST" "$ONBOARD_DST" "$MODELCHK_DST" "$UPDATECHK_DST" "$STYLE_DST"
   rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG" "$MODE_CFG" "$FABLE_HOME_PTR"
   rm -f "$PROFILE_DST_DIR/onboarded" "$PROFILE_DST_DIR/onboard-shown-count" "$PROFILE_DST_DIR/model-check.json" "$PROFILE_DST_DIR/model-notified.json"  # so a later re-install re-onboards cleanly
+  rm -f "$PROFILE_DST_DIR/installed-version.json" "$PROFILE_DST_DIR/update-check.json" "$PROFILE_DST_DIR/update-notified.json"
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
   if have claude; then
@@ -164,6 +171,20 @@ if [ "$DO_MODELCHK" = "1" ]; then
 else
   echo "  modelchk  -> file staged but NOT registered (--no-modelcheck)"
 fi
+cp "$UPDATECHK_SRC" "$UPDATECHK_DST"; chmod +x "$UPDATECHK_DST"
+if [ "$DO_UPDATECHK" = "1" ]; then
+  node "$MERGE" sesshook-on "$SETTINGS" "$UPDATECHK_CMD"
+  echo "  update    -> SessionStart hook registered (daily ANONYMOUS version check vs GitHub; no key/data; FABLE_UPDATE_CHECK=off or --no-update-check)"
+else
+  echo "  update    -> file staged but NOT registered (--no-update-check)"
+fi
+# record installed version (commit sha + repo url + clone path) so the update-check hook can compare.
+# Best-effort: if not a git clone, sha stays empty and the check no-ops.
+_SHA="$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo '')"
+_URL="$(git -C "$REPO" config --get remote.origin.url 2>/dev/null || echo '')"
+_URL="${_URL%.git}"; case "$_URL" in git@github.com:*) _URL="https://github.com/${_URL#git@github.com:}" ;; esac
+[ -n "$_URL" ] || _URL="https://github.com/elon-choo/fablever"
+printf '{\n  "sha": "%s",\n  "repo_url": "%s",\n  "source_dir": "%s"\n}\n' "$_SHA" "$_URL" "$REPO" > "$PROFILE_DST_DIR/installed-version.json"
 
 # 5) optional main-session anti-decay hook (opt-in)
 cp "$HOOK_SRC" "$HOOK_DST"; chmod +x "$HOOK_DST"
@@ -180,7 +201,7 @@ fi
 #       the SessionStart hooks (onboarding xverify-preset.mjs, daily model-freshness.mjs) and the
 #       fusion model registry (models.json) all resolve out of here, NOT the clone, so they work
 #       from any cwd after the user restarts. Re-running install.sh refreshes this copy.
-if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ] || [ "$DO_ONBOARD" = "1" ] || [ "$DO_MODELCHK" = "1" ]; then
+if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ] || [ "$DO_ONBOARD" = "1" ] || [ "$DO_MODELCHK" = "1" ] || [ "$DO_UPDATECHK" = "1" ]; then
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true   # refresh cleanly so files deleted from the repo don't persist stale
   mkdir -p "$RUNTIME_DIR"
   cp -R "${REPO}/mcp" "${REPO}/fusion" "${REPO}/profiles" "${REPO}/orchestration" "${REPO}/docs" "$RUNTIME_DIR"/ 2>/dev/null || true
