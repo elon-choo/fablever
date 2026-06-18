@@ -101,7 +101,7 @@ if [ "$UNINSTALL" = "1" ]; then
   node "$MERGE" sesshook-off "$SETTINGS" "$MODELCHK_CMD" 2>/dev/null || true
   rm -f "$HOOK_DST" "$SUBHOOK_DST" "$ONBOARD_DST" "$MODELCHK_DST" "$STYLE_DST"
   rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG" "$MODE_CFG" "$FABLE_HOME_PTR"
-  rm -f "$PROFILE_DST_DIR/onboarded" "$PROFILE_DST_DIR/model-check.json" "$PROFILE_DST_DIR/model-notified.json"  # so a later re-install re-onboards cleanly
+  rm -f "$PROFILE_DST_DIR/onboarded" "$PROFILE_DST_DIR/onboard-shown-count" "$PROFILE_DST_DIR/model-check.json" "$PROFILE_DST_DIR/model-notified.json"  # so a later re-install re-onboards cleanly
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
   if have claude; then

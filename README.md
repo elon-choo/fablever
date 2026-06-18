@@ -34,22 +34,26 @@ node install.mjs        # universal installer — macOS, Linux, AND native Windo
 
 > **Or just ask your AI.** Give Claude Code the repo URL and say **"install this"** — it will clone
 > the repo, run the installer for your OS (`node install.mjs`), and tell you to restart. The default
-> needs **no API key** and costs nothing extra; on the first session it asks two quick setup questions
-> in your language.
+> needs **no API key** and costs nothing extra; after you restart, your **first message** kicks off a
+> quick two-question setup in your language.
 
 ## First run — it sets itself up, in your language
 
-After you install and **restart Claude Code**, the first new session runs a short, friendly setup
-*before* your first task — the onboarding hook injects the instruction, the agent carries it out. It
-happens **once** and never nags again.
+After you install and **restart Claude Code**, you'll see a **one-line prompt** at the top of the
+session. Send **any** message (a greeting, or just your first task) and the agent runs a short,
+friendly setup *before* doing that task. A Claude Code session hook **cannot make the assistant speak
+before you do** — so the setup triggers on your first message, not as a spontaneous pop-up; the banner
+is there so you know it's waiting. It runs **once** (until you complete or skip it), then never nags again.
 
 - **In your language.** It detects the language you write in and runs the whole setup there (write in
   Korean → it onboards in Korean).
 - **It asks just two things, and configures them for you:**
   1. **Cost mode** — `auto` (default: cheap; spends only on high-stakes reviews) · `on` · `off`.
-  2. **Cross-model reviewer** — one of four presets: `claude-only` (default; no key, no login, $0) ·
-     `gpt-oauth` (a GPT reviewer via your **ChatGPT login** — *no API key*) · `gpt-oauth+gemini-api` ·
-     `gpt-api+gemini-api`.
+  2. **Cross-model reviewer** — it **explains what cross-model verification does** (a different-lab
+     model, GPT and/or Gemini, double-checks Claude's own review to catch blind spots a same-family
+     panel shares) and **asks you to choose** one of four presets — it won't silently default past it:
+     `claude-only` (default; no key, no login, $0) · `gpt-oauth` (a GPT reviewer via your **ChatGPT
+     login** — *no API key*) · `gpt-oauth+gemini-api` · `gpt-api+gemini-api`.
 - **You only do the irreducible human step** — issue a key or sign in — and *only* if you pick a
   paid/login preset. The agent writes all the config itself and **never asks you to paste a key into
   the chat** (keys live in your shell env only; `doctor` checks presence, never the value).

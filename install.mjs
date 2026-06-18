@@ -92,7 +92,7 @@ if (UNINSTALL) {
   node([MERGE, 'sesshook-off', SETTINGS, ONBOARD.cmd]);
   node([MERGE, 'sesshook-off', SETTINGS, MODELCHK.cmd]);
   for (const f of [REINJECT.dst, SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, STYLE_DST]) rmf(f);
-  for (const f of ['full.md', 'compact.md', 'core.md', 'xverify.json', 'mode.json', 'fable-home', 'onboarded', 'model-check.json', 'model-notified.json']) rmf(path.join(PROFILE_DST_DIR, f));
+  for (const f of ['full.md', 'compact.md', 'core.md', 'xverify.json', 'mode.json', 'fable-home', 'onboarded', 'onboard-shown-count', 'model-check.json', 'model-notified.json']) rmf(path.join(PROFILE_DST_DIR, f));
   rmrf(RUNTIME_DIR);
   try { fs.rmdirSync(PROFILE_DST_DIR); } catch (_) {}
   if (haveClaude()) { claude(['mcp', 'remove', 'fable-profile', '--scope', 'user']); claude(['mcp', 'remove', 'fable-fusion', '--scope', 'user']); }
