@@ -1,0 +1,3 @@
+Make eval_expr.js evaluate an expression of integers with + - * / and CORRECT operator precedence (no parentheses); division truncates toward zero (e.g. "2+3*4" -> 14).
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

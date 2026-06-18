@@ -1,0 +1,3 @@
+Extend flatten.js to flatten arbitrarily deeply nested arrays into a single flat array (e.g. [1,[2,[3,[4]]]] -> [1,2,3,4]), not just one level.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

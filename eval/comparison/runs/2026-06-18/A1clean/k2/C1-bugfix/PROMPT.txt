@@ -1,0 +1,3 @@
+Fix the bug in parse_range.js so it returns the inclusive integer range (e.g. "1-3" -> [1,2,3], "5-5" -> [5]). Change only what is needed.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

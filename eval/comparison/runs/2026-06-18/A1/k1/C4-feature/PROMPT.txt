@@ -1,0 +1,3 @@
+Implement slugify(s) in slugify.js: lowercase; strip diacritics (so "Café" -> "cafe"); replace each run of non-alphanumeric characters with a single "-"; and trim leading/trailing "-".
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

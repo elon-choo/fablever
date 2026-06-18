@@ -1,0 +1,3 @@
+split_csv.js splits a line on ";". Add support for double-quoted fields: a quote starts/ends a quoted field, ";" inside quotes is literal, and a doubled quote ("") inside a quoted field is a literal quote character.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

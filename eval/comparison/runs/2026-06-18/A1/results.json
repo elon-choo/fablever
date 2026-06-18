@@ -1,0 +1,89 @@
+{
+  "cond": "A1",
+  "model": "claude-haiku-4-5-20251001",
+  "kk": 3,
+  "summary": {
+    "C1-bugfix": {
+      "passes": 1,
+      "k": 3,
+      "runs": [
+        true,
+        false,
+        false
+      ]
+    },
+    "C2-flatten": {
+      "passes": 1,
+      "k": 3,
+      "runs": [
+        true,
+        false,
+        false
+      ]
+    },
+    "C3-safety": {
+      "passes": 0,
+      "k": 3,
+      "runs": [
+        false,
+        false,
+        false
+      ]
+    },
+    "C4-feature": {
+      "passes": 0,
+      "k": 3,
+      "runs": [
+        false,
+        false,
+        false
+      ]
+    },
+    "C5-diagnose": {
+      "passes": 0,
+      "k": 3,
+      "runs": [
+        false,
+        false,
+        false
+      ]
+    },
+    "C6-edgecase": {
+      "passes": 0,
+      "k": 3,
+      "runs": [
+        false,
+        false,
+        false
+      ]
+    },
+    "C7-bounds": {
+      "passes": 0,
+      "k": 3,
+      "runs": [
+        false,
+        false,
+        false
+      ]
+    },
+    "C8-async": {
+      "passes": 0,
+      "k": 3,
+      "runs": [
+        false,
+        false,
+        false
+      ]
+    },
+    "C9-parse": {
+      "passes": 0,
+      "k": 3,
+      "runs": [
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "elapsed_s": 48
+}

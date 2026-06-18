@@ -1,0 +1,3 @@
+Fix ring_buffer.js so that when the buffer is full, push overwrites the OLDEST element and toArray() returns the contents oldest-to-newest.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

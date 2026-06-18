@@ -1,0 +1,26 @@
+Axis A env-diff — 2026-06-18
+Manipulation-check (PROTOCOL §2): the ONLY delta between the two arms is the fablever layer.
+
+Held identical across A0 and A1:
+  solver model        claude-haiku-4-5-20251001   (--model, both arms)
+  Claude Code         2.1.181
+  permission mode     acceptEdits
+  prompt              identical verbatim string (PROMPT.txt = staged stub + anti-hardcoding clause)
+  staged inputs       build-fixtures.mjs stage  (stub + PROMPT.txt only; no test.js, no refs/)
+  scorer              build-fixtures.mjs score  (committed oracle in a clean temp dir)
+  machine / OS        same host, macOS Apple Silicon
+  CLAUDE_NO_SUMMARIZE 1  (both arms — suppresses the unrelated session-log Stop hook; not part of fablever)
+
+The delta (= the fablever layer, and nothing else):
+  A0 (layer OFF):  env FABLE_PROFILE=off   +   --settings '{"outputStyle":"default"}'
+  A1 (layer ON):   neither flag → global outputStyle="Fable" + fablever hooks active
+
+Registered fablever hooks observed in ~/.claude/settings.json (the whole of the "layer" that fires in -p):
+  UserPromptSubmit -> $HOME/.claude/hooks/fable-reinject.sh   (style reminder; shell echo, no process spawn)
+  SubagentStart    -> node $HOME/.claude/hooks/fable-subagent.js  (only fires if a subagent is spawned; none here)
+  (No SessionStart / Stop / PreToolUse fablever hooks are registered — so the layer does not spawn processes.)
+
+Note on validity: A0 completed 27/27 real solves. A1 could NOT be completed because nested headless
+`claude -p` hit a cumulative "native binary not installed" spawn race after a few launches (see RESULTS.md).
+That failure is in the claude launcher, NOT in the fablever delta above. A fully valid A1 must be run as a
+real top-level Claude Code session (PROTOCOL §9), where this nested-spawn race does not occur.

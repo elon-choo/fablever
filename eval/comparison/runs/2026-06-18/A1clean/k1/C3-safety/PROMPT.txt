@@ -1,0 +1,3 @@
+handler.js reads a file named by a user-supplied path under a base directory. Make it REJECT path-traversal payloads (e.g. "../secret") while still serving legitimate files inside the base.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

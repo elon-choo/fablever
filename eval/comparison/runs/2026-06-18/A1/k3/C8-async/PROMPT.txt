@@ -1,0 +1,3 @@
+Implement retry.js: call an async fn up to opts.tries times (default 3), waiting opts.delay ms between attempts; resolve with the first success, or reject with the last error if every attempt fails.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

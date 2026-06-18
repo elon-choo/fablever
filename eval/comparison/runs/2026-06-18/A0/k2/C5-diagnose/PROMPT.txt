@@ -1,0 +1,3 @@
+cache.js has a TTL bug. Fix the SOURCE so an entry stays available until now >= (set-time + ttl) and is gone after. Do NOT edit the test.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.
