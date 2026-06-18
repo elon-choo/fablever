@@ -1,0 +1,1 @@
+Implement windowMax(arr, k) in window_max.js: return an array of the maximum of every contiguous window of length k. The result has length arr.length - k + 1. If k is larger than arr.length, return []. k is always >= 1.

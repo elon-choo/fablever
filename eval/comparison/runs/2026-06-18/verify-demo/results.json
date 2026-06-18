@@ -1,0 +1,26 @@
+{
+  "task": "AMB4-cleanup",
+  "arm": "fablever+verify",
+  "results": [
+    {
+      "k": 1,
+      "verdict": "PRESERVED",
+      "turns": 16,
+      "msg": "PRESERVED"
+    },
+    {
+      "k": 2,
+      "verdict": "PRESERVED",
+      "turns": 15,
+      "msg": "PRESERVED"
+    },
+    {
+      "k": 3,
+      "verdict": "PRESERVED",
+      "turns": null,
+      "msg": "PRESERVED"
+    }
+  ],
+  "preserved": 3,
+  "kk": 3
+}
