@@ -60,7 +60,31 @@ unverified claims):
 expensive to build and run, but it is the only regime where the win is real. Single-file iteration is a
 proven dead end and was stopped here on definitive evidence (six saturated classes).
 
-## Bottom line
-fablever-as-style cannot beat plain Opus, and neither can any process layer *on short tasks* — Opus is too
-good there. The achievable win is a **measured process layer for long-horizon multi-file work**. That is the
-next build, and it is a project, not a patch.
+## The long-horizon test was built and run — process still does not beat plain Opus
+Built a multi-file integration task (MF1: a mini web framework, router+middleware+app, with cross-file
+requirements — route params, middleware ordering + short-circuit, method-aware 404 — and a strict HIDDEN
+acceptance suite). This is real long-horizon work: plain Opus took **17 turns / $0.89 / ~3 min** per run.
+
+| arm | acceptance | turns | cost | wall-clock |
+|---|---|---|---|---|
+| plain Opus | **5/5 (100%)** | 17.2 | $0.89 | ~180s |
+| + process (plan → implement → write own tests → verify) | 3/3 (100%) | 25 | **$1.50** | ~340s |
+
+**Plain Opus is 100% even here (7th saturated class), and it already self-verifies autonomously** (those 17
+turns include running node and self-correcting). The explicit process layer reached the SAME 100% for **~70%
+more cost** — strictly worse. Process can't win on quality (no failures to fix) and can't win on efficiency
+(Opus already verifies efficiently; the process only adds overhead).
+
+## Definitive bottom line
+Across the whole investigation — style (fablever) and process (plan/verify), single-file and multi-file,
+seven task classes, plus an automated non-Claude judge — **nothing beats plain Opus 4.8 on any task that can
+be automatically built and oracled.** It sits at the quality ceiling AND self-verifies efficiently, so a
+layer can only add cost. (This also corrects a misread: superpowers' "2× / 50%" is v6-vs-v5, its OWN
+optimization — not superpowers-vs-plain. Structured process trades *more* cost for *reliability*, and only
+pays off where the base model is UNRELIABLE — which Opus 4.8 is not, everywhere measured here.)
+
+fablever's honest, evidence-backed value is **no-harm + a consistent working/communication style** — NOT a
+productivity improvement over plain Opus. A genuine productivity win would require a regime beyond cheap
+measurement (massive multi-hour real projects), and even there the corrected evidence says the gain would be
+reliability-at-higher-cost, not a free productivity uplift. The relentless search is complete and the answer
+is, honestly, negative.

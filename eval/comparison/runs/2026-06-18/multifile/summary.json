@@ -1,0 +1,44 @@
+{
+  "model": "claude-opus-4-8",
+  "kk": 3,
+  "agg": [
+    {
+      "cond": "V",
+      "n": 3,
+      "pass": 3,
+      "pct": 100,
+      "meanTurns": 25,
+      "meanCost": 1.5,
+      "launchFails": 0
+    }
+  ],
+  "data": [
+    {
+      "cond": "V",
+      "k": 1,
+      "task": "MF1-framework",
+      "turns": 24,
+      "cost": 1.6563449999999997,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "V",
+      "k": 2,
+      "task": "MF1-framework",
+      "turns": 22,
+      "cost": 1.276607,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "V",
+      "k": 3,
+      "task": "MF1-framework",
+      "turns": 29,
+      "cost": 1.5615180000000002,
+      "fail": false,
+      "pass": true
+    }
+  ]
+}

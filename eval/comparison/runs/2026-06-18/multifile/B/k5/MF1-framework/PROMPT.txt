@@ -1,0 +1,5 @@
+This tiny web framework (app.js, router.js, middleware.js) is incomplete. Complete it so ALL of the following hold, keeping the existing class structure and exports:
+1. ROUTE PARAMS: a route registered as '/users/:id' matches the path '/users/42', and the handler receives req.params = { id: '42' }. Support multiple params (e.g. '/a/:x/b/:y').
+2. MIDDLEWARE: app.use(fn) registers middleware. On handle(req), middleware run in registration order BEFORE the matched handler. Each middleware is called as fn(req, next). Calling next() continues the chain (to the next middleware, then the handler). If a middleware returns a response object (one with a numeric `status`) WITHOUT calling next(), that response short-circuits the chain and the handler does NOT run.
+3. METHOD-AWARE 404: if no route matches BOTH the method and the path, handle returns { status: 404, body: 'Not Found' }.
+4. The matched handler's return value is the response from handle().
