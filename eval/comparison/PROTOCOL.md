@@ -1,10 +1,14 @@
 # fablever Comparison Study — Protocol (pre-registration, v0.2)
 
-**Status:** TWO adversarial methodology reviews done. Round 1 (protocol): FIX-THEN-GO → incorporated.
-Round 2 (task set + rubric + runner): **NO-GO** → its design fixes are incorporated below, but the
-executable coding-fixture tree (`tasks/coding/<id>/`) **does not exist yet**, so the study is **NOT
-sealable and must NOT be run** until that tree is committed and each oracle is mutation-checked (round-2
-finding C-1). See Appendix A. This file is a reviewed DRAFT, not a sealed pre-registration.
+**Status:** TWO adversarial methodology reviews done; all must-fix items incorporated. Round 1 (protocol):
+FIX-THEN-GO → incorporated. Round 2 (task set + rubric + runner): NO-GO → design fixes incorporated AND
+the GO-blocker (round-2 C-1: the executable coding-fixture tree) is now **built and mutation-verified** —
+`tasks/coding/build-fixtures.mjs` proves every oracle sound (stub fails / solution passes / wrong fails,
+all 9), with SHA-256 pins in `tasks/coding/manifest.sha256`. **Round 3 (confirmation): FIX-THEN-GO (score
+90)** — all five round-2 must-fixes confirmed resolved; its two Major items (anti-hardcoding prompt clause,
+clean `stage`/`score` mechanism) are now applied (§9, Appendix A), meeting the reviewer's stated GO
+condition. **This DRAFT seals as a pre-registration on the operator's calibration run** (A0, one pass,
+deterministic drop-to-6); calibration and the Axis-B disjoint panel are run-time steps, not seal-blockers.
 **Rule:** this protocol + the frozen tasks + the empty results template are committed *before* any data.
 Results (including null/negative) are committed after, unedited. No metric or task is added or dropped
 after seeing data. Consistent with [`EVIDENCE.md`](../../EVIDENCE.md)'s honesty contract.
@@ -159,9 +163,19 @@ eval/comparison/
 
 - Axis A needs a **with/without-fablever pair** (two HOMEs, or install/uninstall) **plus the committed
   env-diff** proving only fablever differs.
-- Axis B needs the operator's **gpt-oauth / Gemini keys** to light up those reviewers.
-- The operator runs the frozen tasks, captures transcripts + env-diffs, and provides them; results are
-  then computed and committed.
+- **Coding tasks are staged and scored, never hand-judged (round-3 R3-2/R3-3):**
+  1. `node tasks/coding/build-fixtures.mjs stage <dir>` — emits each task as **stub + PROMPT.txt only**
+     (no `test.js`, no `refs/`), so the model under test never sees the oracle or the answer. The
+     PROMPT.txt carries the verbatim prompt + the anti-hardcoding clause (R3-1).
+  2. The model edits the stub in `<dir>/<id>/` (k=3 fresh runs per task per condition).
+  3. `node tasks/coding/build-fixtures.mjs score <dir>` — runs the **committed** oracle per task in a
+     clean temp dir and re-checks C5's `test.js` SHA-256. Its `PASS/FAIL` per task **is** the §4b headline
+     data. (Staging means the model can't edit `test.js`, so C5's "don't edit the test" is enforced
+     structurally; the hash check is belt-and-suspenders.)
+- **Calibration (one A0 pass, deterministic drop-to-6)** and the **Axis-B disjoint-judge panel** (needs
+  the operator's gpt-oauth/Gemini keys + a Claude judge + a human spot-check) are legitimate run-time
+  steps, not seal-blockers.
+- The operator captures transcripts + env-diffs + the `score` output under `runs/<date>/<condition>/`.
 
 ---
 
@@ -183,6 +197,15 @@ eval/comparison/
   oracles mutation-checked), M-1 (contamination notes require a committed artifact), M-2 (seeded task-order
   shuffle added to the runner), M-3 (results template captions descriptive tables as unable to upgrade a
   null headline), L-1 (bullet-strip restricted to list markers).
-- **STILL OPEN before seal (round-2 C-1, the GO-blocker):** the `tasks/coding/<id>/` fixture tree
-  (stub + `test.js` + planted files + pinned SHA-256, each oracle mutation-checked) must be **built and
-  committed before any calibration or A0/A1 data.** Until then the study is NOT sealable and must not run.
+- **RESOLVED (round-2 C-1):** the `tasks/coding/<id>/` fixture tree is built by `build-fixtures.mjs`
+  (stub + `test.js` + `refs/`), every oracle mutation-checked (stub fails / solution passes / wrong fails,
+  all 9 sound), SHA-256 pinned in `manifest.sha256`. C2 was swapped from a complexity-refactor (not
+  robustly unit-testable in JS) to a deep-flatten correctness task; C3 is a reject-the-payload test; C5
+  uses a clock-injected expiry; all checks are executable with no rubric/`grep` escape hatch.
+- **v0.3 → round-3 confirmation review, verdict FIX-THEN-GO (score 90).** All five round-2 must-fixes
+  confirmed RESOLVED (C-1 independently re-verified). Two Major items applied: R3-1 (anti-hardcoding clause
+  baked into every staged PROMPT.txt), R3-2 (`stage` mode emits stub+prompt only — model never sees the
+  oracle/answer), R3-3 (`score` mode runs the committed oracle per task + C5 hash recheck). The reviewer's
+  stated GO condition ("apply the prompt clause + clean-staging + run-time scoring into §9") is now met.
+- **Seal step:** the calibration run (A0, one pass, deterministic drop-to-6) on the operator's machine.
+  Calibration + the Axis-B disjoint panel are run-time steps, not seal-blockers.

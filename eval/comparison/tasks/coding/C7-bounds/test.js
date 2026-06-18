@@ -1,0 +1,10 @@
+const assert = require('assert');
+const ring = require('./ring_buffer.js');
+const r = ring(3);
+r.push(1); r.push(2); r.push(3);
+assert.deepStrictEqual(r.toArray(), [1, 2, 3]);
+r.push(4);
+assert.deepStrictEqual(r.toArray(), [2, 3, 4]);
+r.push(5);
+assert.deepStrictEqual(r.toArray(), [3, 4, 5]);
+console.log('C7 ok');
