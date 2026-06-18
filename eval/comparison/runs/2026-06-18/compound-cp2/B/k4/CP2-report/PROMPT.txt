@@ -1,0 +1,9 @@
+Implement formatReport(rows, opts) in report.js. rows is an array of { name, amount } (amount is a number, may be negative). Return a string with one line per row, following ALL of these rules:
+1. Skip any row whose amount is null or undefined.
+2. Sort rows by amount DESCENDING; break ties by name ASCENDING.
+3. If opts.top is a positive number, keep only the first that many rows (after sorting).
+4. Each line is the (possibly truncated) name, then TWO spaces, then the formatted amount.
+5. Format the amount with exactly 2 decimals and thousands separators (1234.5 -> $1,234.50).
+6. Negative amounts are wrapped in parentheses with the $ inside: -50 -> ($50.00).
+7. If a name is longer than 12 characters, truncate it to the first 11 characters followed by '…' (U+2026).
+8. Append a final line: the literal name "TOTAL", two spaces, then the sum of the INCLUDED rows' amounts formatted by rules 5 and 6.

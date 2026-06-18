@@ -1,0 +1,4 @@
+In cart.js make THREE changes without breaking any existing behavior:
+1. addItem(cart, id, qty, price) on an id ALREADY in the cart must ADD to the existing quantity and keep the ORIGINAL price (no duplicate line).
+2. Add setQty(cart, id, qty): set that item's quantity; if qty <= 0 remove the item entirely; if the id is not present do nothing. Export it.
+3. Make total(cart) apply a 10% discount to the whole cart when the active code (set via applyCode) is exactly 'SAVE10' (any other code or null = no discount), and round the final total to 2 decimals.

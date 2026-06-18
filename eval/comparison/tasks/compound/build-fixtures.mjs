@@ -72,6 +72,64 @@ applyCode(c, 'OTHER'); assert.strictEqual(total(c), 9.99);
 console.log('CP1 ok');
 `,
   },
+  'CP2-report': {
+    target: 'report.js',
+    prompt: `Implement formatReport(rows, opts) in report.js. rows is an array of { name, amount } (amount is a number, may be negative). Return a string with one line per row, following ALL of these rules:
+1. Skip any row whose amount is null or undefined.
+2. Sort rows by amount DESCENDING; break ties by name ASCENDING.
+3. If opts.top is a positive number, keep only the first that many rows (after sorting).
+4. Each line is the (possibly truncated) name, then TWO spaces, then the formatted amount.
+5. Format the amount with exactly 2 decimals and thousands separators (1234.5 -> $1,234.50).
+6. Negative amounts are wrapped in parentheses with the $ inside: -50 -> ($50.00).
+7. If a name is longer than 12 characters, truncate it to the first 11 characters followed by '…' (U+2026).
+8. Append a final line: the literal name "TOTAL", two spaces, then the sum of the INCLUDED rows' amounts formatted by rules 5 and 6.`,
+    stub: `function formatReport(rows, opts = {}) {
+  return rows.map(r => r.name + ': $' + r.amount).join('\\n');
+}
+module.exports = formatReport;
+`,
+    solution: `function fmtAmt(n) {
+  const s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n < 0 ? '($' + s + ')' : '$' + s;
+}
+function formatReport(rows, opts = {}) {
+  let rs = rows.filter(r => r.amount !== null && r.amount !== undefined);
+  rs = rs.slice().sort((a, b) => b.amount - a.amount || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  if (opts.top > 0) rs = rs.slice(0, opts.top);
+  const lines = rs.map(r => {
+    const name = r.name.length > 12 ? r.name.slice(0, 11) + '…' : r.name;
+    return name + '  ' + fmtAmt(r.amount);
+  });
+  const sum = rs.reduce((s, r) => s + r.amount, 0);
+  lines.push('TOTAL  ' + fmtAmt(sum));
+  return lines.join('\\n');
+}
+module.exports = formatReport;
+`,
+    test: `const assert = require('assert');
+const formatReport = require('./report.js');
+const rows = [
+  { name: 'Alice', amount: 1234.5 },
+  { name: 'Bob', amount: -50 },
+  { name: 'Charlie Longname', amount: 1234.5 },
+  { name: 'Dave', amount: null },
+  { name: 'Eve', amount: 1000000 },
+];
+const expected = [
+  'Eve  $1,000,000.00',
+  'Alice  $1,234.50',
+  'Charlie Lon…  $1,234.50',
+  'Bob  ($50.00)',
+  'TOTAL  $1,002,419.00',
+].join('\\n');
+assert.strictEqual(formatReport(rows), expected);
+// opts.top after sort
+assert.strictEqual(formatReport(rows, { top: 2 }), ['Eve  $1,000,000.00','Alice  $1,234.50','TOTAL  $1,001,234.50'].join('\\n'));
+// all-negative total in parens
+assert.strictEqual(formatReport([{name:'X',amount:-10},{name:'Y',amount:-5}]), ['Y  ($5.00)','X  ($10.00)','TOTAL  ($15.00)'].join('\\n'));
+console.log('CP2 ok');
+`,
+  },
 };
 
 const runTest = dir => spawnSync(process.execPath, ['test.js'], { cwd: dir, encoding: 'utf8' });

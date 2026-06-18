@@ -1,0 +1,61 @@
+{
+  "model": "claude-opus-4-8",
+  "kk": 5,
+  "byTask": {
+    "CP1-cart": {
+      "B": "5/5"
+    }
+  },
+  "agg": [
+    {
+      "cond": "B",
+      "n": 5,
+      "pass": 5,
+      "pct": 100,
+      "meanTurns": 4.8,
+      "launchFails": 0
+    }
+  ],
+  "data": [
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "CP1-cart",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "CP1-cart",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "CP1-cart",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 4,
+      "task": "CP1-cart",
+      "turns": 4,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 5,
+      "task": "CP1-cart",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    }
+  ]
+}

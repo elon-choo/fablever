@@ -1,0 +1,61 @@
+{
+  "model": "claude-opus-4-8",
+  "kk": 5,
+  "byTask": {
+    "CP2-report": {
+      "B": "5/5"
+    }
+  },
+  "agg": [
+    {
+      "cond": "B",
+      "n": 5,
+      "pass": 5,
+      "pct": 100,
+      "meanTurns": 6.2,
+      "launchFails": 0
+    }
+  ],
+  "data": [
+    {
+      "cond": "B",
+      "k": 1,
+      "task": "CP2-report",
+      "turns": 6,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 2,
+      "task": "CP2-report",
+      "turns": 6,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 3,
+      "task": "CP2-report",
+      "turns": 5,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 4,
+      "task": "CP2-report",
+      "turns": 6,
+      "fail": false,
+      "pass": true
+    },
+    {
+      "cond": "B",
+      "k": 5,
+      "task": "CP2-report",
+      "turns": 8,
+      "fail": false,
+      "pass": true
+    }
+  ]
+}
