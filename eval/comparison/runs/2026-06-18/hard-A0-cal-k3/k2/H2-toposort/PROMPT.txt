@@ -1,0 +1,3 @@
+Implement topoSort(nodes, edges) in toposort.js. edges is a list of [a,b] meaning a must come before b. Return an ordering of ALL nodes that respects every edge; THROW an error if the graph contains a cycle.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

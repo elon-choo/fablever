@@ -1,0 +1,3 @@
+Implement createLRU(cap) in lru.js returning an object with get(k) and put(k,v). It is an LRU cache holding at most cap entries. get returns the value (or undefined) AND counts as a use; put inserts or updates and, when over capacity, evicts the least-recently-used entry.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

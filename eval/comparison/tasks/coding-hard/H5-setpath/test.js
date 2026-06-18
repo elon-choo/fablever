@@ -1,0 +1,11 @@
+const assert = require('assert');
+const setPath = require('./set_path.js');
+const o = {};
+setPath(o, 'a.b[2].c', 42);
+assert.strictEqual(o.a.b[2].c, 42);
+assert.ok(Array.isArray(o.a.b), 'b must be an array');
+const o2 = {};
+setPath(o2, 'x.y', 1);
+assert.strictEqual(o2.x.y, 1);
+assert.ok(!Array.isArray(o2.x), 'x must be an object');
+console.log('H5 ok');

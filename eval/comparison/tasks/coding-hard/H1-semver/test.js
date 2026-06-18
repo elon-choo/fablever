@@ -1,0 +1,11 @@
+const assert = require('assert');
+const compare = require('./semver.js');
+assert.strictEqual(compare('1.0.0', '1.0.1'), -1);
+assert.strictEqual(compare('1.2.0', '1.1.9'), 1);
+assert.strictEqual(compare('1.0.0', '1.0.0'), 0);
+assert.strictEqual(compare('1.0.0-alpha', '1.0.0'), -1);
+assert.strictEqual(compare('1.0.0', '1.0.0-alpha'), 1);
+assert.strictEqual(compare('1.0.0-alpha', '1.0.0-alpha.1'), -1);
+assert.strictEqual(compare('1.0.0-alpha.1', '1.0.0-alpha.beta'), -1);
+assert.strictEqual(compare('1.0.0-beta.2', '1.0.0-beta.11'), -1);
+console.log('H1 ok');

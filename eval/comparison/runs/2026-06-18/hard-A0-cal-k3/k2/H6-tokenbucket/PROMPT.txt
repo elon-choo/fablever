@@ -1,0 +1,3 @@
+Implement createLimiter({capacity, refillPerSec}) in token_bucket.js returning allow(now). It is a token-bucket rate limiter that STARTS FULL (capacity tokens): tokens refill at refillPerSec per unit of time, capped at capacity; allow consumes one token and returns true if at least one is available (now is a non-decreasing timestamp), otherwise false.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

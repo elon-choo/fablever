@@ -1,0 +1,3 @@
+Implement insert(intervals, newInterval) in insert_interval.js. intervals is a sorted, non-overlapping list of [start,end] pairs. Insert newInterval, merging any overlaps — including intervals that merely touch at an endpoint, e.g. [1,3] and [3,5] merge into [1,5] — and return the sorted, non-overlapping result.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

@@ -1,0 +1,3 @@
+Implement compare(a,b) in semver.js returning -1/0/1 for two semantic versions, INCLUDING pre-release precedence: a version with a pre-release tag (e.g. "1.0.0-alpha") is LOWER than the same version without it; pre-release identifiers are compared left-to-right, numeric ones numerically and ranked below alphanumeric ones, and when all leading identifiers are equal the version with fewer identifiers is lower.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

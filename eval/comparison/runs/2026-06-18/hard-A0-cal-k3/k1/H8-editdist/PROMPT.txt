@@ -1,0 +1,3 @@
+Implement editDistance(a,b) in edit_distance.js: the minimum total cost to transform a into b where an insertion costs 1, a deletion costs 1, and a substitution costs 2.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

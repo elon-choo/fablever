@@ -1,0 +1,71 @@
+{
+  "cond": "A0",
+  "model": "claude-haiku-4-5-20251001",
+  "kk": 1,
+  "summary": {
+    "H1-semver": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H2-toposort": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H3-interval": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H4-lru": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H5-setpath": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H6-tokenbucket": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H7-roman": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H8-editdist": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    },
+    "H9-parens": {
+      "passes": 1,
+      "k": 1,
+      "runs": [
+        true
+      ]
+    }
+  },
+  "elapsed_s": 300
+}

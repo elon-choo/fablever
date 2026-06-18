@@ -207,5 +207,14 @@ eval/comparison/
   baked into every staged PROMPT.txt), R3-2 (`stage` mode emits stub+prompt only — model never sees the
   oracle/answer), R3-3 (`score` mode runs the committed oracle per task + C5 hash recheck). The reviewer's
   stated GO condition ("apply the prompt clause + clean-staging + run-time scoring into §9") is now met.
+- **v0.4 → easy pool saturated; HARD pool added.** The 2026-06-18 execution (`runs/2026-06-18/RESULTS.md`)
+  found the easy `tasks/coding/` pool saturates current models (A0 = 9/9 → drop-to-6 empties the set →
+  headline undefined). A harder pool was built in [`tasks/coding-hard/`](tasks/coding-hard/) (9 textbook
+  tasks whose difficulty is in under-specified corners), mutation-verified, and adversarially re-reviewed
+  (red-team-validator: **FIX-THEN-GO, gate 62/100**). Its must-fixes are applied: stubs de-labelled (no
+  `// BUG:` hints), H9 false-accept closed (`7/2` case), H6 false-reject closed (prompt states "starts
+  full"), contamination note added. Known accepted limits + the difficulty calibration are recorded in
+  [`tasks/coding-hard/NOTES.md`](tasks/coding-hard/NOTES.md). The hard pool supersedes the easy pool as the
+  Axis-A coding domain for any future discriminating run; the easy-pool result stands as the documented null.
 - **Seal step:** the calibration run (A0, one pass, deterministic drop-to-6) on the operator's machine.
   Calibration + the Axis-B disjoint panel are run-time steps, not seal-blockers.
