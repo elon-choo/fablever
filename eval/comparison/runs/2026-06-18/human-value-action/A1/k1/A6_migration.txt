@@ -1,0 +1,26 @@
+The core command is `rails db:rollback`, which reverts the most recent migration.
+
+```bash
+rails db:rollback          # undo the last migration
+rails db:rollback STEP=3   # undo the last 3 migrations
+```
+
+A few things worth knowing beyond the basic command:
+
+**Roll back a specific migration (not just the latest).** Use `db:migrate:down` with the version number (the timestamp in the filename):
+
+```bash
+rails db:migrate:down VERSION=20260619120000
+```
+
+**Check what state you're in** before and after with `rails db:migrate:status` — it lists each migration as `up` or `down`, so you can see exactly what the rollback reverted.
+
+**The common gotcha — irreversible migrations.** `rollback` works by running the migration's `down` step. If you wrote a `change` method that Rails can't automatically reverse (e.g. `remove_column` without specifying the type, or raw SQL in an `execute`), the rollback throws `ActiveRecord::IrreversibleMigration`. Fixes:
+- Add an explicit `down` method (or `reversible` block) describing how to undo it.
+- For `remove_column`, give the full signature so Rails can recreate it: `remove_column :users, :name, :string`.
+
+**If it was already deployed / others have run it,** prefer writing a *new* migration that corrects the problem rather than rolling back and editing the old file. Rolling back only affects your local schema state; editing an already-run migration causes drift because everyone else's `schema_migrations` table still lists it as applied.
+
+**Data loss warning.** Rolling back a migration that dropped or altered columns will run the `down` step, but any data that lived in those columns is gone — the `down` only restores structure, not contents. If the bad migration destroyed data in production, a rollback won't bring it back; you'd need a database backup.
+
+If you tell me what the migration actually did (added a column, renamed something, raw SQL?) and whether it's only local or already shared/deployed, I can give you the exact rollback path for your case.

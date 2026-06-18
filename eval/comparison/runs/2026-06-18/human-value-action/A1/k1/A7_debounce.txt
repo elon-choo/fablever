@@ -1,0 +1,43 @@
+The simplest approach is a small `useDebounce` hook that delays updating a value, then you drive your search off the debounced value:
+
+```jsx
+import { useState, useEffect } from "react";
+
+function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id); // cancel if value changes before delay
+  }, [value, delay]);
+
+  return debounced;
+}
+```
+
+Usage:
+
+```jsx
+function Search() {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (!debouncedQuery) return;
+    // fire your search/fetch here
+    fetchResults(debouncedQuery);
+  }, [debouncedQuery]);
+
+  return (
+    <input
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search…"
+    />
+  );
+}
+```
+
+The input stays fully controlled and responsive (it updates on every keystroke), but `debouncedQuery` only changes 300ms after the user stops typing. The `clearTimeout` in the cleanup is what does the actual debouncing — each keystroke cancels the previous pending update.
+
+If you'd rather not hand-roll it, `useDebounce` from the `use-debounce` package is the same thing pre-packaged, and React 18+ also gives you `useDeferredValue` for the specific case of deprioritizing expensive renders (though that's for render scheduling, not for throttling network calls — for debouncing fetches, the hook above is the right tool).

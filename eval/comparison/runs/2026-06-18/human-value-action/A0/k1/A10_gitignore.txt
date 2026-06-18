@@ -1,0 +1,23 @@
+You committed `node_modules` already, so it's tracked. You need to (1) add it to `.gitignore` and (2) remove it from git's tracking without deleting it from disk.
+
+```bash
+# 1. Add to .gitignore (if not already there)
+echo "node_modules/" >> .gitignore
+
+# 2. Stop tracking it — --cached keeps the files on disk, only removes from git
+git rm -r --cached node_modules
+
+# 3. Commit the removal
+git commit -m "Remove node_modules from tracking, add to .gitignore"
+```
+
+### Key points
+
+- **`--cached` is the important flag.** Without it, `git rm -r node_modules` would delete the folder from your disk too. With it, the files stay; only the git index entry is removed.
+- After this, `git status` should no longer show `node_modules` changes, since `.gitignore` now matches it.
+- **History note:** this removes it going *forward*. The old commits still contain `node_modules`, so your repo's history (and `.git` folder size) won't shrink. For most cases that's fine. If you specifically need to purge it from all history (e.g. the repo is bloated or you committed secrets), that's a separate, more invasive operation using [`git filter-repo`](https://github.com/newren/git-filter-repo) or BFG — let me know and I'll walk you through it.
+
+### If you have a remote
+After committing, push normally (`git push`). Collaborators will get `node_modules` deleted from their working tree on pull — they just re-run `npm install` to regenerate it locally, so warn them if relevant.
+
+Want me to check a specific repo and run this for you?

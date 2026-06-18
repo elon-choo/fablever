@@ -1,0 +1,32 @@
+The short version: keep a single config module that reads `process.env`, load local values from a gitignored `.env` file via something like `dotenv`, and in production inject the real values through the platform's own environment (host config, secrets manager, CI/CD vars) rather than shipping a prod `.env` file.
+
+Here's the shape that works well:
+
+**One config module, validated at startup.** Don't scatter `process.env.FOO` across the codebase. Read everything once, validate it, and export typed values. If a required var is missing, crash immediately on boot rather than failing deep in a request later.
+
+```js
+// config.js
+import 'dotenv/config'; // loads .env in dev; no-op if file absent
+import { z } from 'zod';
+
+const schema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().default(3000),
+  DATABASE_URL: z.string().url(),
+  STRIPE_SECRET_KEY: z.string().min(1),
+});
+
+export const config = schema.parse(process.env);
+```
+
+**Local:** a `.env` file in the project root, listed in `.gitignore`. Commit a `.env.example` with the keys but no real values so teammates know what's needed.
+
+**Production:** set the variables in the environment itself — your host's dashboard (Render, Railway, Fly, Vercel, ECS task definition), a secrets manager (AWS/GCP Secrets Manager, Doppler, Vault), or CI/CD secrets. Never commit production secrets to the repo, and don't bake them into a Docker image.
+
+A few things worth getting right:
+
+- **`NODE_ENV` is for behavior, not for picking secret values.** Use it to toggle things like logging verbosity or error detail. Use distinct variables (`DATABASE_URL`, etc.) for the actual local-vs-prod difference, set per environment.
+- **Node 20.6+ has built-in `--env-file=.env`**, so for newer projects you may not need the `dotenv` dependency at all: `node --env-file=.env app.js`. Note it doesn't override already-set vars, which is exactly what you want — real prod env vars take precedence.
+- **Validate-and-fail-fast** (the schema above) is the single highest-value habit. It turns "silent misconfiguration in prod at 2am" into "won't boot, clear error."
+
+If you want, tell me your deployment target (Docker, a specific PaaS, serverless) and I'll give the concrete setup for it.

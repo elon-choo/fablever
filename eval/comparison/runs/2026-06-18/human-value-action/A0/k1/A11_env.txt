@@ -1,0 +1,65 @@
+Good question. Here's the approach that's become standard for modern Node, from simplest to most robust.
+
+## The core principle
+**Config comes from the environment, not from files committed to the repo.** Your code reads `process.env`; *how* those vars get populated differs per environment:
+
+- **Local** → loaded from a `.env` file (gitignored)
+- **Prod** → injected by the platform (Docker, Kubernetes secrets, AWS/GCP secret manager, Vercel/Railway/Render dashboard, CI/CD vars)
+
+The app code shouldn't know or care which mechanism filled `process.env`.
+
+## Local loading
+
+Node 20.6+ has this built in — you often don't need `dotenv` anymore:
+
+```bash
+node --env-file=.env app.js
+# multiple files, later overrides earlier:
+node --env-file=.env --env-file=.env.local app.js
+```
+
+If you need broader support or programmatic control, `dotenv` is still fine:
+
+```js
+import 'dotenv/config'; // top of entry file
+```
+
+## File layout convention
+
+```
+.env.example      ← committed. Lists every var with dummy/empty values. Documentation.
+.env              ← gitignored. Real local values.
+.env.local        ← gitignored. Personal overrides.
+```
+
+Put `.env*` (except `.env.example`) in `.gitignore`. **Never commit real secrets.** New devs copy `.env.example` → `.env` and fill it in.
+
+## Validate at startup (the part most people skip)
+
+Don't scatter raw `process.env.FOO` reads through your code. Parse and validate once, fail fast if something's missing. With [Zod](https://github.com/colinhacks/zod):
+
+```js
+// config.js
+import { z } from 'zod';
+
+const schema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().default(3000),
+  DATABASE_URL: z.string().url(),
+  API_KEY: z.string().min(1),
+});
+
+export const env = schema.parse(process.env);
+```
+
+Then everywhere else: `import { env } from './config.js'` and use `env.DATABASE_URL`. Benefits: typed, coerced (strings → numbers/bools), and a missing prod var crashes on boot with a clear message instead of surfacing as `undefined` deep in a request handler.
+
+## Prod: don't use .env files
+
+In production, inject vars through your platform's secret mechanism rather than shipping a `.env` file. The `.env` approach is a local-dev convenience; prod secrets belong in a secrets manager or the platform's encrypted env config so they're not sitting in plaintext on disk.
+
+---
+
+**TL;DR:** code reads `process.env` → validate it once with Zod at startup → load from a gitignored `.env` locally (via `node --env-file` or `dotenv`) → inject via platform secrets in prod. Commit only `.env.example`.
+
+Want me to drop a working `config.js` + `.env.example` into a specific project?

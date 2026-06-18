@@ -1,0 +1,52 @@
+Rolling back Rails migrations is done with `rails db:rollback`. Here are the common scenarios:
+
+## Roll back the last migration
+
+```bash
+rails db:rollback
+```
+
+This reverts the single most recent migration (whatever has the highest version timestamp in `schema_migrations`).
+
+## Roll back multiple migrations
+
+```bash
+rails db:rollback STEP=3
+```
+
+Reverts the last 3 migrations.
+
+## Roll back to a specific version
+
+```bash
+rails db:migrate VERSION=20240115123456
+```
+
+Migrates **down** to that version (or up, if you're behind it). Use `VERSION=0` to undo everything.
+
+## Redo (down then up) — handy while developing a migration
+
+```bash
+rails db:migrate:redo          # last migration
+rails db:migrate:redo STEP=2   # last 2
+```
+
+## Roll back one specific migration without touching others
+
+```bash
+rails db:migrate:down VERSION=20240115123456
+```
+
+---
+
+### Important caveats
+
+1. **Check it's reversible first.** Run `rails db:migrate:status` to see what's up/down and grab version numbers. If your migration used `def change` with a non-reversible operation (e.g. raw `execute`, `change_column`), the rollback will raise `IrreversibleMigration`. Fix this by writing explicit `def up` / `def down` methods.
+
+2. **Rollback reverts schema, not data.** If the migration dropped a column or table, the data in it is **gone** — rolling back recreates the empty structure but cannot restore the data. Restore from a backup if data loss is a concern.
+
+3. **If the migration is already deployed/shared**, prefer writing a *new* migration that corrects the problem rather than rolling back and editing the old one. Editing an already-run migration causes drift between developers and environments. Rolling back + editing is fine only for a migration that exists **only on your local machine** and hasn't been pushed.
+
+4. **After rolling back, `schema.rb` (or `structure.sql`) updates automatically.** Commit that change too if you intend the rollback to be permanent.
+
+What's the situation — is the bad migration only local, or already committed/deployed? That changes whether you should roll back or write a corrective migration.

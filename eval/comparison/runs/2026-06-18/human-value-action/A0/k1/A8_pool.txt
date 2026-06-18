@@ -1,0 +1,44 @@
+When a pool keeps exhausting, the cause is almost always **connections not being returned**, not too few connections. Check in this order:
+
+## 1. Leaked connections (the usual culprit)
+A code path that acquires a connection and never releases it. Look for:
+- Queries inside a `try` with no `finally`/release, early `return`s before release, or thrown errors that skip the release.
+- Transactions that `BEGIN` but never `COMMIT`/`ROLLBACK` on the error path.
+- Forgetting to release in async code (missing `await`, or releasing the wrong client).
+
+**Fast diagnostic** — see what the open connections are actually doing:
+```sql
+SELECT state, count(*)
+FROM pg_stat_activity
+WHERE datname = current_database()
+GROUP BY state;
+```
+- Lots of **`idle in transaction`** → leaked/unclosed transactions (your code opened a txn and walked away). This is the #1 finding.
+- Lots of **`idle`** near your pool max → connections checked out but not returned, or the pool is just sized fine but never recycling.
+- Lots of **`active`** that never drop → slow queries holding connections (see #3).
+
+Drill into the worst offenders:
+```sql
+SELECT pid, state, now() - state_change AS idle_for,
+       left(query, 100) AS query
+FROM pg_stat_activity
+WHERE datname = current_database()
+ORDER BY state_change ASC;
+```
+
+## 2. Pool math vs. Postgres `max_connections`
+- App pool size × number of app instances/workers must stay under Postgres `max_connections` (default 100, minus reservations). `SHOW max_connections;`
+- Serverless/autoscaled apps multiply pools fast → use a server-side pooler (**PgBouncer** in transaction mode, or RDS Proxy) instead of cranking pool size.
+
+## 3. Slow queries holding connections too long
+If queries are slow, connections stay checked out and the pool drains even without a leak. Check `pg_stat_statements` for high-`mean_exec_time` queries, and look for missing indexes / lock contention.
+
+## 4. Pool config sanity
+- `idle in transaction` should be capped: set `idle_in_transaction_session_timeout` in Postgres as a backstop.
+- Check your pool's `connectionTimeout` (how long acquire waits before erroring) vs `idleTimeout`/`maxLifetime` (recycling). A too-low `maxLifetime` with high churn can also thrash.
+
+---
+
+**The 30-second triage:** run the `pg_stat_activity` `GROUP BY state` query right when exhaustion hits. If you see a pile of `idle in transaction`, it's a leaked transaction in your code — go straight to #1. If it's `active` and growing, it's slow queries — go to #3.
+
+Want to tell me your stack (Node/`pg`, Python/SQLAlchemy, HikariCP, etc.) and paste the state breakdown? I can point at the specific leak pattern for that pool library.

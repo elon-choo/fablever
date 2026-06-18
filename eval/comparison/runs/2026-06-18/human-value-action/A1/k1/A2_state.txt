@@ -1,0 +1,22 @@
+Use `useState` for this. Eight fields isn't enough to justify a reducer.
+
+The thing that actually drives the choice isn't field count — it's how the fields interact. `useReducer` earns its keep when state transitions are coupled or complex: changing one field needs to reset or recalculate others, you have multiple sub-values that update together, there's validation logic that depends on several fields at once, or you're dispatching the same updates from many places. A flat form where each field updates independently is exactly what `useState` handles cleanly.
+
+The pragmatic pattern for 8 independent fields is a single state object with one generic change handler, rather than 8 separate `useState` calls:
+
+```jsx
+const [form, setForm] = useState({
+  name: '', email: '', phone: '', // ...etc
+});
+
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  setForm(prev => ({ ...prev, [name]: value }));
+};
+```
+
+That gives you one updater for all fields without the boilerplate of a reducer's action types and switch statement.
+
+Reach for `useReducer` instead if any of these are true: fields validate against each other, selecting one option changes which other fields are shown or what values they can hold, or you have multi-step/wizard logic. At that point the explicit state transitions a reducer gives you become worth the ceremony.
+
+One alternative worth naming: if this is a real form with validation, submission, and error states, a form library like React Hook Form will save you more than either hook — it avoids re-rendering on every keystroke and handles validation wiring for you. But for plain controlled state, `useState` with one object is the right call.

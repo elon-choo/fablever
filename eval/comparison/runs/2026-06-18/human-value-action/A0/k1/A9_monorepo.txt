@@ -1,0 +1,7 @@
+No worries — you don't need to answer those. My recommendation stands without them:
+
+**Go with a monorepo.** For 3 related services it's the lower-friction default, and the one decision that's hard to undo (splitting vs. merging) favors starting unified — you can always carve a service out into its own repo later if ownership or lifecycle diverges.
+
+If you hit any of the "flip" conditions down the road — a service gets handed to another team, goes public, or becomes genuinely decoupled — that's your signal to split *that one* out. Until then, monorepo keeps your cross-service changes atomic and your tooling in one place.
+
+Want me to sketch a concrete monorepo layout (directory structure, shared-package setup, CI strategy) for your specific stack? Just tell me the languages/frameworks involved.

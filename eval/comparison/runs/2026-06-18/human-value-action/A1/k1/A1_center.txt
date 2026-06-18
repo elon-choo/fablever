@@ -1,0 +1,38 @@
+The modern way is **flexbox** — three lines on the parent:
+
+```css
+.parent {
+  display: flex;
+  justify-content: center; /* horizontal */
+  align-items: center;     /* vertical */
+}
+```
+
+This centers the child regardless of its size, and works for multiple children too.
+
+A couple of alternatives depending on your situation:
+
+**CSS Grid** — even shorter if the parent only holds the one thing you're centering:
+
+```css
+.parent {
+  display: grid;
+  place-items: center;
+}
+```
+
+**Absolute positioning** — when the child must be taken out of normal flow (e.g. an overlay):
+
+```css
+.parent { position: relative; }
+.child {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+```
+
+One catch with flexbox and grid: the parent needs actual height for vertical centering to be visible. If the parent is only as tall as its content, there's no extra space to center within — give it a `height` (e.g. `height: 100vh` for full viewport) and you'll see the effect.
+
+Reach for flexbox by default; it's the most flexible and widely supported.

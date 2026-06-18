@@ -1,0 +1,20 @@
+The first thing to check is **`pg_stat_activity`** — it tells you whether you're actually out of connections or just leaking them. Run this:
+
+```sql
+SELECT state, count(*)
+FROM pg_stat_activity
+WHERE datname = current_database()
+GROUP BY state ORDER BY count(*) DESC;
+```
+
+What you're looking for, in priority order:
+
+**1. A pile of `idle in transaction`.** This is the most common cause by far. It means your code opened a transaction (or just ran a query on autocommit-off) and never committed or rolled back, so the connection is checked out of the pool and held indefinitely. If this number is high, the bug is a missing commit/rollback or a connection not being released on an error path — look for code that doesn't use a `try/finally`, context manager, or `using` block around the connection.
+
+**2. `idle` count near your pool max.** If connections are `idle` (not in transaction) and the pool is still exhausting, the pool is handing them out but the app isn't returning them — a leak. Trace where you acquire a connection and confirm every path releases it, including exceptions and early returns.
+
+**3. Pool max × app instances vs. Postgres `max_connections`.** Check `SHOW max_connections;` and compare. If you run, say, 10 app processes each with a pool of 20, that's 200 connections demanded against a default `max_connections` of 100 — Postgres refuses new ones and the pool starves even though no code is leaking. The fix here is sizing, often a smaller per-instance pool or a server-side pooler like PgBouncer.
+
+**4. Long-running queries.** Add `query_start` and `query` to the pg_stat_activity select and sort by age. A few slow queries can pin connections long enough to drain a small pool under load.
+
+If you tell me which pool you're using (SQLAlchemy, HikariCP, `pg`/node-postgres, pgx, etc.) and roughly your pool size and instance count, I can point at the specific leak patterns and config knobs for that stack.

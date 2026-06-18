@@ -1,0 +1,11 @@
+`lsof -i :3000` — it lists the process holding the port, with the PID in the second column.
+
+If you just want the PID to kill it: `lsof -ti :3000` prints only the PID, so `kill $(lsof -ti :3000)` frees the port in one go.
+
+A couple of notes for your zsh/macOS setup: the first run may prompt for permissions, and add `-sTCP:LISTEN` if you only want the listener (not clients connected to it):
+
+```
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+```
+
+`-n` skips DNS lookups and `-P` skips port-name lookups, which makes it return faster.

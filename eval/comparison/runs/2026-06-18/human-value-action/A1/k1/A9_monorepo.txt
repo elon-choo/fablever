@@ -1,0 +1,16 @@
+For 3 related services, start with a monorepo. It's the better default and you can split later far more easily than you can merge.
+
+The reason it wins for related services: one place to make a change that touches all three (shared types, a protocol bump, a cross-cutting refactor lands in a single atomic commit/PR instead of three coordinated ones), trivial code sharing without publishing internal packages, and one CI/tooling/lint/dependency setup instead of three drifting copies. "Related" is the keyword — services that evolve together belong together.
+
+Pick separate repos only if one of these is actually true for you:
+
+- **Different teams with different release cadences** who shouldn't step on each other or need independent permissions/access control.
+- **Independent open-sourcing or external consumers** of one service.
+- **Hard tech divergence** — wildly different toolchains where shared tooling buys you nothing.
+- You'd hit real **scale pain** (huge repo, slow clones/CI) — but at 3 services you're nowhere near this, so ignore it for now.
+
+The usual objection to monorepos — "CI runs everything on every change" — is a solved problem with path-based build filters (Turborepo, Nx, Bazel, or just CI path triggers), not a reason to split.
+
+So: monorepo with a clear top-level boundary per service (e.g. `services/a`, `services/b`, `services/c`) plus a `shared/` or `packages/` for common code. If you tell me the stack (Node, Go, Python, mixed?) I can recommend the specific tooling and layout.
+
+If a wrong guess here would be costly for your case, the one thing that would flip my answer is team structure — are all three owned by one team, or split across teams with separate release schedules?

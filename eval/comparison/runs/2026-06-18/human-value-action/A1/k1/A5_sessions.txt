@@ -1,0 +1,9 @@
+For a small app, use the database. Don't add Redis.
+
+The reasoning: sessions in your existing database mean one less moving part to deploy, monitor, and back up. A small app's session read/write volume is trivial — a single indexed `sessions` table handles it without breaking a sweat, and you get persistence for free (sessions survive restarts and deploys, which a default Redis setup doesn't unless you configure persistence). Redis earns its place when you're either at a scale where session lookups measurably load your DB, running multiple app servers that need fast shared state, or already using Redis for caching/queues anyway. None of that applies to a small app yet.
+
+Two practical notes if you go with the database:
+- Add an index on the session ID (or expiry) column and a periodic cleanup of expired rows so the table doesn't grow unbounded.
+- Most web frameworks have a built-in DB-backed session store — use it rather than hand-rolling.
+
+If you're already running Redis for another reason, then putting sessions there is fine and saves a DB round-trip. But don't introduce it *just* for sessions at this size. You can always migrate later; switching session stores is a low-risk, well-trodden change.

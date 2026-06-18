@@ -1,0 +1,23 @@
+For a small app: **use your database** (or signed cookies). Skip Redis.
+
+Here's the reasoning:
+
+**Why not Redis yet**
+- It's another service to run, monitor, secure, and back up. For a small app that's real operational overhead for little gain.
+- Redis is in-memory by default — a restart or crash can drop all sessions (logging everyone out) unless you configure persistence correctly. Your DB already has durability handled.
+- You almost certainly don't have the traffic where session lookups stress your DB.
+
+**Two good options, simplest first:**
+
+1. **Signed/encrypted cookies (no server storage at all).** Store the session data in the cookie itself, signed so it can't be tampered with. Zero infrastructure, scales trivially. Best when session data is small (user id, a few flags) and you don't need to forcibly invalidate sessions server-side. Most web frameworks support this out of the box.
+
+2. **Database-backed sessions.** A `sessions` table keyed by session id, with an `expires_at` column. Lets you revoke sessions, query active ones, and store more data. Add an index on the session id and a periodic cleanup of expired rows.
+
+**When to reach for Redis later:**
+- Session lookups actually become a measurable DB bottleneck.
+- You need high-churn ephemeral data (rate limiting, real-time presence) where Redis's TTLs and speed shine.
+- You're running many app instances and want fast shared session state.
+
+**My pick:** start with cookie-based sessions if your needs are simple, or DB-backed if you need revocation/larger data. Introduce Redis only when a concrete problem (latency, scale) tells you to — not preemptively.
+
+One question that changes the answer: do you need to **forcibly log users out / revoke sessions** server-side? If yes, go DB-backed (or cookies + a small revocation list). If no, plain signed cookies are the least-effort choice.

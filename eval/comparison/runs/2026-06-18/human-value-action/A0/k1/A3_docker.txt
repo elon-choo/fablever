@@ -1,0 +1,34 @@
+The single most useful first step: **find out where the time is actually going** before changing anything. Run your build with timing visible:
+
+```bash
+# BuildKit shows per-step durations
+DOCKER_BUILDKIT=1 docker build --progress=plain --no-cache -t myimage .
+```
+
+Look at which steps eat the most seconds. Almost always it's one of two things:
+
+**1. Dependency install runs on every build (broken layer cache).** This is the #1 cause. If your Dockerfile copies everything before installing deps, any source change busts the cache and reinstalls from scratch. Fix the ordering — copy the manifest first, install, *then* copy source:
+
+```dockerfile
+# Good: deps layer only rebuilds when package.json changes
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .          # source changes don't invalidate the install above
+```
+
+(Same pattern for `requirements.txt` / `go.mod` / `pom.xml` / `Cargo.toml`.)
+
+**2. Sending a huge build context.** If the first line of output shows `transferring context: 800MB`, you're shipping `node_modules`, `.git`, build artifacts, etc. to the daemon. Add a `.dockerignore`:
+
+```
+.git
+node_modules
+dist
+*.log
+```
+
+So, concretely, do this first:
+1. Run the timed build above and see which step dominates.
+2. Check the context-transfer size in the output.
+
+If you paste your **Dockerfile** (and roughly what's in the project dir), I'll point at the exact lines to change — that's much higher-leverage than generic tips. Want to share it?

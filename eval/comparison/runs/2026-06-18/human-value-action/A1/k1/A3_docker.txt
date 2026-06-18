@@ -1,0 +1,24 @@
+First thing: find out *where* the time is going before changing anything. Run the build with BuildKit timing so each step's duration is visible:
+
+```bash
+DOCKER_BUILDKIT=1 docker build --progress=plain --no-cache .
+```
+
+That tells you whether the cost is dependency installation, copying files, or compilation — and you fix the actual bottleneck instead of guessing.
+
+That said, the single most common culprit is **layer cache ordering**. If your Dockerfile copies all source code *before* installing dependencies, every code change invalidates the dependency layer and reinstalls everything. The fix is to copy just the manifest first:
+
+```dockerfile
+# deps layer — only re-runs when manifests change
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# source layer — changes often, but deps stay cached
+COPY . .
+```
+
+(Same pattern for `requirements.txt`/`pip`, `go.mod`/`go mod download`, `Cargo.toml`, etc.)
+
+After that, the next biggest wins are usually a `.dockerignore` (so `node_modules`, `.git`, and build artifacts don't get sent to the daemon or bust the cache) and a multi-stage build to keep build tools out of the final image.
+
+If you point me at your Dockerfile I'll tell you exactly which of these is hurting you — the ordering fix is often the whole story.

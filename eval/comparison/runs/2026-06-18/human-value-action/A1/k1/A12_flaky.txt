@@ -1,0 +1,19 @@
+The core move is to make the flakiness reproducible *locally* first, then find the source of nondeterminism and fix that root cause — resist the urge to paper over it with a retry or a `sleep`, which just hides the bug.
+
+Here's the approach I'd take, in order:
+
+**1. Quantify it.** Run the single test in a tight loop to get a failure rate — e.g. `for i in $(seq 100); do <run one test>; done` or your runner's repeat flag (`pytest --count`, `go test -count=100 -run TestX`, `jest --testNamePattern`). If it fails 1-in-100 vs 1-in-3, that tells you how aggressive your reproduction needs to be. If it won't fail locally at all, the flakiness is environmental (CI parallelism, slower machine, different clock) — reproduce by adding load: run it under `-race`, pin it to one slow core, or run the whole suite in random order.
+
+**2. Capture a real failure.** Get the actual error from a failing CI run — assertion message, stack trace, timeout. Don't theorize from a green local run. The failure mode usually points straight at the category.
+
+**3. Identify the source of nondeterminism.** Almost all flakiness is one of:
+- **Async/timing races** — waiting on a fixed `sleep` instead of the actual condition; assert-before-ready. Fix by polling for the condition with a timeout.
+- **Shared state / test ordering** — a global, DB row, temp file, or singleton left dirty by another test. Fix by isolating fixtures and running tests in randomized order to expose the coupling.
+- **Time/timezone** — `now()`, DST, day boundaries. Fix by injecting a clock.
+- **Unseeded randomness** — fix by seeding deterministically.
+- **Unordered collections** — asserting on map/set iteration order. Fix by sorting before comparing.
+- **External dependency** — real network/service call. Fix by mocking or pinning.
+
+**4. Fix the root cause, then prove it.** Re-run the same tight loop (a few hundred iterations) and confirm zero failures. That re-run is the evidence the fix worked — a flaky test "looks fixed" far too easily.
+
+If you paste the test, its failure output from CI, and the language/runner, I can pin down which category it is and the specific fix.

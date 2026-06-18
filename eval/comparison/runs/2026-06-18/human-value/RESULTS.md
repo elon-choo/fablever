@@ -51,7 +51,31 @@ repo context"* (fablever's restraint avoided fabricating details plain Opus adde
   with high run-to-run variance, and plain Opus's structured style is *better* for explanation/teaching and
   code-review answers. fablever is a **delivery preference for action-oriented work**, not a universal upgrade.
 
+## Expansion: 12 action-oriented questions — fablever 11 of 12 (~92%)
+To firm up the headline, a second set of **12 purely action-oriented questions** (center a div, undo a
+migration, find the process on a port, debounce input, fix a flaky test, monorepo-or-not, gitignore an
+already-committed dir, env-var handling, etc.), A0 vs A1 on Opus, scored by the same blind, position-balanced
+non-Claude judge from the asker's view.
+
+**Result: fablever preferred 11 of 12 (~92%).** Judge reasons: *"direct flexbox answer with enough caveat,"*
+*"fast command first, safer than kill -9,"* *"decisive database recommendation,"* *"strong recommendation plus
+practical split conditions,"* *"simple hook, less extra, still complete."* The one loss was the flaky-test
+question — an *approach/process* question (closer to explanation), where plain Opus's structured workflow won.
+Objective proxies on this set: fablever −12% words, **0% filler-openers vs plain's 8%**, headers 0.4 vs 3.1.
+
+## Consolidated finding (honest)
+| question set | fablever preferred |
+|---|---|
+| mixed (decisions+debug+explain+review+…), 16 judgments | 10/16 (~62%) |
+| **action-oriented ("just tell me what to do"), 12 judgments** | **11/12 (~92%)** |
+
+The edge is **concentrated on action-oriented work** — the bulk of day-to-day engineering (how do I X, what
+do I do first, which should I pick, fix this) — and narrows on explanation/teaching/review, where structure
+helps. This is *why people feel they work better*: their most common ask is "get me to the answer/action,"
+and fablever does that with the answer up front, decisively, with no padding and no invented detail — at zero
+cost to correctness (substance is identical, proven across 7 task classes).
+
 ## One-line value proposition (defensible)
-*"Same correct answer as plain Opus, delivered the way busy engineers prefer for getting things done —
-answer-first, decisive, no padding. A blind GPT judge taking the asker's view preferred fablever's replies
-~62% of the time, and consistently on 'just tell me what to do' questions, at zero cost to correctness."*
+*"Same correct answer as plain Opus, delivered the way busy engineers want when they're trying to get
+something done — answer-first, decisive, no padding, no made-up detail. A blind non-Claude judge taking the
+asker's view preferred fablever on 11 of 12 action-oriented questions (~92%), at zero cost to correctness."*

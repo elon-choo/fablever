@@ -1,0 +1,48 @@
+The simplest approach is a small `useDebounce` hook that delays updating a value:
+
+```jsx
+import { useState, useEffect } from "react";
+
+function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id); // cancels the previous timer on each keystroke
+  }, [value, delay]);
+
+  return debounced;
+}
+```
+
+Use it like this:
+
+```jsx
+function Search() {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (!debouncedQuery) return;
+    fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`)
+      .then(/* ... */);
+  }, [debouncedQuery]); // only fires 300ms after typing stops
+
+  return (
+    <input
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search..."
+    />
+  );
+}
+```
+
+**How it works:** the input updates `query` on every keystroke (so the field stays responsive), but `debouncedQuery` only catches up 300ms after typing stops. The `clearTimeout` cleanup is the key — each new keystroke cancels the pending timer, so the fetch fires only once the user pauses.
+
+A few notes:
+- **300ms** is a good default; 200–500ms feels natural for search.
+- For a real fetch, also **abort stale requests** with `AbortController` (pass `signal` to `fetch` and abort in the effect cleanup) so an earlier slow response can't overwrite a newer one.
+- If you'd rather not write the hook, `useDebouncedValue` from **`@mantine/hooks`** or the debounce in **`use-debounce`** do the same thing.
+
+Want me to add the `AbortController` version, or adapt this to your actual search code?

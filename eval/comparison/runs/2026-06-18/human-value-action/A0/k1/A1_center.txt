@@ -1,0 +1,61 @@
+Here are the standard ways to center a div both vertically and horizontally.
+
+## 1. Flexbox (most common)
+
+```css
+.parent {
+  display: flex;
+  justify-content: center; /* horizontal */
+  align-items: center;     /* vertical */
+  height: 100vh;           /* parent needs a height */
+}
+```
+
+## 2. Grid (shortest)
+
+```css
+.parent {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+}
+```
+
+## 3. Grid with `margin: auto`
+
+```css
+.parent {
+  display: grid;
+  height: 100vh;
+}
+.child {
+  margin: auto;
+}
+```
+
+## 4. Absolute positioning + transform
+
+Useful when you can't control the parent's display, or the child is positioned relative to a specific container:
+
+```css
+.parent {
+  position: relative;
+  height: 100vh;
+}
+.child {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+```
+
+## Which to use?
+
+- **Flexbox** — the default choice; best browser support and most readable.
+- **`place-items: center`** — cleanest if you're already using Grid.
+- **Absolute + transform** — for overlays, modals, or when the child must escape normal flow.
+
+**Key gotcha:** the parent needs a defined height (e.g. `100vh`, a fixed `px`, or an inherited height). Without it, "vertically centered" just collapses to the content's height and nothing appears to move.
+
+Want me to adapt one of these to your actual markup?

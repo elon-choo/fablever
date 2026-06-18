@@ -1,0 +1,45 @@
+For an 8-field form, I'd lean toward **`useReducer`** — but it depends on how the fields interact. Here's the decision rule I'd use:
+
+## Use `useReducer` if any of these are true
+- Fields depend on each other (e.g., selecting a country filters the state/province options, "same as billing" copies address fields).
+- You have related state beyond the values: `errors`, `touched`, `isSubmitting`, `isDirty`. That's really 4×8 pieces of state.
+- You want a single `RESET`, `LOAD_DRAFT`, or `SUBMIT_START/SUCCESS/FAILURE` transition instead of calling many setters.
+- You want validation/transition logic testable in isolation (a reducer is just a pure function).
+
+## Use `useState` if
+- The 8 fields are genuinely independent and you're only tracking values.
+- In that case, **don't make 8 separate `useState` calls** — use one object:
+
+```jsx
+const [form, setForm] = useState({
+  firstName: '', lastName: '', email: '', /* ... */
+});
+
+const handleChange = (e) =>
+  setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+```
+
+With `name` attributes matching the keys, one handler covers all 8 fields. This is often enough and is less ceremony than a reducer.
+
+## My recommendation
+At 8 fields, real forms almost always grow validation and submission state, so `useReducer` tends to age better:
+
+```jsx
+function formReducer(state, action) {
+  switch (action.type) {
+    case 'CHANGE':
+      return { ...state, values: { ...state.values, [action.name]: action.value } };
+    case 'SET_ERRORS':
+      return { ...state, errors: action.errors };
+    case 'RESET':
+      return initialState;
+    default:
+      return state;
+  }
+}
+```
+
+## Honest caveat
+If this is a serious form, the bigger win is usually **not hand-rolling either** — [React Hook Form](https://react-hook-form.com/) handles values, validation, errors, and re-render performance (uncontrolled inputs) for you, and it's the path I'd actually pick for production. `useReducer` is the right answer when you want to stay dependency-free or are learning the pattern.
+
+Want me to sketch out the full reducer version (with validation + submit states) or the React Hook Form version for your specific 8 fields?

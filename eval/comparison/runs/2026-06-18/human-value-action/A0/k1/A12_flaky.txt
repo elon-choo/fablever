@@ -1,0 +1,36 @@
+Good instinct to fix it rather than just retry it. Here's the approach I'd take:
+
+## 1. Make it reproducible first
+You can't fix what you can't trigger. Before touching code:
+- **Run it in a loop** until it fails, so you have a fast feedback cycle:
+  ```bash
+  for i in $(seq 1 100); do <test cmd> || { echo "FAILED run $i"; break; }; done
+  ```
+  (Many runners have this built in: `pytest --count=100`, `go test -count=100 -run TestX`, `jest --runInBand` + loop, etc.)
+- **Capture a failing run's full output** — seed, timestamps, ordering, logs. Flaky failures are often only debuggable from the one time you caught them.
+
+## 2. Find the category — most flakiness is one of these
+- **Order dependency / shared state** — passes alone, fails in the suite. Test: run it in isolation, then run the suite in randomized order. Cause: leaked global/DB/file/singleton state from another test.
+- **Timing / async races** — `sleep`-based waits, fixed timeouts, "wait for X then assert". Cause: assertion runs before the async work settles.
+- **Time & timezone** — tests using real `now()`, dates that break at midnight/month-end/DST, or non-UTC CI.
+- **Unseeded randomness** — RNG, UUIDs, fake data that occasionally collides.
+- **Unordered collections** — asserting on map/set iteration order, or unsorted DB query results.
+- **External/shared resources** — network calls, real ports, shared DB rows, filesystem temp paths colliding across parallel workers.
+
+## 3. Fix the root cause, not the symptom
+- Order/state → ensure each test sets up and tears down its own state; don't rely on run order.
+- Timing → replace sleeps with **deterministic waits** (poll a condition / await the actual signal) or fake the clock.
+- Time → inject a clock; pin timezone to UTC in CI.
+- Randomness → seed it, and log the seed on failure.
+- Ordering → sort before asserting, or assert set-equality.
+- Resources → unique names per worker, mock external calls.
+
+## 4. Verify the fix
+Run the same high-count loop (and randomized order) that reproduced it. A flaky fix needs *statistical* confidence, not one green run. Only then consider it done.
+
+## Last resort
+If you genuinely can't fix it now, **quarantine** it (mark it, exclude from the gate, file a ticket) — explicit and visible. A retry-wrapper that silently hides it is worse than a quarantine, because it masks real regressions later.
+
+---
+
+If you paste the test (and ideally a failing run's output), I can pin down which category it is and propose the concrete fix. The two most useful clues: **does it fail in isolation or only in the full suite?** and **does it involve any async/timing or external calls?**

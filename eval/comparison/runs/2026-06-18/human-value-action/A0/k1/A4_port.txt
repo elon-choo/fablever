@@ -1,0 +1,24 @@
+On macOS, the quickest one-liner is:
+
+```bash
+lsof -i :3000
+```
+
+That lists the process (with PID, command name, user) bound to port 3000.
+
+A few handy variants:
+
+```bash
+lsof -ti :3000          # just the PID(s) — nothing else
+kill -9 $(lsof -ti :3000)   # find it and kill it in one go
+lsof -nP -i :3000       # skip host/port name lookups (faster, shows raw IP:port)
+```
+
+If `lsof` ever comes up empty but you suspect something's there, fall back to:
+
+```bash
+netstat -anv | grep 3000     # or:
+sudo lsof -i :3000           # in case the process is owned by another user
+```
+
+For everyday use, `lsof -i :3000` is the one to remember.
