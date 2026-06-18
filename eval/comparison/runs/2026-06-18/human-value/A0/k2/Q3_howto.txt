@@ -1,0 +1,20 @@
+Use `git reset --soft HEAD~1`.
+
+```bash
+git reset --soft HEAD~1
+```
+
+This moves the branch pointer back by one commit, but `--soft` leaves both your working tree and the **staging area** untouched — so all the changes from that commit remain staged, exactly as if you'd just `git add`ed them and were about to commit.
+
+**How it compares to the other reset modes:**
+
+| Command | Commit undone | Changes staged | Working tree |
+|---|---|---|---|
+| `git reset --soft HEAD~1` | ✅ | ✅ kept staged | untouched |
+| `git reset --mixed HEAD~1` (default) | ✅ | ❌ unstaged | untouched |
+| `git reset --hard HEAD~1` | ✅ | — | ❌ discarded (destructive) |
+
+**Notes:**
+- If the commit you're undoing is your very first commit (no parent exists), `HEAD~1` will fail. Use `git reset --soft --root` or, more simply, amend instead.
+- If you just want to *edit* the last commit (change message or add files) rather than fully uncommit it, `git commit --amend` is often what you actually want.
+- This rewrites history, so avoid it on commits you've already pushed to a shared branch — others who pulled it will get conflicts.

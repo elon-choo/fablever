@@ -1,0 +1,5 @@
+Use `git reset --soft HEAD~1`.
+
+That moves the branch back one commit while leaving everything from that commit staged in the index, so your changes are ready to re-commit. The `--soft` flag is the key part — it preserves both the working tree and the staging area, unlike `--mixed` (the default, which unstages) or `--hard` (which discards changes entirely).
+
+If you only need to fix the commit message or add a forgotten file rather than fully undo it, `git commit --amend` is the lighter option.

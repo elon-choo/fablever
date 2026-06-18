@@ -1,0 +1,21 @@
+No problem — I'll give you the full plan with my recommended default, and you can redirect if your setup differs.
+
+**Recommended approach: multer middleware, local disk to start, with a clean swap path to S3 later.** Local disk gets you working in minutes with zero external dependencies; the storage layer is the only part that changes if you later move to cloud, and multer isolates that change to one config object.
+
+The plan, in order:
+
+1. **Install** — `npm install multer`. (If you go S3 later, add `@aws-sdk/client-s3` and `multer-s3`; the route code stays the same, only the storage engine swaps.)
+
+2. **Configure the storage engine** — `multer.diskStorage` pointing at an `uploads/` folder, with a `filename` function that generates a unique name (e.g. timestamp + random + original extension) so two uploads of `photo.jpg` don't collide. Create the `uploads/` dir and add it to `.gitignore`.
+
+3. **Add the validation limits** — set `limits.fileSize` (e.g. 5–10 MB) and a `fileFilter` that accept-lists the MIME types you actually want. This is the real security boundary: reject everything not on the list, and don't trust the original filename or extension alone. Storing under a server-generated name (step 2) also prevents path-traversal via crafted filenames.
+
+4. **Wire the route** — `app.post('/upload', upload.single('file'), handler)`. In the handler, read `req.file` (path, size, mimetype, generated filename) and persist that metadata to your DB, keyed to the relevant record/user.
+
+5. **Handle errors** — wrap the middleware or add error-handling so a `MulterError` (size exceeded, unexpected field) returns a clean `400` with a useful message instead of bubbling into a 500.
+
+6. **Serve files back** — a download/view route that looks up the stored filename and streams it (`res.sendFile` or a read stream), with authorization checks so users can only fetch what they're allowed to.
+
+Two things I assumed, since the codebase wasn't in front of me: that you're persisting uploads as-is (not just processing transient buffers), and that single-server local disk is acceptable for now. If you're on an ephemeral host like Heroku or containers where disk doesn't survive redeploys, tell me and I'll switch the plan to S3/R2 — only steps 1–2 change.
+
+Want me to find your Express app and implement this? If so, point me at the directory (or confirm it's somewhere under your working folder and I'll locate it).

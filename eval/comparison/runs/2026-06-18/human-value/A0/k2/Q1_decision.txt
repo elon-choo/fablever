@@ -1,0 +1,26 @@
+Short answer: **start with REST.** Reach for GraphQL only if you hit specific problems it's designed to solve. Here's the reasoning rather than a both-sides dump.
+
+## Default to REST when
+- Your data is fairly resource-shaped (users, orders, posts) and screens map cleanly to endpoints.
+- You want **HTTP caching for free** — CDNs, `ETag`, `Cache-Control` all work out of the box. This matters a lot on mobile/cellular.
+- Your team already knows it. Lower operational surface: no resolver N+1 traps, no query-cost/depth-limiting to police, no schema gateway to run.
+- Simpler debugging — every call is a URL you can curl and a status code you can read.
+
+## Reach for GraphQL when
+- **Many screens need different slices of the same data.** Mobile's classic pain is over-fetching (wasting bandwidth/battery) and under-fetching (waterfall of round trips). GraphQL lets each screen ask for exactly its shape in one request.
+- You're aggregating **several backend services** into one client-facing API.
+- You have **long-lived app versions in the wild.** You can't force-update mobile clients, and GraphQL's additive, field-level schema evolution (deprecate a field instead of versioning the whole API) handles that gracefully.
+- Frontend iterates fast and you want them unblocked from backend changes.
+
+## The honest tradeoff
+Mobile is genuinely one of GraphQL's strongest use cases (bandwidth + many view shapes + un-updatable clients). But GraphQL moves complexity from the client to the server: caching, auth per-field, query cost limits, N+1 batching (DataLoader), and error handling all get harder. For a solo dev or small team shipping a first version, that overhead usually isn't worth it yet.
+
+**My recommendation:** Build v1 with REST. If you find yourself constantly adding `?include=` params, versioning endpoints, or making the app fire 4 calls to render one screen — that's your signal to introduce GraphQL (you can even add it as a layer later).
+
+A couple of things that would change my answer:
+
+- **Team size / experience** — solo or small team leans harder toward REST; a team with GraphQL experience tilts the other way.
+- **Client count** — if it's *only* one mobile app, REST is plenty; multiple clients (iOS + Android + web + third parties) each wanting different data shapes strengthens the GraphQL case.
+- **A middle option:** REST endpoints purpose-built per screen (BFF — Backend-for-Frontend pattern) gets you a lot of GraphQL's "exact data in one trip" benefit without the machinery.
+
+Want me to sketch the concrete project structure for whichever direction fits your situation?

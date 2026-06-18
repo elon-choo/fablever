@@ -1,0 +1,26 @@
+**Don't roll your own auth.** For a small startup, use a managed provider. The reasoning is pretty one-sided:
+
+**Why not DIY**
+- Auth is a huge, unforgiving surface area: password hashing, session/token management, email verification, password reset flows, MFA, social/OAuth logins, rate limiting, account lockout, refresh token rotation. Each is a place where a subtle mistake = a breach.
+- It's the worst possible use of scarce early-stage eng time. It's pure undifferentiated plumbing — no customer pays you for it, but they'll leave you over a leak.
+- "Just store a hashed password and a session cookie" balloons the moment you need social login, SSO, or compliance.
+
+The only real case for owning more of it: hard regulatory/data-residency constraints, or auth *is* your product.
+
+**Auth0 vs. the alternatives**
+
+Auth0 is mature and reliable, but its pricing scales aggressively — the jump from free → paid tiers and especially B2B/enterprise (SSO, RBAC) features gets expensive fast, and it carries real vendor lock-in. It's a safe default, not the cheapest or the best-DX one.
+
+Worth comparing before committing, depending on your stack:
+
+| Need | Good fit |
+|---|---|
+| React/Next.js, great DX, fast start | **Clerk** |
+| Already using Postgres / want DB + auth together | **Supabase Auth** |
+| B2B selling to enterprises (SSO/SCIM is the point) | **WorkOS** |
+| Want to self-host / avoid lock-in, own the data | **Better Auth**, Ory, or Keycloak |
+| Deep in AWS | **Cognito** (cheap, rougher DX) |
+
+**My recommendation:** Pick a managed provider that matches your stack rather than Auth0 by default. If you're on Next.js/React, **Clerk** or **Supabase Auth** will get you live faster and cheaper. Reserve Auth0/WorkOS for when enterprise SSO becomes a sales requirement. Keep the integration thin (wrap it behind your own small interface) so switching later is cheap.
+
+What's your stack and rough user model (consumer vs. B2B)? I can give a sharper pick.

@@ -1,0 +1,23 @@
+Start with REST. For most mobile backends it's the right default, and you should only reach for GraphQL if you hit specific conditions that REST handles poorly.
+
+Here's the reasoning, and the honest caveat that it depends on your app's shape.
+
+**Why REST is the better default for you**
+
+- HTTP caching just works — CDNs, ETags, and client-side caching all key off URLs and standard headers. On mobile, where networks are flaky, this is a real win you get for free. GraphQL sends everything as `POST` to one endpoint, so you lose all of that and have to rebuild caching yourself (or adopt Apollo/Relay client caches).
+- It's simpler to build, debug, and operate. You can hit an endpoint with `curl`, read logs by route, rate-limit per path, and onboard developers faster. GraphQL adds a schema, resolvers, and the N+1 query problem you'll have to solve with batching (DataLoader-style).
+- Tooling and hosting are mature everywhere.
+
+**When GraphQL actually pays off**
+
+It earns its complexity when over-fetching and under-fetching are a measured problem, specifically:
+
+- Your screens compose deeply nested, related data (user → posts → comments → authors), and with REST you'd either make many round-trips or build lots of custom "screen-shaped" endpoints.
+- You have multiple client types (iOS, Android, web, maybe third parties) each wanting different fields from the same data, and you're tired of versioning endpoints for each.
+- Mobile bandwidth is a genuine constraint and letting the client request exactly the fields it needs is worth the cost.
+
+If those describe you, GraphQL's single flexible query per screen is a strong fit and the caching tradeoff is worth managing.
+
+**The practical move:** unless you already know you're in that second bucket, build REST now. It won't trap you — you can put GraphQL in front of REST services later if the data-fetching pain materializes. Choosing GraphQL upfront, by contrast, commits you to its complexity before you know you need it.
+
+One thing that would sharpen this: what does your data look like across screens — mostly flat lists and simple records, or deeply nested relationships? And is it one mobile client or several? If you tell me, I'll give you a firm answer instead of a default.

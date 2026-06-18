@@ -1,0 +1,25 @@
+The single most important first step: **measure before you change anything.** "Feels slow" has many possible causes, and guessing usually leads to optimizing the wrong thing. Here's a concrete order:
+
+## 1. Pin down *what* is slow
+Open Chrome DevTools on the page that feels slow:
+- **Network tab** — reload and watch. Is one request taking seconds? Are you downloading megabytes of JS/images? Is the *initial HTML* slow to arrive (backend problem) or is everything after it slow (frontend problem)?
+- **Performance tab** — record a load or an interaction. It'll show you whether time goes to network, scripting, rendering, or waiting on the server.
+
+This 5-minute check tells you which half of the stack to focus on and saves you from optimizing things that don't matter.
+
+## 2. Get an objective baseline
+Run **Lighthouse** (DevTools → Lighthouse tab, or PageSpeed Insights). It gives you Core Web Vitals (LCP, INP, CLS) and ranks the biggest wins. Write the numbers down so you can tell if your changes actually help.
+
+## 3. Look at the usual top offenders
+In rough order of how often they're the culprit:
+- **Large/unoptimized images** — the #1 cause of slow loads. Compress, resize, use modern formats (WebP/AVIF), lazy-load below the fold.
+- **Too much JavaScript** — large bundles block rendering. Check bundle size; code-split, defer non-critical scripts.
+- **Slow backend / database** — if the initial response (TTFB) is slow, look at slow DB queries (missing indexes, N+1 queries) and add caching.
+- **No caching/CDN** — static assets should be served with cache headers, ideally from a CDN.
+
+## The one rule
+Don't optimize from intuition. Measure → find the single biggest bottleneck → fix that one thing → measure again. Repeat.
+
+---
+
+If you tell me **what the app is built with** (framework, frontend/backend) and **what specifically feels slow** (initial load? a particular page? clicking around?), I can give you targeted next steps instead of general ones. If the project is on this machine, point me at it and I'll profile it directly.

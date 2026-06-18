@@ -1,0 +1,7 @@
+The loop counter goes the wrong way. You wrote `i--`, which decrements `i` on every pass, so starting from `0` it goes `-1, -2, -3, …` and never reaches `arr.length` — the condition `i < arr.length` stays true forever.
+
+Change it to `i++`:
+
+```js
+for (let i = 0; i < arr.length; i++) { console.log(arr[i]); }
+```

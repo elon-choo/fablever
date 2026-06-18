@@ -1,0 +1,11 @@
+Measure before you change anything. The first move is to find out *where* the time actually goes, because "feels slow" has several very different causes and guessing usually fixes the wrong one.
+
+Concretely, open Chrome DevTools on the page that feels slow and run a **Lighthouse** report plus look at the **Network** and **Performance** tabs. That tells you in a few minutes which of these you're dealing with:
+
+- **Slow initial load** — large JS/CSS bundles, unoptimized images, render-blocking resources, no caching. Network tab shows big payloads and waterfall stalls.
+- **Slow server response** — the first byte takes a long time (high TTFB). The problem is backend/database/hosting, not the frontend.
+- **Slow after load (janky interactions)** — fast to load but sluggish to click/scroll/type. Performance tab shows long tasks on the main thread; the cause is JS execution, re-renders, or heavy DOM work.
+
+Look at the single biggest number first and fix that — don't spread effort. A 2 MB image or a 4-second database query will dominate everything else, and optimizing anything smaller is wasted work until that's gone.
+
+If you tell me what the app is built with (framework, hosting) and what "slow" means specifically — slow to first load, or slow once it's open — I can point you at the likely culprit and how to confirm it. If it's in a repo I can look at, share the path and I'll dig into the actual bottleneck rather than the generic list.

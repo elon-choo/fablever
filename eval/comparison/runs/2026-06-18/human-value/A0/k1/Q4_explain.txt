@@ -1,0 +1,38 @@
+A database index is a separate data structure the database maintains alongside a table to speed up lookups — conceptually like the index at the back of a book. Instead of scanning every row to find what you want, the database consults the index to jump straight to the matching rows.
+
+## How it works
+
+Most indexes are **B-trees** (balanced sorted trees). Because the entries are kept in sorted order, the database can find a value in roughly `log(N)` steps instead of reading all `N` rows. The index stores the indexed column value(s) plus a pointer back to the full row.
+
+The trade-off: the index is a copy of part of your data that must be **kept in sync on every write**. So you're buying faster reads at the cost of slower writes and extra storage.
+
+```sql
+CREATE INDEX idx_users_email ON users(email);
+```
+
+## When you SHOULD add one
+
+- **Columns in `WHERE` clauses** that filter large tables — the classic case.
+- **Join columns** (foreign keys especially). Databases often *don't* auto-index FKs, and unindexed joins are a common performance cliff.
+- **Columns in `ORDER BY` / `GROUP BY`** — a sorted index can skip the sort step entirely.
+- **Uniqueness constraints** — a unique index both enforces correctness and speeds lookups.
+- **High-selectivity columns** — ones where a value matches few rows (e.g. `email`, `user_id`). The more distinct the values, the more an index helps.
+
+## When you should NOT (or it won't help)
+
+- **Small tables** — a full scan is already fast; the planner may ignore the index anyway.
+- **Write-heavy tables with few reads** — every `INSERT`/`UPDATE`/`DELETE` must also update the index.
+- **Low-selectivity columns** — indexing a boolean or a `status` with 3 values rarely helps; the DB often scans instead.
+- **Columns wrapped in functions** in queries — `WHERE lower(email) = ...` won't use a plain index on `email` (you'd need an expression/functional index).
+- **Speculatively, "just in case"** — each index has ongoing write and storage cost. Add them to solve observed problems.
+
+## Practical guidance
+
+1. **Measure first.** Use `EXPLAIN` / `EXPLAIN ANALYZE` to confirm a query does a sequential scan on a big table before adding an index.
+2. **Composite indexes are order-sensitive.** An index on `(a, b)` helps queries filtering on `a` or `a AND b`, but generally *not* `b` alone. Put the most selective / most-filtered column first (column order follows the "leftmost prefix" rule).
+3. **Covering indexes** can include all columns a query needs, letting the DB answer entirely from the index without touching the table.
+4. **Re-check after adding.** Run `EXPLAIN` again to verify the planner actually uses it.
+
+**Rule of thumb:** index the columns you frequently filter, join, or sort on in large tables — then verify with `EXPLAIN` rather than guessing.
+
+If you tell me your database (Postgres, MySQL, SQLite…) and a specific slow query, I can suggest the exact index.

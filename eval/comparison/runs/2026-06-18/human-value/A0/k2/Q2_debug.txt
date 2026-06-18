@@ -1,0 +1,21 @@
+The bug is `i--` — it should be `i++`.
+
+You start at `i = 0`, and the loop continues while `i < arr.length`. But `i--` *decrements* `i` each iteration, so it goes `0, -1, -2, -3, …` — always less than `arr.length`, so the condition is never false. (As a bonus, `arr[-1]`, `arr[-2]`, etc. are all `undefined`, so it just logs `undefined` forever.)
+
+Fix:
+
+```js
+for (let i = 0; i < arr.length; i++) { console.log(arr[i]); }
+```
+
+If you actually *wanted* to iterate backwards, you'd flip the start and condition too:
+
+```js
+for (let i = arr.length - 1; i >= 0; i--) { console.log(arr[i]); }
+```
+
+Or sidestep the index entirely:
+
+```js
+for (const x of arr) { console.log(x); }
+```

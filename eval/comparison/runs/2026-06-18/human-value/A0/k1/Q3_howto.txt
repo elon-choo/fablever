@@ -1,0 +1,20 @@
+Use a soft reset:
+
+```bash
+git reset --soft HEAD~1
+```
+
+This moves `HEAD` back by one commit but leaves the index (staging area) and working tree untouched — so all the changes from that commit remain **staged**, ready to re-commit.
+
+**Quick reference for the variants:**
+
+| Command | Commit undone | Changes staged? | Working tree |
+|---|---|---|---|
+| `git reset --soft HEAD~1` | ✅ | ✅ kept staged | untouched |
+| `git reset HEAD~1` (mixed, default) | ✅ | ❌ unstaged | untouched |
+| `git reset --hard HEAD~1` | ✅ | ❌ **discarded** | ⚠️ wiped |
+
+**Notes:**
+- `--soft` is what you want here. Avoid `--hard` unless you truly want to throw the changes away.
+- If you only need to fix the commit message or add a forgotten file, `git commit --amend` is simpler than reset-then-recommit.
+- If you'd already **pushed** the commit, undoing it rewrites history — you'd need a force push (`git push --force-with-lease`), which affects anyone else on the branch. For shared branches, prefer `git revert` instead.

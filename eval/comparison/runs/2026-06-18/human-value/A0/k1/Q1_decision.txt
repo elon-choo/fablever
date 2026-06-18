@@ -1,0 +1,38 @@
+Short answer: **default to REST, and reach for GraphQL only if you hit specific pain that it solves.** For most mobile backends REST gets you further with less operational risk. Here's the reasoning that actually matters for *mobile* specifically.
+
+## Why mobile changes the calculus
+
+Two things about mobile make this different from a web-only decision:
+
+1. **Old app versions live for months or years.** Users don't update. Your API must serve a 2023 build and a 2026 build simultaneously. This is the strongest *real* argument for GraphQL — you add fields without breaking old clients and deprecate gracefully, avoiding `/v1`, `/v2` REST sprawl. But REST handles this fine too with additive changes and discipline.
+2. **Bandwidth/latency/battery are constrained.** Over-fetching (REST returning fields you don't need) and under-fetching (N round trips to build one screen) cost real user-visible latency on cellular. GraphQL's "ask for exactly what this screen needs in one query" is a genuine win here.
+
+## Pick GraphQL if several of these are true
+- You have **multiple client types** with divergent data needs (iOS + Android + web + watch), or many screens each needing different slices of overlapping data.
+- Your data is **deeply relational/nested** (user → posts → comments → authors) and you're tired of either fat endpoints or chatty round-trips.
+- Your **frontend team wants to iterate** on data needs without waiting on backend endpoint changes.
+- UI is **evolving fast** and you want schema-level evolution over endpoint versioning.
+
+## Stick with REST if
+- **Small team / want to ship fast.** REST has less to learn, less server machinery, and you can hire for it trivially.
+- You rely on **HTTP caching / CDNs** — REST caches naturally on URLs; GraphQL (single POST endpoint) needs deliberate, more complex caching (persisted queries, client normalized cache).
+- Your data is mostly **flat CRUD** without complex graph relationships.
+- You want **simple observability/debugging** — every endpoint is a URL with a status code, easy to log, rate-limit, and reason about.
+
+## The traps people underestimate with GraphQL
+- **N+1 queries** — you need DataLoader-style batching from day one or your DB melts.
+- **Security** — a single flexible endpoint means you must add query depth/complexity limits, or a client can craft an expensive query that DoSes you.
+- **Caching is genuinely harder** than REST. This surprises teams.
+- **File uploads, rate limiting, monitoring** are all slightly more awkward.
+
+## My concrete recommendation
+For a new mobile backend with a normal-sized team, **start with REST** (clean, additive-versioned, well-cached). It's the lower-risk default and you won't regret it for an MVP. Adopt GraphQL deliberately *when* you feel the multi-client / round-trip pain — and if you do, consider a managed/federated setup rather than hand-rolling.
+
+A common middle path: **REST for the public/simple surface, plus a GraphQL gateway later** if and when client data-fetching complexity demands it.
+
+---
+
+If you tell me a bit more I can make this a firm call instead of conditionals:
+- How many client types, and how complex/nested is your data?
+- Team size and any existing REST/GraphQL experience?
+- Greenfield, or is there an existing API/DB shape to fit?

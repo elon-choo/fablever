@@ -1,0 +1,19 @@
+A database index is a separate data structure that stores a sorted copy of one or more columns along with pointers back to the full rows, so the database can find matching rows by looking them up rather than scanning the whole table. The classic analogy is the index at the back of a book: instead of reading every page to find where "indexes" is discussed, you jump to the entry and it tells you the page. Most indexes are B-trees, which keep keys sorted and support fast equality lookups, range scans, and ordered retrieval; hash indexes (equality only) and specialized types like GIN/GiST for full-text or geospatial data also exist.
+
+The reason this matters is the tradeoff. An index makes reads that filter or sort on the indexed columns dramatically faster — turning a full-table scan (O(n)) into a tree lookup (roughly O(log n)). But it costs you storage, and it slows down writes, because every insert, update, or delete on the indexed column also has to update the index. So an index is not free; it's a bet that you'll read on this column far more often than you write to it.
+
+**When to add one:**
+
+- A column appears frequently in `WHERE` clauses, `JOIN` conditions, or `ORDER BY` / `GROUP BY`, and the table is large enough that scanning hurts.
+- You're enforcing uniqueness (a unique index backs a `UNIQUE` constraint), and most databases index primary keys automatically.
+- A query is measurably slow and the query planner shows a sequential scan over many rows. Confirm with `EXPLAIN` / `EXPLAIN ANALYZE` before and after — let the plan, not a guess, justify the index.
+- For multi-column filters, a composite index on `(a, b)` can serve queries on `a` alone and on `a` plus `b`, but not on `b` alone — so column order should match your real query patterns.
+
+**When to hold off:**
+
+- Small tables, where a full scan is already cheap and the planner may ignore the index anyway.
+- Write-heavy tables where read performance isn't the bottleneck — each index is a tax on every write.
+- Low-cardinality columns (e.g. a boolean or a status with three values) where a lookup still returns a large fraction of the table; the planner often scans instead, so the index just sits there costing maintenance.
+- Speculative "might need it later" indexes. Unused indexes consume space and slow writes for no benefit; add them when a real query demands it.
+
+The practical rule: start without an index, find your slow queries under realistic data volume, read the query plan, and add the narrowest index that fixes the specific bottleneck. Then re-measure to confirm it actually helped and didn't just add overhead.

@@ -1,0 +1,9 @@
+Use `git reset --soft HEAD~1`.
+
+This moves the branch pointer back one commit while leaving your working tree and index untouched, so all the changes from that commit stay staged and ready to re-commit.
+
+A couple of related variants, in case you want them:
+- `git reset HEAD~1` (mixed, the default) — undoes the commit and unstages the changes, but keeps them in your working tree.
+- `git reset --hard HEAD~1` — undoes the commit and discards the changes entirely. Destructive, so only use it if you're sure.
+
+If the commit was already pushed, redoing it will rewrite history, so you'd need a force-push (`git push --force-with-lease`) and should coordinate with anyone else on the branch.

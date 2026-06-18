@@ -1,0 +1,28 @@
+The single most important first move: **measure before you change anything.** "Feels slow" has at least three very different causes, and guessing wastes time. Here's the fast triage:
+
+## 1. Open DevTools and find *where* the time goes
+- **Network tab** (reload with cache disabled): Is the page waiting on a slow server response (long TTFB), or downloading too much (big JS bundles, unoptimized images)?
+- **Lighthouse / Performance tab**: Run it once. It'll tell you if the bottleneck is load time, rendering, or JavaScript execution, and give concrete numbers (LCP, TBT, CLS).
+
+This 5-minute step tells you which of the three buckets you're in:
+
+| Symptom in DevTools | Likely cause | 
+|---|---|
+| High TTFB (server slow to respond) | Backend / DB query / N+1 |
+| Large transfer size, slow downloads | Bundle size, images, no compression |
+| Page loads fast but feels janky | Client-side JS, re-renders, blocking main thread |
+
+## 2. Fix the biggest number first
+Don't optimize everything — find the one metric that's worst and chase that. Usually it's one of:
+- **Slow backend** → look at the slowest endpoint, check for unindexed queries / N+1.
+- **Heavy frontend** → code-split, lazy-load, compress images, enable gzip/brotli.
+
+---
+
+To point you at the *actual* bottleneck instead of generic advice, tell me a bit more:
+
+- **What's the stack?** (React/Next, Rails, Django, plain server-rendered, etc.)
+- **Slow on first load, or slow while using it?** (load-time vs. interaction)
+- **Is the working code somewhere I can look at?** I don't see a project in the current directory — if you point me at the repo, I can profile the real bottleneck rather than guess.
+
+What does "slow" feel like to you — the page taking seconds to appear, or laggy once it's up?

@@ -1,0 +1,19 @@
+Default to REST, and reach for GraphQL only if you hit a specific problem it solves. For most mobile backends REST is the lower-risk choice, and nothing about "it's for mobile" by itself argues for GraphQL.
+
+Here's the reasoning that actually matters for a mobile client:
+
+**Why REST is the safe default**
+- Mobile apps can't be force-updated — users run old versions for months. REST's URL-and-verb model plus HTTP caching (CDNs, `ETag`, `Cache-Control`) works out of the box, which matters on flaky mobile networks and for battery/bandwidth. GraphQL posts to a single endpoint and is much harder to cache at the HTTP layer.
+- The tooling, auth patterns, monitoring, and rate-limiting you already know all assume REST. Less to build, less to debug.
+- Backend versioning is straightforward, and you control the response shape.
+
+**When GraphQL genuinely earns its place**
+- You have many screens whose data needs differ a lot, and REST would force you into either over-fetching big payloads or making 4-5 round trips per screen. GraphQL lets the client ask for exactly one screen's data in one request — a real win on high-latency mobile connections.
+- You have multiple clients (iOS, Android, web) evolving at different speeds and you don't want to keep cutting custom endpoints for each.
+- Your data is graph-shaped (lots of nested relationships the client traverses differently per view).
+
+The cost side of GraphQL is real: caching is harder, you have to defend against expensive/nested queries (depth limiting, complexity analysis), N+1 query problems need batching (DataLoader-style), and error handling is less uniform than HTTP status codes.
+
+**My recommendation:** Start with REST. If you later find yourself making many round trips per screen or constantly adding bespoke endpoints to satisfy different views, that's the signal to introduce GraphQL — and you can add it as a layer in front of existing services rather than rewriting. A common middle ground is REST plus a few purpose-built "BFF" (backend-for-frontend) aggregate endpoints for the heavy screens, which gets you most of GraphQL's payload benefit without the operational overhead.
+
+If you can tell me roughly how varied your screens are and whether it's one client or several, I can make this more concrete — but if you just want to start building, go REST.

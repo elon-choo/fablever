@@ -1,0 +1,26 @@
+Yes — the main problem is the **unguarded property chain**.
+
+```js
+async function getUser(id) { const u = await db.find(id); return u.profile.name; }
+```
+
+If `db.find(id)` finds nothing, it typically resolves to `null`/`undefined`. Then `u.profile` throws `TypeError: Cannot read properties of null (reading 'profile')`. Same crash if the record exists but has no `profile`. So a perfectly normal "user not found" case becomes an unhandled exception.
+
+A few smaller points:
+- **Naming lies.** It's called `getUser` but returns a *name string*, not a user. Either return `u` or rename it `getUserName`.
+- **Rejections propagate.** A DB error rejects the promise; fine *if* every caller `await`s inside a try/catch, but that's an assumption worth making explicit.
+
+Minimal fix:
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  return u?.profile?.name ?? null;   // or throw a typed NotFoundError
+}
+```
+
+Which way to handle the missing case depends on the contract:
+- **Return `null`** if "no user" is an expected, normal outcome the caller branches on.
+- **Throw** (e.g. `NotFoundError`) if the caller treats a missing user as an error anyway — that gives a clear message instead of a cryptic `TypeError`.
+
+`?.` just prevents the crash; it doesn't decide intent. Pick based on what callers expect.

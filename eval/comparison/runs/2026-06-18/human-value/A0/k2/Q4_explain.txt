@@ -1,0 +1,43 @@
+## What a database index is
+
+An index is a separate data structure the database maintains alongside your table that lets it find rows **without scanning every row**. The classic analogy is the index at the back of a book: instead of reading all 500 pages to find "indexes," you jump to the entry and it tells you the exact page.
+
+Most indexes are **B-trees** (balanced trees), which keep keys sorted and let the engine narrow a search by roughly halving the candidates at each step. That turns a lookup from `O(n)` (read all N rows — a "full table scan") into `O(log n)`.
+
+The cost: the index is a copy of the indexed column(s) plus a pointer back to the row, stored on disk and kept in sync on every write. So you're trading **faster reads for slower writes and more storage**.
+
+```sql
+CREATE INDEX idx_users_email ON users (email);
+
+-- Now this uses the index instead of scanning the whole table:
+SELECT * FROM users WHERE email = 'a@b.com';
+```
+
+## When you *should* add one
+
+- **Columns in `WHERE` clauses** that filter to a small fraction of rows (high selectivity — e.g. email, user_id, status codes that are rarely matched).
+- **Join columns** — foreign keys especially. Joining on an unindexed column is a common, severe slowdown.
+- **`ORDER BY` / `GROUP BY` columns** — a sorted index can let the DB skip a sort step.
+- **Unique constraints** — a unique index both enforces uniqueness and speeds lookups.
+- **Composite (multi-column) indexes** when you frequently filter on the same combination. Column order matters: `(a, b)` helps queries on `a` or `a AND b`, but **not** queries on `b` alone (the "leftmost prefix" rule).
+
+## When you should *not* (or think twice)
+
+- **Write-heavy tables** where reads are rare — every `INSERT`/`UPDATE`/`DELETE` must update the index too.
+- **Low-selectivity columns** — indexing a boolean or a `gender` column rarely helps; if a value matches 40% of rows, scanning is often cheaper than the index round-trips.
+- **Small tables** — a full scan of a few hundred rows is already fast; the index won't pay off.
+- **Redundant indexes** — if you have `(a, b)`, you usually don't also need `(a)` separately.
+
+## How to decide in practice
+
+Don't guess — **measure**. Run your slow query through the planner and see what it actually does:
+
+```sql
+EXPLAIN ANALYZE SELECT ...;   -- Postgres / MySQL
+```
+
+Look for `Seq Scan` / "full table scan" on a large table with a selective filter — that's your signal to add an index. After adding it, run `EXPLAIN` again to confirm the planner switched to an `Index Scan` and the cost dropped.
+
+**Rule of thumb:** index based on real query patterns and measured slow queries, not preemptively on every column. Start with foreign keys and your most frequent/slowest `WHERE` filters, then add more only when the query plan tells you to.
+
+If you tell me your database engine and a specific slow query, I can suggest the exact index.

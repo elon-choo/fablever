@@ -1,0 +1,39 @@
+Got it — I'll give you the standard plan and call out the one decision that changes it most. If you later point me at the code (it's under `~/Documents`, so I'd just need to approve `docbroker`, or paste a path), I'll tailor it.
+
+## Plan: file uploads in Express
+
+**Library:** `multer` — the standard middleware for parsing `multipart/form-data`. Nothing else handles multipart cleanly in Express.
+
+### 1. Install & wire middleware
+- `npm i multer` (`@types/multer` if TS).
+- Configure multer **per-route**, not globally — only the upload endpoints should parse multipart.
+
+### 2. Storage backend — the main fork
+- **Local disk (default to start):** `multer.diskStorage` with a generated filename (don't trust the client's), saving to an `uploads/` dir **outside** any static-served folder. Fast to ship; caveat: doesn't survive ephemeral/containerized hosts and won't scale across instances.
+- **S3 / R2 (if you'll deploy to containers or scale out):** either `multer-s3`, or — better — keep multer in `memoryStorage` and stream to the SDK, or issue **presigned PUT URLs** so the browser uploads directly and your server never proxies the bytes. This is the more durable choice; it just needs a bucket + credentials.
+
+### 3. Validation & limits (do this — it's where uploads go wrong)
+- `limits: { fileSize, files }` so a huge upload can't exhaust memory/disk.
+- `fileFilter` with an **allowlist** of MIME types, and verify the real type from magic bytes (e.g. `file-type`) rather than trusting `Content-Type` or the extension.
+- Sanitize/replace the original filename; never use it directly in a path (path-traversal).
+
+### 4. Route handler
+- `upload.single('file')` (or `.array`) → on success you have `req.file`/`req.files` + any text fields in `req.body`.
+- Persist a **record** (filename, original name, size, mime, owner, URL/key) in your DB; return its id/URL to the client.
+- Gate the route behind your existing auth so uploads are attributable.
+
+### 5. Serving / download
+- Local: a route that streams the file **after an auth/ownership check** (or `express.static` only if files are meant to be public).
+- S3: return a presigned GET URL or serve via CDN.
+
+### 6. Error handling
+- A dedicated error branch for `MulterError` (esp. `LIMIT_FILE_SIZE`) returning clean 4xx JSON, so size/type rejections don't surface as 500s.
+
+### 7. Verify
+- Test happy path + oversized file + disallowed type + missing file, via `curl -F` or `supertest`.
+
+---
+
+**My assumptions** (tell me if any are off): JSON API with token/session auth already present, and you want server-side handling rather than direct browser→S3.
+
+If you want, I can read the app and turn this into exact code for your route/middleware layout — just say the word and I'll get `docbroker` access (or give me the path). Which storage backend are you leaning toward — local disk or S3/R2?

@@ -1,0 +1,12 @@
+Measure before you change anything. "Feels slow" has several very different causes, and guessing wastes effort — so your first move is to get one real measurement that tells you *where* the time goes.
+
+Concretely, open the page in Chrome with DevTools and do two things:
+
+1. **Run Lighthouse** (DevTools → Lighthouse tab → analyze). It gives you Core Web Vitals (LCP, CLS, INP) and a prioritized list of what's actually costing you. This is the single highest-value first step because it points you at the right category instead of you optimizing the wrong thing.
+2. **Look at the Network waterfall** (Network tab, reload with cache disabled). Check the **TTFB** on the main document request. That one number splits the problem cleanly:
+   - **High TTFB (server is slow to respond):** the bottleneck is backend — slow DB queries, no caching, cold serverless functions. Front-end optimization won't help.
+   - **Low TTFB but slow to render:** the bottleneck is front-end — large JS bundles, render-blocking resources, big unoptimized images, too many requests.
+
+Once you know which side it's on, the fixes are well-defined (and different), so it's worth spending 10 minutes to find out rather than starting to optimize blind.
+
+If you point me at the repo or tell me the stack (and roughly what "slow" means — slow first load, slow navigation, slow interactions?), I can look at the actual code and give you specific fixes instead of general ones.

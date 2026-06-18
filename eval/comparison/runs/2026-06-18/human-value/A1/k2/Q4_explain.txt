@@ -1,0 +1,16 @@
+A database index is a separate data structure the database maintains alongside a table that lets it find rows by a given column's value without scanning the whole table. The standard analogy: it's like the index at the back of a book — instead of reading every page to find "indexes," you look up the term and jump straight to the right pages. Most indexes are B-trees, which keep values sorted so the database can binary-search to a value and also walk ranges efficiently.
+
+The tradeoff is the whole story. An index makes reads that filter or sort on that column faster, but it costs you storage and slows down writes — every `INSERT`, `UPDATE`, or `DELETE` on the table now has to update the index too. So an index is never "free"; you're spending write speed and disk to buy read speed.
+
+**Add an index when:**
+- A column shows up frequently in `WHERE`, `JOIN ... ON`, `ORDER BY`, or `GROUP BY` clauses on a table large enough that a full scan is slow.
+- You're enforcing uniqueness (a unique index) or backing a foreign key — foreign key columns are commonly indexed because joins and cascade checks hit them constantly.
+- The column is *selective*, meaning a given value matches only a small fraction of rows. Indexing something like a boolean or a status with three possible values usually doesn't help, because the database still has to read a large chunk of the table and may just scan instead.
+
+**Don't bother (or actively avoid) when:**
+- The table is small — a full scan is already fast, and the planner will often ignore the index anyway.
+- The table is write-heavy and read-light; the per-write cost may outweigh the read benefit.
+- The column has very low selectivity (few distinct values).
+- You'd be adding redundant indexes — many databases can use a multi-column index `(a, b)` for queries on `a` alone, so a separate index on `a` is wasted.
+
+A few practical notes that matter in real use. Column *order* in a composite index is significant: an index on `(user_id, created_at)` helps queries filtering on `user_id` or on both, but not queries filtering on `created_at` alone. And the reliable way to decide is to measure rather than guess — run your slow query through `EXPLAIN` (or `EXPLAIN ANALYZE`), see whether it's doing a sequential scan, add the candidate index, and confirm the plan actually changed and got faster. Indexes are a response to observed query patterns, so it's normal and correct to add them after you know how the data is queried, not preemptively on every column.

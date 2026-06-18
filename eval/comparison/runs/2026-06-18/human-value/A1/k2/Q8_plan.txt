@@ -1,0 +1,20 @@
+You dismissed the questions, so here's the plan with sensible defaults — I'll assume local-disk storage to start (easiest, swappable later) and flag exactly where the two decisions change things. Tell me the repo path when you want this actually wired in.
+
+## Plan: file uploads in Express
+
+**1. Add the multipart parser.** Install `multer` — it's the standard for `multipart/form-data` in Express and handles the streaming/parsing that `express.json()` can't. Configure it once: destination, a size limit (`limits.fileSize`), and a `fileFilter` that allowlists MIME types. Don't set it globally; attach it per-route so only upload endpoints accept files.
+
+**2. The route.** A single `POST /upload` (or wherever it belongs) with `upload.single('file')` or `upload.array('files', n)` as middleware. After it runs, `req.file` / `req.files` holds the saved file metadata and `req.body` the other fields. Return the stored identifier (path or key), not the raw disk location.
+
+**3. Validation — the part that actually matters.** Three layers, all server-side:
+- Size cap in multer `limits` (reject before fully buffering).
+- MIME + extension allowlist in `fileFilter`. Don't trust the client's `Content-Type`; for stricter cases sniff magic bytes.
+- Generate your own filename (uuid + safe extension). Never use the client-supplied name on disk — that's how you get path-traversal and overwrites.
+
+**4. Storage.** Default here is local disk via multer's `diskStorage` into a folder *outside* your static-served public dir, with a route that authorizes then serves files. This is the fork: if this app runs on more than one instance or an ephemeral filesystem (most container/PaaS deploys), local disk breaks and you want S3/R2/GCS instead — stream the buffer to the bucket and store only the returned key. Keeping a thin `saveFile(buffer, meta)` function means that swap is one module, not a rewrite.
+
+**5. Wiring the result in.** Persist the file key/URL on whatever record it belongs to (user, post, etc.), and add auth on both the upload route and any download route so users can't read each other's files.
+
+**6. Errors.** multer throws on limit/filter violations; add an error handler that maps those to clean 400s (`LIMIT_FILE_SIZE`, etc.) instead of leaking stack traces.
+
+Two things still steer the details: **where files live** (local vs cloud — affects step 4) and **what's uploaded** (images want a resize/re-encode step with `sharp`; arbitrary files don't). Give me those plus the repo and I'll turn this into the actual code.

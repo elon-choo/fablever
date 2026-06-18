@@ -1,0 +1,18 @@
+Use a managed auth provider. For a small startup, writing your own is almost always the wrong place to spend your limited engineering time.
+
+The core reason: auth is deceptively deep. The login form is the easy 10%. The other 90% — secure password hashing and rotation, email verification, password reset flows, session/token management, rate limiting, brute-force and credential-stuffing defense, account lockout, MFA, OAuth social logins, audit logging, and keeping up with CVEs — is where the real cost lives, and every one of those is a place to leak user credentials if you get it subtly wrong. That's a liability you carry forever, not a one-time build.
+
+A few specifics for your situation:
+
+**Auth0 specifically works, but consider the alternatives** — the pricing model is the main complaint. Auth0's free tier is generous early, but the jump to paid (especially for B2B features like SSO/SAML, or once you pass the MAU threshold) gets steep fast, and migrating off auth later is painful because it's woven through your whole app. Before committing, weigh:
+
+- **Clerk** — best developer experience if you're on React/Next.js, drop-in UI components, generous free tier. Most popular current default for small startups.
+- **Supabase Auth** — essentially free if you're already using (or open to) Supabase for your database; good if you want to own your user table in your own Postgres.
+- **WorkOS** — if you expect to sell to enterprises and need SSO/SAML early.
+- **Auth0** — still solid and the most mature, but I'd reach for it over the above mainly if you need its breadth of features or already know it.
+
+**When writing your own is defensible:** if auth *is* your product (you're building an identity company), if you have a hard requirement that no third party can hold user data, or if your needs are genuinely trivial and permanent (a single internal tool). For a typical small startup shipping a product, none of these usually apply.
+
+My recommendation: pick Clerk or Supabase Auth based on your stack, ship, and revisit only if you hit a real limit. The hours you save go into the thing that actually differentiates your startup.
+
+If you tell me your stack (framework, database, B2B vs B2C, whether you need enterprise SSO soon), I'll narrow this to one pick.

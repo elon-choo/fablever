@@ -1,0 +1,18 @@
+Yes — the unsafe part is `u.profile.name`. If `db.find(id)` finds no record it typically returns `null`/`undefined`, and then `u.profile` throws `TypeError: Cannot read properties of undefined (reading 'profile')`. Same crash if the user exists but has no `profile`. The rejection propagates to the caller with a confusing message that doesn't mention the real cause (missing user).
+
+A couple of smaller things:
+
+- The name `getUser` suggests it returns a user, but it returns just the name string — slightly misleading.
+- Whatever `db.find` rejects with (connection error, etc.) propagates raw; that may be fine depending on your caller, but it's worth being deliberate about.
+
+A safer version guards the lookup:
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  if (!u) throw new Error(`User not found: ${id}`);
+  return u.profile?.name ?? null;
+}
+```
+
+The core fix is checking `u` before dereferencing; the `?.` and the rename are judgment calls depending on whether a missing profile is expected.

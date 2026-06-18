@@ -1,0 +1,34 @@
+Short answer: **use a managed auth provider, don't roll your own.** For a small startup, writing your own auth is almost always a mistake — but Auth0 specifically may not be your best pick. Here's the reasoning.
+
+## Why not write your own
+
+Auth looks like a weekend project (login form + hashed password) and then quietly becomes a permanent, security-critical maintenance burden:
+
+- Password reset flows, email verification, session/token management, refresh rotation
+- Brute-force protection, rate limiting, account lockout
+- MFA/2FA, social login, SSO (enterprise customers *will* ask)
+- Storing secrets correctly, defending against credential stuffing, breach response
+- Staying current as best practices shift
+
+Every one of these is a place to get it wrong, and getting auth wrong is the kind of bug that ends a startup. The opportunity cost is the real killer — that's time not spent on your actual product.
+
+**Roll your own only if** auth *is* your product, you have specific compliance/data-residency rules that forbid third parties, or you have genuinely trivial needs (one internal tool, a handful of users).
+
+## On Auth0 specifically
+
+Auth0 is excellent and battle-tested, but it's known for **pricing that scales painfully** as your user count and feature needs grow (MFA, enterprise SSO, etc. push you up tiers fast). For a *small* startup, lower-friction / cheaper-at-scale options are usually a better fit:
+
+| Option | Best when |
+|---|---|
+| **Clerk** | You want the fastest setup + great prebuilt UI components (esp. React/Next.js). Most "just works" for early-stage. |
+| **Supabase Auth** | You're already using Supabase, or want auth bundled with your Postgres DB. Very cheap to start. |
+| **Auth0 / Okta** | You need maturity, deep enterprise SSO, and extensive compliance certs — and can absorb the cost. |
+| **AWS Cognito** | You're deep in AWS and prioritize cost over DX (the DX is rougher). |
+
+## My recommendation
+
+For a typical small startup: **start with Clerk or Supabase Auth.** You get production-grade security, MFA, social login, and session handling out of the box, and the free/low tiers comfortably cover early traction. Reserve Auth0 for when you have enterprise customers demanding things it's uniquely good at.
+
+One caveat to keep in mind: managed auth creates **vendor lock-in**. Mitigate it by keeping your own `users` table keyed to the provider's user ID, so your data model isn't fully hostage to one vendor if you migrate later.
+
+Want me to weigh these against your actual stack? If you tell me your framework/language and whether you'll need social login or enterprise SSO, I can give a concrete pick.

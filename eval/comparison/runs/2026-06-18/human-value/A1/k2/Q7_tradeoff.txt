@@ -1,0 +1,16 @@
+Use a managed provider — don't write your own. For a small startup, rolling your own auth is almost never worth it.
+
+The reason isn't that auth is hard to *start* — a login form and a session cookie are easy. It's that the long tail is where you bleed time and risk: password reset flows, email verification, secure password hashing and rotation, brute-force and rate limiting, session invalidation, MFA, OAuth/social login, account recovery, and staying current on vulnerabilities. None of that differentiates your product, and getting any of it subtly wrong is a breach. That's engineering time you can't spend on the thing customers actually pay for.
+
+On Auth0 specifically: it's a solid, reputable choice, but it's worth comparing before you commit, because its pricing is known to jump sharply once you cross free-tier limits or need features like enterprise SSO. Quick lay of the land:
+
+- **Clerk** — best developer experience for React/Next.js, drop-in UI components, generous free tier. Most popular pick for new startups today.
+- **Supabase Auth** — essentially free if you're already using (or open to) Supabase/Postgres; good if you want to own your user data in your own database.
+- **Auth0** — most mature and feature-complete, strongest enterprise/compliance story, but the priciest as you grow.
+- **AWS Cognito / Firebase Auth** — cheapest at scale, but rougher developer experience.
+
+My default recommendation for a small startup: **Clerk if you're on a modern JS stack and want to move fast, Supabase Auth if you want to keep users in your own Postgres.** Reach for Auth0 specifically when you have near-term enterprise customers who'll demand SAML/SSO and audit features.
+
+The one case where building your own is defensible is if auth *is* your product, or you have a hard requirement (regulatory, air-gapped) that no provider meets — neither of which usually applies to an early-stage startup.
+
+If you tell me your stack and whether you expect enterprise customers soon, I can narrow this to one.
