@@ -1,0 +1,130 @@
+[
+  {
+    "cond": "A0",
+    "k": 1,
+    "task": "AMB1-robust",
+    "turns": 8,
+    "outTok": 4681,
+    "launchFailed": false
+  },
+  {
+    "cond": "A0",
+    "k": 1,
+    "task": "AMB2-errmsg",
+    "turns": 8,
+    "outTok": 4192,
+    "launchFailed": false
+  },
+  {
+    "cond": "A0",
+    "k": 1,
+    "task": "AMB3-edge",
+    "turns": 7,
+    "outTok": 5349,
+    "launchFailed": false
+  },
+  {
+    "cond": "A0",
+    "k": 1,
+    "task": "AMB4-cleanup",
+    "turns": 5,
+    "outTok": 3352,
+    "launchFailed": false
+  },
+  {
+    "cond": "A0",
+    "k": 2,
+    "task": "AMB1-robust",
+    "turns": 7,
+    "outTok": 3970,
+    "launchFailed": false
+  },
+  {
+    "cond": "A0",
+    "k": 2,
+    "task": "AMB2-errmsg",
+    "turns": 6,
+    "outTok": 2844,
+    "launchFailed": false
+  },
+  {
+    "cond": "A0",
+    "k": 2,
+    "task": "AMB3-edge",
+    "turns": 6,
+    "outTok": 5601,
+    "launchFailed": false
+  },
+  {
+    "cond": "A0",
+    "k": 2,
+    "task": "AMB4-cleanup",
+    "turns": 4,
+    "outTok": 3304,
+    "launchFailed": false
+  },
+  {
+    "cond": "A1",
+    "k": 1,
+    "task": "AMB1-robust",
+    "turns": 11,
+    "outTok": 7921,
+    "launchFailed": false
+  },
+  {
+    "cond": "A1",
+    "k": 1,
+    "task": "AMB2-errmsg",
+    "turns": null,
+    "outTok": null,
+    "launchFailed": true
+  },
+  {
+    "cond": "A1",
+    "k": 1,
+    "task": "AMB3-edge",
+    "turns": 8,
+    "outTok": 8131,
+    "launchFailed": false
+  },
+  {
+    "cond": "A1",
+    "k": 1,
+    "task": "AMB4-cleanup",
+    "turns": 5,
+    "outTok": 2144,
+    "launchFailed": false
+  },
+  {
+    "cond": "A1",
+    "k": 2,
+    "task": "AMB1-robust",
+    "turns": 8,
+    "outTok": 3871,
+    "launchFailed": false
+  },
+  {
+    "cond": "A1",
+    "k": 2,
+    "task": "AMB2-errmsg",
+    "turns": 8,
+    "outTok": 3316,
+    "launchFailed": false
+  },
+  {
+    "cond": "A1",
+    "k": 2,
+    "task": "AMB3-edge",
+    "turns": 5,
+    "outTok": 9094,
+    "launchFailed": false
+  },
+  {
+    "cond": "A1",
+    "k": 2,
+    "task": "AMB4-cleanup",
+    "turns": 5,
+    "outTok": 2582,
+    "launchFailed": false
+  }
+]

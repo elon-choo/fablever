@@ -17,6 +17,13 @@ effort/verbosity. This is a well-earned null (multiple task sets, real runs), no
 | Efficiency (same, Opus) | turns / output tokens to clean | A0 4.7 turns / 1033 tok vs **A1 5.7 / 1608** | fablever **costs more** |
 | Communication (manipulation check, Opus) | final-message length | A0 70 words vs **A1 92** | fablever **not terser** here |
 | LLM-as-judge on code artifact (non-Claude GPT, Opus pilot) | pairwise quality winner | **plain 2, fablever 1, 3 ties** | no fablever advantage; slight plain edge (see `auto-judge-research.md`) |
+| Ambiguous intent (4 open-ended tasks, Opus, blind GPT judge) | intent-alignment + behavior-preservation vs hidden rubric | AMB4 **plain 5/5 vs fablever 2/5 (broke behavior)**; AMB1-3 ~tie | no fablever advantage; slight plain edge (`runs/2026-06-18/ambiguous/RESULTS.md`) |
+
+**Premise validated (operator's question):** on this installed machine, A0 is a clean baseline — the Fable
+output style toggles OFF under `--settings outputStyle=default` (verified: A0 emits default markdown-heavy
+formatting, A1 emits Fable prose-first), and the reinject hook gates on `FABLE_PROFILE=off`. The A0/A1
+contrast is real, not contaminated. Same probe showed both arms equally decisive in substance — the layer
+restyles *form* (prose vs markdown), not *substance*, which is why task quality stays at parity.
 
 (n is small — work-quality is k=1, n=6 — so the negatives are directional. But nothing across five metrics
 points toward benefit; the only signals are parity or cost.)
