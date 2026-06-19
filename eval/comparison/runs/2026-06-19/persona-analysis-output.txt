@@ -1,0 +1,24 @@
+=== GPT-5.5 judge: generic vs AI-Elon vs AI-Julia (k=1, both-orders gated, A0 vs A1) ===
+
+metric                generic-gpt   elon          julia         
+calls                 180           180           180           
+decisive/ties         78/12         71/19         72/18         
+A1 win-rate %         74            82            79            
+  Wilson 95%          [64,83]       [71,89]       [68,87]       
+  exact p             0*            0*            0*            
+first-slot %          48            61            52            
+A1 slot1/slot2 %      69/73         86/64         76/71         
+answer_first A1 %     80            79            79            
+decisiveness A1 %     73            80            75            
+fab: A0more/A1more    20/11         77/51         89/42         
+
+--- per-category A1 win-rate % ---
+cat                   generic-gpt   elon          julia         
+ACT                   88            93            93            
+DEC                   75            89            70            
+DBG                   67            69            71            
+PLN                   45            73            56            
+EXP                   85            90            100           
+REV                   79            79            80            
+
+wrote persona-analysis.json

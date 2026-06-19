@@ -1,0 +1,86 @@
+[
+  {
+    "src": "generic-gpt",
+    "calls": 180,
+    "decisive": 78,
+    "ties": 12,
+    "a1": 58,
+    "winrate": 74,
+    "wilson": [
+      64,
+      83
+    ],
+    "p": 0,
+    "firstSlot": 48,
+    "a1slot1": 69,
+    "a1slot2": 73,
+    "answer_first": 80,
+    "decisiveness": 73,
+    "fab_A0more": 20,
+    "fab_A1more": 11,
+    "cats": {
+      "ACT": 88,
+      "DEC": 75,
+      "DBG": 67,
+      "PLN": 45,
+      "EXP": 85,
+      "REV": 79
+    }
+  },
+  {
+    "src": "elon",
+    "calls": 180,
+    "decisive": 71,
+    "ties": 19,
+    "a1": 58,
+    "winrate": 82,
+    "wilson": [
+      71,
+      89
+    ],
+    "p": 0,
+    "firstSlot": 61,
+    "a1slot1": 86,
+    "a1slot2": 64,
+    "answer_first": 79,
+    "decisiveness": 80,
+    "fab_A0more": 77,
+    "fab_A1more": 51,
+    "cats": {
+      "ACT": 93,
+      "DEC": 89,
+      "DBG": 69,
+      "PLN": 73,
+      "EXP": 90,
+      "REV": 79
+    }
+  },
+  {
+    "src": "julia",
+    "calls": 180,
+    "decisive": 72,
+    "ties": 18,
+    "a1": 57,
+    "winrate": 79,
+    "wilson": [
+      68,
+      87
+    ],
+    "p": 0,
+    "firstSlot": 52,
+    "a1slot1": 76,
+    "a1slot2": 71,
+    "answer_first": 79,
+    "decisiveness": 75,
+    "fab_A0more": 89,
+    "fab_A1more": 42,
+    "cats": {
+      "ACT": 93,
+      "DEC": 70,
+      "DBG": 71,
+      "PLN": 56,
+      "EXP": 100,
+      "REV": 80
+    }
+  }
+]
