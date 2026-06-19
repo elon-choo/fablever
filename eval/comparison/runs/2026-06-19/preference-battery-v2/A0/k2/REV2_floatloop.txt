@@ -1,0 +1,32 @@
+It's an infinite loop. 🐛
+
+The bug is floating-point: `0.1` has no exact IEEE 754 binary representation, so the running sum drifts and **never lands exactly on `1`**:
+
+```
+0, 0.1, 0.2, 0.30000000000000004, 0.4, 0.5,
+0.6, 0.7, 0.7999999999999999, 0.8999999999999999,
+0.9999999999999999, 1.0999999999999999, ...
+```
+
+It skips straight from `0.9999999999999999` to `1.0999…`, so `x !== 1` is *always* true. The loop never terminates — `tick(x)` runs forever with `x` climbing past 1, past 2, indefinitely.
+
+Two things compound it:
+1. **`!==` against an exact float** — equality checks on accumulated floats are almost always a mistake.
+2. **Accumulated error** — even the intermediate values are wrong (`0.30000000000000004`), so any logic in `tick` keying on a specific value also breaks.
+
+### Fixes, best first
+
+**Iterate over integers, derive the float** — no drift, exact count:
+```js
+for (let i = 0; i < 10; i++) { tick(i * 0.1); }
+```
+
+**If you must accumulate, use a `<` bound, not `!==`:**
+```js
+for (let x = 0; x < 1; x += 0.1) { tick(x); }   // runs 0.0 … 0.9 (10 times)
+```
+Note `x < 1` still relies on rounding going your way — the integer-index version is the one that's actually robust.
+
+**If you genuinely need the value `1` included,** loop `i` from 0 to 10 inclusive (`i <= 10`).
+
+Rule of thumb: never use `===`/`!==` as a loop terminator on a float you've been adding to. Drive loops with integers and compute the real number inside.

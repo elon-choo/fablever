@@ -1,0 +1,42 @@
+The most common way is `jq`:
+
+```bash
+jq . file.json
+```
+
+This reads `file.json`, pretty-prints it with 2-space indentation, and (bonus) validates it — you'll get an error if the JSON is malformed.
+
+## Other options
+
+**Python** (no extra install needed):
+```bash
+python3 -m json.tool file.json
+```
+
+**`jq` from stdin / a pipe:**
+```bash
+cat file.json | jq .
+curl -s https://api.example.com/data | jq .
+```
+
+## Handy variations
+
+```bash
+# Edit in place (overwrite the file with the pretty version)
+jq . file.json | sponge file.json        # 'sponge' is from moreutils
+# or, portably without sponge:
+tmp=$(mktemp) && jq . file.json > "$tmp" && mv "$tmp" file.json
+
+# Change indentation to 4 spaces
+jq --indent 4 . file.json
+
+# Sort object keys alphabetically
+jq -S . file.json
+
+# Compact (the reverse — minify to one line)
+jq -c . file.json
+```
+
+If you don't have `jq` installed: `brew install jq` (macOS) or `apt install jq` (Debian/Ubuntu). On your Mac, `python3 -m json.tool` works out of the box with no install.
+
+Quick rule of thumb: reach for **`jq`** if it's available (more powerful, validates), otherwise **`python3 -m json.tool`** is always there.

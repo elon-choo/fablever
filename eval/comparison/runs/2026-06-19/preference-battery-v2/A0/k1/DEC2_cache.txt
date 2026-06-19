@@ -1,0 +1,39 @@
+For a genuinely single-instance app, **start with a plain in-memory cache.** Reach for Redis only when a specific need forces it.
+
+## Why in-memory wins by default
+
+- **Zero network hop.** It's a hashmap lookup (nanoseconds) vs. a Redis round-trip (sub-ms, but still ~100–1000× slower) plus serialization.
+- **No extra moving part.** No separate process to deploy, monitor, secure, patch, or pay for. No connection pool, no "Redis is down" failure mode.
+- **No serialization tax.** You cache live objects directly instead of marshaling to/from bytes on every get/set.
+
+For one process, Redis's whole reason for existing — *shared state across instances* — gives you nothing.
+
+## When to actually use Redis (even on one instance)
+
+Pick Redis if **any** of these is true:
+
+| Trigger | Why |
+|---|---|
+| **You'll scale to >1 instance soon** | Migrating a baked-in in-memory cache later is painful. If multi-instance is on the roadmap, start with Redis. |
+| **Cache must survive restarts/deploys** | In-memory dies with the process. Cold cache after every deploy may be unacceptable (e.g. expensive-to-rebuild data). |
+| **Working set won't fit in heap** | Redis offloads memory out of your app's GC heap and can hold far more. |
+| **You need TTLs, LRU eviction, pub/sub, atomic counters, rate-limiting, distributed locks** | These come free in Redis; reimplementing them correctly in-process is real work. |
+| **GC pressure matters** | A large in-heap cache (esp. JVM/Go/Node) can cause GC pauses. Redis keeps it off-heap. |
+
+## Practical middle ground
+
+Use a **proper in-memory cache library** rather than a raw map/dict — it gives you TTL, size-bounded LRU/LFU eviction, and metrics, which is 80% of what people reach for Redis to get:
+
+- Java: **Caffeine**
+- Go: **ristretto** / `golang-lru`
+- Node: **lru-cache**
+- Python: **cachetools** or `functools.lru_cache`
+- .NET: `MemoryCache`
+
+A common pattern is to put the cache **behind an interface** so swapping in-memory → Redis later is a one-class change, not a rewrite.
+
+## Bottom line
+
+Default to an **in-memory cache library with bounded size + TTL**. Go to Redis the moment you need persistence across restarts, multi-instance sharing, a working set bigger than RAM/heap, or Redis's built-in data structures — and if multi-instance is clearly coming, just start with Redis to save a migration.
+
+What's the app's stack and is multi-instance on the horizon? I can give a concrete recommendation (and library/config) for your case.

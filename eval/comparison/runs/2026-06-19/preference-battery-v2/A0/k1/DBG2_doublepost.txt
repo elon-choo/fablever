@@ -1,0 +1,54 @@
+Good news: this is one of the most diagnosable bugs there is, because the *timing* and *count* of the requests tells you almost exactly where the problem lives. Work it in this order.
+
+## Step 1 — Triage: one request sent twice, or one request processed twice?
+
+Open DevTools → **Network tab**, reproduce, and count the POSTs to the form endpoint.
+
+- **Two HTTP requests** → it's a **client-side** problem (double-fire). Go to Step 2.
+- **One HTTP request, two effects** (two rows in DB, two emails) → it's a **server-side** problem (retry or middleware re-run). Go to Step 3.
+
+This single observation eliminates half the search space, so don't skip it.
+
+## Step 2 — Client-side double-fire
+
+Look at the **time gap** between the two requests in the Network tab — it points straight at the cause:
+
+| Gap | Likely cause |
+|---|---|
+| **< ~50ms, near-simultaneous** | Listener bound twice, OR a JS click handler *and* the native form submit both firing |
+| **100–500ms** | Double-click / Enter+click with no button disable or debounce |
+| **seconds apart** | Client retry logic, or a timeout firing a second attempt |
+
+To find the culprit, instrument the handler:
+
+```js
+function onSubmit(e) {
+  console.count('submit-fired');
+  console.trace();        // shows the call stack — is it one listener or two?
+  // ...
+}
+```
+
+- `console.count` jumping by 2 per interaction → **listener attached more than once**. Extremely common in SPAs (re-render re-binds without cleanup), with HMR/Fast Refresh, or React **StrictMode** double-invoking effects in dev. Check that you remove listeners / clean up effects, and that you aren't binding inside a loop or re-render.
+- Two *different* stack traces → you have **both** an `onclick`/AJAX handler **and** a native `<form>` submit firing. The classic fix: `e.preventDefault()` in the handler so the browser doesn't also submit.
+- Same handler, fired twice rapidly → **no guard on the button**. Disable it on first submit (`button.disabled = true`) and/or debounce.
+
+## Step 3 — Server-side double-process (only one request was sent)
+
+- **Client/proxy retry on slow response:** if the server is slow, `fetch`/axios timeouts, load balancers, or service workers may resend. Check axios interceptors, retry libraries, SW `fetch` handlers.
+- **Middleware/route registered twice:** log a request ID at the very entry of the handler — if it logs once but the write runs twice, a middleware or hook is double-wired.
+- **Form re-POST on refresh/back:** browser resubmits a POST. Fix with **Post/Redirect/Get**.
+
+## Step 4 — Make it reproducible while you hunt
+
+Intermittent bugs hide. Force the conditions:
+
+- **Throttle the network** (DevTools → Slow 3G). Most double-submits only appear when the response is slow enough for a second trigger to sneak in.
+- Try **double-clicking fast**, and **Enter then click**.
+- Test in **production mode**, not just dev — StrictMode/HMR artifacts disappear in prod, and real retries appear.
+
+## The durable fix
+
+Whatever the cause, the robust defense is **idempotency**: generate a unique token (nonce) when the form renders, send it with the submit, and have the server reject a token it has already seen. That makes a second submission a no-op no matter where it originates — client double-fire, retry, or refresh. Pair it with disabling the submit button on first click for good UX.
+
+If you can tell me the stack (React/Vue/plain JS, what backend) and whether the Network tab shows one request or two, I can point at the exact likely cause and the fix.

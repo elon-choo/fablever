@@ -1,0 +1,57 @@
+To POST a JSON body with curl, you need three things: the `-X POST` method (often optional), a `Content-Type: application/json` header, and the body via `-d`.
+
+## Basic form
+
+```bash
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Ada", "role": "admin"}'
+```
+
+- `-H "Content-Type: application/json"` tells the server the body is JSON. **Don't skip this** — without it, curl defaults to `application/x-www-form-urlencoded` and many servers will misparse the body.
+- `-d` sends the data and implicitly makes it a POST, so `-X POST` is technically redundant here but harmless and explicit.
+
+## Send a JSON file instead of inline
+
+Use `@` to read the body from a file (avoids shell-quoting headaches):
+
+```bash
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d @payload.json
+```
+
+To read the body from stdin, use `-d @-`.
+
+## Useful variations
+
+```bash
+# Add an auth header
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name": "Ada"}'
+
+# See response headers + status (verbose-ish) and pretty-print with jq
+curl -sS -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Ada"}' | jq
+
+# Show the HTTP status code and fail the shell on 4xx/5xx
+curl -fsS -w '\n%{http_code}\n' -X POST ... 
+```
+
+## Quoting tips
+
+- Wrap the JSON in **single quotes** so the shell doesn't try to expand `$`, and use double quotes inside for JSON keys/strings.
+- If your JSON contains variables, either use a file (`-d @file`) or build it with a tool like `jq -n` to avoid escaping bugs:
+
+```bash
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d "$(jq -n --arg name "$NAME" '{name: $name}')"
+```
+
+One gotcha: `-d` strips newlines but otherwise sends data raw. If you ever need the body sent *exactly* as-is (rare for JSON), use `--data-raw` to avoid `@` being interpreted as a file reference.
+
+Want an example for a specific endpoint or language equivalent?

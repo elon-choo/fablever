@@ -1,0 +1,33 @@
+Reviewing this snippet directly — it's a self-contained two-liner, the kind of quick bug scan that doesn't need the full adversarial-review gate.
+
+## Issues
+
+**1. `NaN` when `page` is missing or non-numeric (most serious)**
+If `req.query.page` is `undefined` (param omitted) or a non-numeric string like `"abc"`, `parseInt` returns `NaN`, so `offset = NaN * 20 = NaN`. Feeding `NaN` into a SQL `OFFSET` / `LIMIT` clause or `Array.slice` either throws or silently misbehaves. There's no default and no validation.
+
+**2. Likely off-by-one — 1-based vs 0-based**
+`offset = page * 20` assumes a **0-based** page index. If clients call `?page=1` for the first page (the common convention), they'll get `offset = 20` and skip the entire first 20 rows. If the contract is 1-based, this should be `(page - 1) * 20`. Either way the intended base needs to be explicit.
+
+**3. No clamping of negative / huge values**
+`?page=-5` → `offset = -100`, which errors on some databases (Postgres rejects negative `OFFSET`). `?page=99999999` → a massive offset enabling slow deep-pagination scans (perf/DoS vector). No lower or upper bound.
+
+**4. Missing radix on `parseInt`**
+Use `parseInt(x, 10)`. Without the radix you rely on engine defaults; it's a long-standing lint rule for a reason and makes intent explicit.
+
+**5. Magic number `20`**
+Page size is hardcoded inline; consider a named constant if it's reused.
+
+## Suggested fix
+
+```javascript
+const PAGE_SIZE = 20;
+
+// 1-based page param, defaulting to 1; clamp to a sane range
+const rawPage = parseInt(req.query.page, 10);
+const page = Number.isNaN(rawPage) ? 1 : Math.max(1, Math.min(rawPage, MAX_PAGE));
+const offset = (page - 1) * PAGE_SIZE;
+```
+
+Adjust the `(page - 1)` and the default depending on whether your API is documented as 1-based or 0-based — but pick one explicitly rather than letting `NaN`/negatives flow through.
+
+The one that will bite in production first is **#1** — an unguarded `parseInt` result reaching your query layer. Want me to adapt the fix to your actual data layer (raw SQL, an ORM, an in-memory slice)?

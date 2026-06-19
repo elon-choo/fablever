@@ -1,0 +1,55 @@
+For an 8-field form, I'd default to **`useReducer`** — but it depends on how the fields interact. Here's the decision rule:
+
+## Use `useReducer` when (likely your case)
+- **8 fields is past the threshold** where 8 separate `useState` calls get noisy.
+- Fields have **interdependencies** (e.g., selecting a country changes the state/province options, or a "same as billing" checkbox copies address fields).
+- You have **cross-cutting actions** like `RESET_FORM`, `LOAD_DRAFT`, or `SUBMIT_START/SUCCESS/ERROR` that touch many fields at once.
+- You want validation/touched/error state to live alongside values in one predictable place.
+
+```jsx
+const initialState = {
+  values: { name: '', email: '', /* ... */ },
+  errors: {},
+  touched: {},
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'CHANGE':
+      return {
+        ...state,
+        values: { ...state.values, [action.field]: action.value },
+      };
+    case 'RESET':
+      return initialState;
+    default:
+      return state;
+  }
+}
+
+// One generic handler instead of 8:
+const handleChange = (e) =>
+  dispatch({ type: 'CHANGE', field: e.target.name, value: e.target.value });
+```
+
+The big win: **one `handleChange` for all fields** (keyed by `name`), and state transitions are testable as a pure function.
+
+## Use `useState` when
+- Fields are **truly independent** and you can hold them in a single object with one state call anyway:
+
+```jsx
+const [form, setForm] = useState({ name: '', email: '', /* ... */ });
+const handleChange = (e) =>
+  setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+```
+
+This gets you ~80% of the reducer's ergonomics (one handler, one state) with less boilerplate. **For a plain form with no complex transitions, this is often the right call** — don't reach for `useReducer` just because there are 8 fields.
+
+## My recommendation
+- **Simple data entry, independent fields** → single `useState` object (above). Start here.
+- **Validation + interdependent fields + multi-field actions** → `useReducer`.
+- **Either way, don't use 8 separate `useState` calls.**
+
+And honestly — if this form grows (validation, async submit, dirty tracking), consider a library like **React Hook Form**, which outperforms both by minimizing re-renders (uncontrolled inputs) and handling validation for you.
+
+What do the 8 fields look like — any validation or fields that depend on each other? That tips it decisively one way.

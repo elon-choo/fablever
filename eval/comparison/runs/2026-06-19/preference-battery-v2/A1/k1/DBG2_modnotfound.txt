@@ -1,0 +1,19 @@
+Almost always one of these, in rough order of likelihood:
+
+**1. Case-sensitivity (the usual culprit).** Your local machine (macOS/Windows) has a case-insensitive filesystem; your deploy host (Linux) does not. `import './MyComponent'` resolves locally even if the file is actually `mycomponent.ts`, but fails on Linux. Check that every import's casing exactly matches the filename on disk — this is the single most common cause of "works locally, breaks on deploy."
+
+**2. The package is in `devDependencies`, not `dependencies`.** Production installs (`npm ci --omit=dev`, `NODE_ENV=production`, many CI/buildpacks) skip devDependencies. If runtime code imports it, it's there locally but absent on deploy. Move it to `dependencies`.
+
+**3. Installed locally but never saved to package.json.** You ran `npm install x` at some point without it being recorded (or the lockfile is out of sync), so it lives in your local `node_modules` but the clean install on deploy never fetches it. Check: does the module appear in `package.json`/lockfile, and are both committed?
+
+**4. The file isn't actually in the deploy.** It's gitignored, uncommitted, or excluded from the Docker build context (`.dockerignore`). The build copies a different set of files than you have locally.
+
+**5. Path aliases / tsconfig `paths` or bundler aliases** that resolve in dev but aren't applied in the production build step.
+
+**6. Node version drift** — a different Node major on deploy resolves a built-in or subpath export differently.
+
+To pin it down fast: look at the exact module name in the error.
+- A **relative path** (`./foo`) → it's #1 or #4.
+- A **package name** (`lodash`) → it's #2 or #3.
+
+If you paste the full error line and your `package.json` (or point me at the repo), I'll tell you which one it is.

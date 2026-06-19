@@ -1,0 +1,18 @@
+A hydration mismatch means the HTML React rendered on the server didn't match what it rendered on the client during the first render. React bails out and re-renders, and you get the warning. The usual culprits:
+
+**Non-deterministic values in render.** Anything that differs between server and client run:
+- `Date.now()`, `new Date()`, `Math.random()`, or rendering a formatted timestamp/relative time ("3 minutes ago").
+- `crypto.randomUUID()` or any per-render generated ID (use React's `useId()` instead).
+- `toLocaleString()` / `Intl` formatting that depends on locale or timezone, which differ between server and browser.
+
+**Browser-only APIs read during render.** Touching `window`, `localStorage`, `navigator`, `document`, or matchMedia to decide what to render. The server has no window, so it renders one thing and the client renders another. The fix is to read these in `useEffect` and render the server-safe version first.
+
+**Invalid or auto-corrected HTML nesting.** A `<div>` inside a `<p>`, a `<p>` inside a `<p>`, block elements inside `<a>`/`<button>`, or anything illegal inside `<table>`. The browser silently fixes the DOM, so it no longer matches React's tree.
+
+**External mutation before hydration.** Browser extensions (Grammarly, dark-mode/translation tools) injecting attributes or nodes, or a third-party script mutating the DOM.
+
+**Stored client state that differs from the server default.** Reading theme from `localStorage` or a cookie and applying it during render — server renders the default, client renders the stored value.
+
+The fastest way to find it: the warning usually points at the offending element, and React's diff shows the mismatched text/attribute. The two standard fixes are (1) move the client-only logic into `useEffect` with a `mounted` flag so the first client render matches the server, or (2) add `suppressHydrationWarning` to the specific element when the difference is genuinely expected and harmless (like a timestamp).
+
+If you paste the warning text or the component it points to, I can tell you which of these it is.

@@ -1,0 +1,76 @@
+## What a closure is
+
+A **closure** is a function that "remembers" the variables from the scope where it was *created*, even after that outer scope has finished running. In JS, functions carry their lexical environment around with them — so an inner function keeps access to an outer function's variables even after the outer function returns.
+
+## Minimal example
+
+```javascript
+function makeCounter() {
+  let count = 0;              // local to makeCounter
+
+  return function () {
+    count++;                  // inner fn still "sees" count
+    return count;
+  };
+}
+
+const counter = makeCounter(); // makeCounter has already returned
+counter(); // 1
+counter(); // 2
+counter(); // 3
+```
+
+`makeCounter` finished executing on the first line, but the returned function still holds a live reference to `count`. Each call mutates that same captured variable. `count` is also **private** — there's no way to read or reset it except through the returned function.
+
+## Practical example: a rate limiter
+
+Closures shine when you want private state without a class. Here's a `once` helper — runs a function only the first time, caches the result after:
+
+```javascript
+function once(fn) {
+  let called = false;
+  let result;
+
+  return function (...args) {
+    if (!called) {
+      called = true;
+      result = fn.apply(this, args);
+    }
+    return result;
+  };
+}
+
+const initDatabase = once(() => {
+  console.log("connecting...");
+  return { connection: "ready" };
+});
+
+initDatabase(); // logs "connecting...", returns { connection: "ready" }
+initDatabase(); // logs nothing, returns the cached object
+```
+
+`called` and `result` live on as hidden per-instance state, owned entirely by the returned function.
+
+## The classic gotcha (and why it matters)
+
+```javascript
+// Bug: all callbacks share ONE i
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 100); // 3, 3, 3
+}
+
+// Fix: let creates a NEW binding per iteration
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 100); // 0, 1, 2
+}
+```
+
+With `var`, every closure captures the *same* `i`, which is `3` by the time the timeouts fire. With `let`, each loop iteration gets a fresh `i` binding, so each closure captures its own copy. This single example is the quickest way to internalize that closures capture **variables, not values**.
+
+## Mental model
+
+- A closure forms whenever a function references variables from an enclosing scope.
+- It captures a **reference** to the variable, not a snapshot — later mutations are visible.
+- Common uses: private state/encapsulation, factory functions, memoization/caching, callbacks and event handlers, and partial application (`bind`-style helpers).
+
+Want me to show one of these in a real context — e.g. a React `useState`-style hook, or a memoize wrapper?

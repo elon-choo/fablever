@@ -1,0 +1,19 @@
+`jq` is the standard tool:
+
+```bash
+jq . file.json
+```
+
+If you don't have `jq`, Python's built-in module works too:
+
+```bash
+python3 -m json.tool file.json
+```
+
+Both print the JSON with indentation and proper formatting. A couple of useful variants:
+
+- **Write back to the file** (jq can't edit in place, so use a temp file): `jq . file.json > tmp && mv tmp file.json`
+- **Sort keys alphabetically**: `jq -S . file.json` or `python3 -m json.tool --sort-keys file.json`
+- **Compact / minify instead** (the reverse): `jq -c . file.json`
+
+`jq` is worth installing (`brew install jq` on macOS) — it also handles filtering and querying, not just formatting.

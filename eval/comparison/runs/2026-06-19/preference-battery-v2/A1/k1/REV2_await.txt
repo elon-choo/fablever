@@ -1,0 +1,18 @@
+The one real problem: the `await` inside the loop serializes the fetches. Each iteration waits for the previous `fetch` to fully resolve before starting the next, so total latency is the *sum* of all requests instead of the slowest one. For 100 ids that's 100× slower than it needs to be.
+
+Fix — fire them concurrently and await together:
+
+```js
+async function loadAll(ids) {
+  return Promise.all(ids.map(id => fetch(id)));
+}
+```
+
+This preserves order (`Promise.all` keeps input order regardless of which resolves first), so the result is identical apart from being parallel.
+
+Two things to decide based on intent, not bugs in themselves:
+
+- **Failure semantics.** `Promise.all` rejects as soon as any one fetch fails, discarding the successful results. If you want "give me whatever succeeded," use `Promise.allSettled(...)` and partition the outcomes instead.
+- **Concurrency cap.** Fully parallel is fine for a handful of ids, but unbounded `map` over a large list will open all connections at once and can swamp the server or hit rate limits. If `ids` can be large, batch it (e.g. a pool of N at a time).
+
+If the sequential behavior was *intentional* — say each request depends on the previous, or you're deliberately throttling — then the original is correct and only the missing error handling is worth a look. Nothing in the snippet suggests that, though, so I'd treat the serialization as the bug.

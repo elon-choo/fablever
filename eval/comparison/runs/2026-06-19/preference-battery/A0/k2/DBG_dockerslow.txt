@@ -1,0 +1,43 @@
+No Dockerfile in this repo, so I'll answer generally — and the answer is almost always the same thing.
+
+## Do this first: reorder your Dockerfile so dependencies are cached separately from source
+
+The reason a build is slow on *every* code change is that a layer near the top of your Dockerfile gets invalidated, forcing everything below it (including the slow dependency install) to rebuild. Docker caches layers, but the moment one layer's inputs change, every layer after it is thrown away.
+
+The classic culprit is copying all your source code **before** installing dependencies:
+
+```dockerfile
+# ❌ SLOW: any code change invalidates the dependency install
+COPY . .
+RUN npm install        # re-runs on every single code edit
+```
+
+Fix it by copying only the dependency manifest first, installing, *then* copying source:
+
+```dockerfile
+# ✅ FAST: deps only re-install when package.json/lock changes
+COPY package.json package-lock.json ./
+RUN npm install        # cached unless deps actually change
+COPY . .               # only this cheap layer rebuilds on code edits
+```
+
+The same pattern applies to any ecosystem — `requirements.txt`/`poetry.lock` (Python), `go.mod`/`go.sum` (Go), `Cargo.toml`/`Cargo.lock` (Rust), `pom.xml` (Java).
+
+## Why this is the right *first* move
+
+It's free, it's a 2-line reorder, and it usually turns a multi-minute rebuild into seconds. Everything else (BuildKit cache mounts, multi-stage builds, `.dockerignore`, layer squashing) is a second-order optimization that only matters once caching is working at all.
+
+## Quick second step while you're in there
+
+Add a `.dockerignore` so `COPY . .` doesn't drag in `node_modules`, `.git`, build artifacts, etc. — those bloat the build context and can bust the cache on irrelevant changes:
+
+```
+.git
+node_modules
+dist
+*.log
+```
+
+---
+
+If you paste your actual Dockerfile (or point me to the project), I'll give you the exact reordering and tell you whether cache mounts / multi-stage builds are worth adding next.

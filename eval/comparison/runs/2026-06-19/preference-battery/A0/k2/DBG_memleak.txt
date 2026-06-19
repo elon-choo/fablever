@@ -1,0 +1,83 @@
+Solid, well-understood problem. The reliable path is **diff two heap snapshots taken hours apart under the same load, then look at what grew.** Here's the workflow.
+
+## 1. First, confirm *where* the memory is growing
+
+Not all "Node OOM" is a JS heap leak. Log this on an interval:
+
+```js
+setInterval(() => {
+  const m = process.memoryUsage();
+  console.log(JSON.stringify({
+    t: Date.now(),
+    rss: m.rss,                 // total process memory
+    heapUsed: m.heapUsed,       // live JS objects
+    heapTotal: m.heapTotal,
+    external: m.external,       // C++ objects bound to JS (Buffers, etc.)
+    arrayBuffers: m.arrayBuffers,
+  }));
+}, 30_000);
+```
+
+- **`heapUsed` climbing** → classic JS leak → heap snapshots (step 2).
+- **`external`/`arrayBuffers` climbing but heap flat** → leaked `Buffer`s / native handles (DB driver, sharp, zlib streams not closed).
+- **`rss` climbing but heap flat** → native addon leak or memory fragmentation, not a JS object leak. Snapshots won't show it; you'd need `--trace-gc` and possibly native tooling.
+
+Also add `--trace-gc` — if memory rises and GC *never* reclaims it back down to a stable baseline after full GCs, it's a real leak, not just a high-water mark.
+
+## 2. Take heap snapshots and diff them (the core technique)
+
+The leak shows up as *objects that should have been collected but weren't*. One snapshot tells you little; the **delta between two** tells you everything.
+
+**Easiest in production** — trigger snapshots on demand without DevTools:
+
+```js
+const v8 = require('v8');
+process.on('SIGUSR2', () => {
+  const f = v8.writeHeapSnapshot();   // writes .heapsnapshot to cwd
+  console.log('heap snapshot:', f);
+});
+```
+
+Then under steady load:
+```bash
+kill -USR2 <pid>     # snapshot A (baseline, after warmup)
+# ... wait 1-3 hours of real traffic ...
+kill -USR2 <pid>     # snapshot B
+```
+
+Load both into **Chrome DevTools → Memory tab → Load**. Select snapshot B, switch the dropdown to **"Comparison"** against A, and **sort by `Delta` (or `# New`)**. The constructors with large positive deltas and many uncollected objects are your leak. Use **"Retainers"** (bottom panel) to see what's holding each one alive — that retention chain points straight at the offending code.
+
+> Note: snapshotting pauses the process and roughly doubles heap memory briefly — take the second snapshot *before* you're near the OOM ceiling, or run a copy with a raised `--max-old-space-size`.
+
+## 3. Let V8 auto-snapshot right before it dies
+
+If you can't catch it manually, start the process so it dumps a snapshot at the cliff edge:
+
+```bash
+node --heapsnapshot-near-heap-limit=2 --max-old-space-size=2048 app.js
+```
+
+You get a snapshot from the moment it's about to OOM — exactly when the leaked objects dominate the heap.
+
+## 4. Reproduce faster instead of waiting hours
+
+Drive the suspected endpoint hard locally so a multi-hour leak shows in minutes:
+
+```bash
+npx autocannon -c 50 -d 120 http://localhost:3000/suspect-route
+```
+
+Snapshot before and after. A leak per-request compounds quickly under load. `npx clinic doctor -- node app.js` (then load it) is also good for a first-pass "is this memory/GC/event-loop" classification.
+
+## What you're usually looking for
+
+In ~90% of cases the comparison view points at one of these:
+
+- **Unbounded cache / `Map` / `Set`** keyed by something high-cardinality (request id, user id) that's never evicted.
+- **Event listener accumulation** — `emitter.on(...)` inside a request/connection handler without a matching `removeListener`. Node warns `MaxListenersExceededWarning` — watch for it.
+- **Closures captured by long-lived objects** — a small handler holding a reference to a huge object.
+- **Timers / intervals** created per-request and never cleared.
+- **Module-level arrays** you push to but never drain (in-memory queues, logs, metrics).
+- **Streams/connections not closed** → shows up in `external`, not heap.
+
+If you paste the snapshot comparison's top-delta constructors (or tell me the framework — Express, Fastify, a worker, etc.), I can help pinpoint the retainer. Want me to look at the actual service in this repo, or is this a different Node project?

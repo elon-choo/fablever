@@ -1,0 +1,35 @@
+No worries — I'll give you the plan keyed to the decision that actually matters (your database), so you can pick your branch.
+
+## The headline
+
+**100k records is small.** Do not reach for Elasticsearch/OpenSearch. New search infrastructure means a second datastore to sync, keep consistent, secure, and operate — all to search a dataset your primary DB can index in seconds and query in under ~50ms. Use your existing database's built-in full-text search. Only escalate to a dedicated engine (Meilisearch/Typesense) if you specifically need typo-tolerance or sub-keystroke instant search, and even then those are far lighter than ES.
+
+## The plan (database-agnostic shape)
+
+1. **Pin requirements** — keyword match vs. typo-tolerance vs. as-you-type, and whether search combines with structured filters/facets. This is what decides "built-in FTS" vs. "dedicated engine." Everything below assumes classic keyword + ranking, which is the 90% case.
+2. **Identify the searchable columns** and how you want them weighted (e.g. title > body).
+3. **Add a search index** (details per DB below) — ideally a generated/stored column so you index once and the DB maintains it.
+4. **Backfill** the index over existing rows (one migration; trivial at 100k).
+5. **Keep it fresh** — generated columns or triggers update automatically on write; no app-side sync code.
+6. **Query layer** — one parameterized search query returning ranked results + total count for pagination. Sanitize user input into the DB's query syntax.
+7. **Verify** — measure latency on real data, check ranking quality on ~20 representative queries, confirm the index is actually used (`EXPLAIN`).
+
+## Your branch (pick by DB)
+
+**PostgreSQL** — the best built-in option. Add a stored `tsvector` generated column, GIN-index it, query with `websearch_to_tsquery` + `ts_rank`. If you also need typo/substring tolerance, add `pg_trgm`. No new infra, handles 100k effortlessly.
+
+**MySQL/MariaDB (InnoDB)** — add a `FULLTEXT` index, query with `MATCH(...) AGAINST(... IN BOOLEAN MODE)`. Solid for keyword search; weaker ranking and no fuzzy.
+
+**SQLite** — use the **FTS5** virtual table (contentless or external-content mode to avoid duplicating data), kept in sync via triggers. Genuinely excellent at this scale and zero extra services.
+
+**MongoDB** — a text index works for basic keyword search; if you're on Atlas, **Atlas Search** (Lucene-backed) is much stronger and is the right call there.
+
+**Escalate to Meilisearch/Typesense** only if you need real typo-tolerance + instant as-you-type + faceting as first-class features. Both are single-binary, 100k-records-is-nothing engines — not the ES operational burden.
+
+## One language caveat
+
+If the searchable text is **Korean or mixed CJK**, default tokenizers break (CJK isn't space-delimited). Postgres needs a tokenizer extension or a trigram approach; a dedicated engine like Meilisearch handles CJK well out of the box. This can flip the recommendation, so it matters.
+
+---
+
+If you tell me **(a) the database** and **(b) keyword-match vs. typo-tolerant/instant**, plus whether the content is English or Korean, I'll turn the relevant branch into concrete migration + query code for your stack. What's the app on?

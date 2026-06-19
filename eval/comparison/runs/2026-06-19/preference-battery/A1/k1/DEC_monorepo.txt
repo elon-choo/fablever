@@ -1,0 +1,13 @@
+Default to a **monorepo** for 3 related services. For a small set of services that share code, ship together, or call each other, the monorepo wins on the things that actually cost you time day-to-day: one clone, atomic cross-service changes (a change to a shared type and all three consumers land in one commit/PR), one place for CI config and tooling, and no version-skew dance between repos.
+
+The case for separate repos is narrower than it looks. It's mostly worth it when:
+
+- The services have **genuinely independent lifecycles and owners** — different teams who deploy on their own cadence and shouldn't see each other's churn.
+- You need **hard access boundaries** — e.g. one service is open-source or shared with an external party and the others can't be.
+- The repos are **large enough that tooling strains** — but at 3 services you are nowhere near the scale (thousands of devs, giant histories) where monorepo tooling like Bazel/Nx becomes a tax instead of a benefit.
+
+A common failure mode with separate repos is shared code copied or pinned across them, so a single logical change becomes three coordinated PRs merged in the right order. That coordination overhead is the thing you're trying to avoid, and a monorepo removes it.
+
+What I'd actually do: one repo, three top-level service directories plus a shared package, per-service deploy pipelines (a monorepo does **not** force you to deploy everything together — path-based CI triggers keep deploys independent). That gives you the atomic-change benefit without coupling releases.
+
+Two things that would change my answer — if any of the three is owned by a separate team with its own release schedule, or one needs different access/visibility from the others, tell me and I'd lean toward splitting that one out while keeping the other two together. Do you know how these three will be owned and deployed?

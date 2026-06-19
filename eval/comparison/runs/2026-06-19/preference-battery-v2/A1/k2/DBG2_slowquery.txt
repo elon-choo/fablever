@@ -1,0 +1,15 @@
+Most likely a query that was doing a full table scan all along and only just became expensive — the table crossed the size where a missing or unused index started to hurt. Start at the database, not the application code.
+
+The fastest path to the answer:
+
+1. **Get the actual query plan for the endpoint's query.** Run `EXPLAIN ANALYZE` on the real query with real parameters. A `Seq Scan` over the 2M-row table, or an index scan that returns far more rows than the endpoint ultimately uses, is your smoking gun. This one step usually ends the investigation.
+
+2. **Check what the endpoint actually runs.** Turn on slow-query logging (Postgres `auto_explain` / `log_min_duration_statement`, MySQL slow log) or look at your APM trace for the request. Two things to rule out: a missing index, and an **N+1** — one query that suddenly fires 2M-ish times or loops per row. Row growth makes both visible at the same threshold, so confirm which one it is rather than assuming.
+
+3. **Look at the WHERE / ORDER BY / JOIN columns.** Whatever the slow query filters or sorts on is what needs an index. Common cases: filtering on an unindexed column, sorting a large result set with no supporting index, or a `LIKE '%...%'` / function-wrapped column that can't use one.
+
+4. **Check result-set size, not just lookup speed.** If the query now returns 50k rows where it used to return 50, the cost may be in serialization/transfer, not the scan. Pagination or a tighter filter is the fix there, not an index.
+
+A useful discriminator before you dig: if latency grew **roughly linearly** with row count, it's a scan or an N+1. If it jumped a **cliff** at a certain size, suspect data spilling out of memory — a sort or hash going to disk (`work_mem`), or the working set no longer fitting in cache.
+
+If you share the endpoint's query and an `EXPLAIN ANALYZE`, I can tell you exactly what to fix.

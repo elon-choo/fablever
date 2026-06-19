@@ -1,0 +1,31 @@
+The error message tells you exactly where it breaks: `...property 'name' of undefined` means the thing immediately to the left of `.name` — i.e. `u.profile` — is `undefined`. (If `u` itself were the problem, the message would say `...property 'profile' of undefined`.)
+
+So at least one of these is happening:
+
+**`db.find(id)` returns a record with no `profile` field.** The user row exists, but `profile` is missing/null (e.g. profile not yet created, a column that's nullable, a partial document). `u.profile` → `undefined` → `.name` throws.
+
+Less likely given the exact wording, but worth ruling out:
+- **`db.find(id)` resolves to `undefined`** (no match for that `id`). That would normally throw on `.profile` instead — but some `find` APIs return `{}` or a wrapper, so check what yours actually returns on a miss.
+
+Why it's *intermittent*: it only fails for the specific `id`s whose records lack a `profile`. Valid users with a profile work fine, so it looks fine until one of those ids comes through.
+
+How to make it safe:
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  if (!u) throw new Error(`User not found: ${id}`); // explicit, debuggable
+  return u.profile?.name ?? null;                   // no throw when profile missing
+}
+```
+
+`?.` short-circuits to `undefined` if `u.profile` is missing, and `?? null` gives you a defined fallback. Decide deliberately whether a missing user should throw (as above) or also return `null` — that's a behavior choice, not just a crash to silence.
+
+To confirm the root cause quickly, log the shape right before the return:
+
+```js
+const u = await db.find(id);
+console.log(id, JSON.stringify(u));
+```
+
+You'll see whether `u` is `undefined` or whether it's present but `profile` is absent — that distinguishes the two cases above.

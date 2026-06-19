@@ -1,0 +1,20 @@
+I dug into the repo before sketching anything, and I need to flag a mismatch rather than hand you a plan for the wrong system.
+
+**This repo has no database.** `fable-profile` (npm name `fablever`) is a zero-dependency Claude Code style/orchestration layer — output style + hooks + an MCP server + eval tooling. I checked:
+
+- `package.json`: `"dependencies": {}`, no DB/cache client.
+- No Postgres/MySQL/SQLite/Redis/Mongo/Aurora/Supabase client anywhere in `mcp/`, `fusion/`, `orchestration/`, or `tools/`.
+- Every `postgres`/`redis`/`SELECT` grep hit is in **eval prompt fixtures and markdown docs**, not running code.
+- The only `cache.js` files are an eval test fixture (`eval/comparison/tasks/coding/C5-diagnose/cache.js` — a deliberately-bugged TTL cache used to test a model's debugging ability), not production code.
+
+So there's nothing here that "reads are hammering." I don't want to write you a confident-sounding cache-aside/Redis/TTL plan anchored to a database that doesn't exist in this tree — that'd be fiction.
+
+A few ways this resolves — which is it?
+
+1. **The real app lives in another repo/machine.** Most likely. Point me at it (path or git URL) and I'll do the same grounding pass there — read schema, find the hot read paths, look at existing connection/query code — and *then* give you a plan that fits your actual stack (DB engine, language, deploy target, read patterns).
+
+2. **You mean something *in this repo* that I'd loosely call "reads."** The closest candidate is the MCP/fusion server re-reading profile/config files from disk per request — that's a real "cache the hot reads" opportunity, but it's files, not a DB. If that's it, say so and I'll scope it.
+
+3. **You're in the wrong working directory.** Easy to mix up. `cd` to the right project and re-ask.
+
+Which one? If it's #1, just give me the location and I'll start there.

@@ -1,0 +1,34 @@
+For a small team starting a new React app, I'd recommend **Tailwind** — but let me give you the real trade-offs rather than just a verdict.
+
+## Recommendation: Tailwind
+
+The deciding factors for a *small team* + *new app*:
+
+| Factor | Tailwind | CSS Modules |
+|---|---|---|
+| Onboarding/consistency | Design tokens (spacing, color scale) baked in → hard to drift | Everyone invents their own scale/naming |
+| Speed of iteration | Edit markup, see result — no file-switching | Round-trip between `.tsx` and `.module.css` |
+| Dead code | Unused utilities purged at build | Orphaned classes accumulate silently |
+| Naming overhead | None (utilities) | You name everything (`.cardWrapperInner`…) |
+| Refactoring | Move JSX, styles come along | Risk of leaving styles behind |
+
+For a small team, Tailwind's biggest win is **enforced consistency without process**. You don't need a design-system meeting or a linter to stop people from using 17 slightly-different greys — the scale constrains them by default. That matters more the smaller the team, because you have less bandwidth for governance.
+
+## When I'd pick CSS Modules instead
+
+- The team has **strong CSS muscle and a strong aversion to utility soup** in markup — forcing Tailwind on people who hate it kills velocity.
+- You expect **heavy, complex, stateful styling** (intricate animations, deeply themed components) where co-located real CSS reads better than long `className` strings.
+- You want **zero buy-in to a framework's conventions** and full portability of styles.
+
+## The honest caveats on Tailwind
+
+- Long `className` strings are real. Mitigate by **extracting components, not `@apply`** — lean on React composition (`<Button variant="primary">`) so utilities live in one place.
+- Add **Prettier's `prettier-plugin-tailwindcss`** (auto-sorts classes) and the **Tailwind VS Code extension** (autocomplete + hover) on day one — without them the DX is noticeably worse.
+
+## A middle path worth knowing
+
+If you want design-system rigor with typed, composable APIs and zero runtime, look at **Tailwind + shadcn/ui** (copy-paste components you own) — very popular for exactly this scenario. Or if the team prefers writing CSS-like styles with type safety, **vanilla-extract** (CSS Modules' spiritual successor: zero-runtime, TypeScript, themeable).
+
+**Bottom line:** Default to **Tailwind (+ shadcn/ui if you want prebuilt components)** unless your team actively dislikes utility classes — in which case **vanilla-extract** over plain CSS Modules.
+
+What's the team's existing comfort with CSS, and are you leaning toward a component library? That'd let me sharpen the pick.

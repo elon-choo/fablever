@@ -1,0 +1,788 @@
+{
+  "n_questions": 96,
+  "decisive": 78,
+  "ties": 18,
+  "a1wins": 44,
+  "winrate": 0.5641025641025641,
+  "p_two_sided": 0.3081682319436825,
+  "wilson": [
+    0.45361787664577374,
+    0.6685693728703647
+  ],
+  "bootstrap_ci": [
+    0.44871794871794873,
+    0.6666666666666666
+  ],
+  "flip_rate": 0.29304029304029305,
+  "first_slot_winrate": 0.6135531135531136,
+  "perQ": {
+    "ACT2_curljson": {
+      "id": "ACT2_curljson",
+      "cat": "ACT",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT2_dockerprune": {
+      "id": "ACT2_dockerprune",
+      "cat": "ACT",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "ACT2_findbig": {
+      "id": "ACT2_findbig",
+      "cat": "ACT",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT2_jsonpretty": {
+      "id": "ACT2_jsonpretty",
+      "cat": "ACT",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT2_killport": {
+      "id": "ACT2_killport",
+      "cat": "ACT",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT2_rename": {
+      "id": "ACT2_rename",
+      "cat": "ACT",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT2_squash": {
+      "id": "ACT2_squash",
+      "cat": "ACT",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "ACT2_truncate": {
+      "id": "ACT2_truncate",
+      "cat": "ACT",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "ACT_center": {
+      "id": "ACT_center",
+      "cat": "ACT",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "ACT_debounce": {
+      "id": "ACT_debounce",
+      "cat": "ACT",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT_envvars": {
+      "id": "ACT_envvars",
+      "cat": "ACT",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "ACT_gitignore": {
+      "id": "ACT_gitignore",
+      "cat": "ACT",
+      "decisive": 3,
+      "a1": 3,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT_port": {
+      "id": "ACT_port",
+      "cat": "ACT",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT_promisify": {
+      "id": "ACT_promisify",
+      "cat": "ACT",
+      "decisive": 3,
+      "a1": 3,
+      "y": 1,
+      "win": "A1"
+    },
+    "ACT_rollback": {
+      "id": "ACT_rollback",
+      "cat": "ACT",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "ACT_uncommit": {
+      "id": "ACT_uncommit",
+      "cat": "ACT",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "DBG2_corspost": {
+      "id": "DBG2_corspost",
+      "cat": "DBG",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "DBG2_doublepost": {
+      "id": "DBG2_doublepost",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "DBG2_eaddr": {
+      "id": "DBG2_eaddr",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "DBG2_hydration": {
+      "id": "DBG2_hydration",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "DBG2_logout": {
+      "id": "DBG2_logout",
+      "cat": "DBG",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "DBG2_modnotfound": {
+      "id": "DBG2_modnotfound",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "DBG2_slowquery": {
+      "id": "DBG2_slowquery",
+      "cat": "DBG",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "DBG2_tz": {
+      "id": "DBG2_tz",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DBG_500": {
+      "id": "DBG_500",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DBG_cors": {
+      "id": "DBG_cors",
+      "cat": "DBG",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DBG_dockerslow": {
+      "id": "DBG_dockerslow",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "DBG_loop": {
+      "id": "DBG_loop",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DBG_memleak": {
+      "id": "DBG_memleak",
+      "cat": "DBG",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DBG_npaccess": {
+      "id": "DBG_npaccess",
+      "cat": "DBG",
+      "decisive": 3,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DBG_pool": {
+      "id": "DBG_pool",
+      "cat": "DBG",
+      "decisive": 3,
+      "a1": 3,
+      "y": 1,
+      "win": "A1"
+    },
+    "DBG_race": {
+      "id": "DBG_race",
+      "cat": "DBG",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "DEC2_cache": {
+      "id": "DEC2_cache",
+      "cat": "DEC",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "DEC2_css": {
+      "id": "DEC2_css",
+      "cat": "DEC",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "DEC2_deploy": {
+      "id": "DEC2_deploy",
+      "cat": "DEC",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "DEC2_orm": {
+      "id": "DEC2_orm",
+      "cat": "DEC",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "DEC2_pandas": {
+      "id": "DEC2_pandas",
+      "cat": "DEC",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DEC2_pkg": {
+      "id": "DEC2_pkg",
+      "cat": "DEC",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DEC2_test": {
+      "id": "DEC2_test",
+      "cat": "DEC",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "DEC2_uuid": {
+      "id": "DEC2_uuid",
+      "cat": "DEC",
+      "decisive": 0,
+      "a1": 0,
+      "y": null,
+      "win": "nodata"
+    },
+    "DEC_auth": {
+      "id": "DEC_auth",
+      "cat": "DEC",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "DEC_db": {
+      "id": "DEC_db",
+      "cat": "DEC",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "DEC_monorepo": {
+      "id": "DEC_monorepo",
+      "cat": "DEC",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "DEC_queue": {
+      "id": "DEC_queue",
+      "cat": "DEC",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "DEC_rendering": {
+      "id": "DEC_rendering",
+      "cat": "DEC",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "DEC_restgraphql": {
+      "id": "DEC_restgraphql",
+      "cat": "DEC",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "DEC_sessions": {
+      "id": "DEC_sessions",
+      "cat": "DEC",
+      "decisive": 0,
+      "a1": 0,
+      "y": null,
+      "win": "nodata"
+    },
+    "DEC_state": {
+      "id": "DEC_state",
+      "cat": "DEC",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "EXP2_bigo": {
+      "id": "EXP2_bigo",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "EXP2_hoisting": {
+      "id": "EXP2_hoisting",
+      "cat": "EXP",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "EXP2_idempotency": {
+      "id": "EXP2_idempotency",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "EXP2_imgcontainer": {
+      "id": "EXP2_imgcontainer",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "EXP2_normalization": {
+      "id": "EXP2_normalization",
+      "cat": "EXP",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "EXP2_oauth": {
+      "id": "EXP2_oauth",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "EXP2_rest": {
+      "id": "EXP2_rest",
+      "cat": "EXP",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "EXP2_tls": {
+      "id": "EXP2_tls",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "EXP_acid": {
+      "id": "EXP_acid",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "EXP_async": {
+      "id": "EXP_async",
+      "cat": "EXP",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "EXP_cap": {
+      "id": "EXP_cap",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "EXP_closure": {
+      "id": "EXP_closure",
+      "cat": "EXP",
+      "decisive": 3,
+      "a1": 3,
+      "y": 1,
+      "win": "A1"
+    },
+    "EXP_eventloop": {
+      "id": "EXP_eventloop",
+      "cat": "EXP",
+      "decisive": 0,
+      "a1": 0,
+      "y": null,
+      "win": "nodata"
+    },
+    "EXP_gc": {
+      "id": "EXP_gc",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "EXP_index": {
+      "id": "EXP_index",
+      "cat": "EXP",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "EXP_jwt": {
+      "id": "EXP_jwt",
+      "cat": "EXP",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "PLN2_apiversion": {
+      "id": "PLN2_apiversion",
+      "cat": "PLN",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "PLN2_auth": {
+      "id": "PLN2_auth",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "PLN2_backups": {
+      "id": "PLN2_backups",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "PLN2_observability": {
+      "id": "PLN2_observability",
+      "cat": "PLN",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "PLN2_offline": {
+      "id": "PLN2_offline",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "PLN2_payments": {
+      "id": "PLN2_payments",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "PLN2_pg": {
+      "id": "PLN2_pg",
+      "cat": "PLN",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "PLN2_webhook": {
+      "id": "PLN2_webhook",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "PLN_caching": {
+      "id": "PLN_caching",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "PLN_flaky": {
+      "id": "PLN_flaky",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "PLN_i18n": {
+      "id": "PLN_i18n",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "PLN_ratelimit": {
+      "id": "PLN_ratelimit",
+      "cat": "PLN",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "PLN_realtime": {
+      "id": "PLN_realtime",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "PLN_search": {
+      "id": "PLN_search",
+      "cat": "PLN",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "PLN_ts": {
+      "id": "PLN_ts",
+      "cat": "PLN",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "PLN_uploads": {
+      "id": "PLN_uploads",
+      "cat": "PLN",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "REV2_await": {
+      "id": "REV2_await",
+      "cat": "REV",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "REV2_eqeq": {
+      "id": "REV2_eqeq",
+      "cat": "REV",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "REV2_floatloop": {
+      "id": "REV2_floatloop",
+      "cat": "REV",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "REV2_mutate": {
+      "id": "REV2_mutate",
+      "cat": "REV",
+      "decisive": 3,
+      "a1": 3,
+      "y": 1,
+      "win": "A1"
+    },
+    "REV2_parseint": {
+      "id": "REV2_parseint",
+      "cat": "REV",
+      "decisive": 1,
+      "a1": 1,
+      "y": 1,
+      "win": "A1"
+    },
+    "REV2_regex": {
+      "id": "REV2_regex",
+      "cat": "REV",
+      "decisive": 2,
+      "a1": 1,
+      "y": 0.5,
+      "win": "tie"
+    },
+    "REV2_secret": {
+      "id": "REV2_secret",
+      "cat": "REV",
+      "decisive": 3,
+      "a1": 2,
+      "y": 0.6666666666666666,
+      "win": "A1"
+    },
+    "REV2_unhandled": {
+      "id": "REV2_unhandled",
+      "cat": "REV",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "REV_getuser": {
+      "id": "REV_getuser",
+      "cat": "REV",
+      "decisive": 3,
+      "a1": 3,
+      "y": 1,
+      "win": "A1"
+    },
+    "REV_global": {
+      "id": "REV_global",
+      "cat": "REV",
+      "decisive": 3,
+      "a1": 1,
+      "y": 0.3333333333333333,
+      "win": "A0"
+    },
+    "REV_money": {
+      "id": "REV_money",
+      "cat": "REV",
+      "decisive": 3,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "REV_nplus1": {
+      "id": "REV_nplus1",
+      "cat": "REV",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "REV_passwd": {
+      "id": "REV_passwd",
+      "cat": "REV",
+      "decisive": 1,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "REV_sqlinj": {
+      "id": "REV_sqlinj",
+      "cat": "REV",
+      "decisive": 2,
+      "a1": 2,
+      "y": 1,
+      "win": "A1"
+    },
+    "REV_syncfs": {
+      "id": "REV_syncfs",
+      "cat": "REV",
+      "decisive": 2,
+      "a1": 0,
+      "y": 0,
+      "win": "A0"
+    },
+    "REV_trycatch": {
+      "id": "REV_trycatch",
+      "cat": "REV",
+      "decisive": 3,
+      "a1": 3,
+      "y": 1,
+      "win": "A1"
+    }
+  }
+}

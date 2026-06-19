@@ -1,0 +1,49 @@
+To rename a git branch both locally and on the remote, here's the standard sequence:
+
+## 1. Rename the local branch
+
+If you're **currently on** the branch you want to rename:
+
+```bash
+git branch -m new-name
+```
+
+If you're on a **different** branch:
+
+```bash
+git branch -m old-name new-name
+```
+
+(`-m` = move/rename. Use `-M` to force, if `new-name` already exists.)
+
+## 2. Push the new branch and delete the old one on the remote
+
+```bash
+git push origin :old-name new-name
+```
+
+That single command does two things: `:old-name` deletes the old remote branch, and `new-name` pushes the renamed one. (Equivalently: `git push origin --delete old-name` then `git push origin new-name`.)
+
+## 3. Reset the upstream tracking for the new branch
+
+```bash
+git push origin -u new-name
+```
+
+This makes your local `new-name` track `origin/new-name` so future `git push`/`git pull` work without arguments.
+
+---
+
+### Notes & gotchas
+
+- **You can't directly rename a remote branch** — Git has no such operation. The only way is delete-old + push-new, which is what step 2 does.
+- **Default branch (e.g. `main`/`master`):** if you're renaming the repo's default branch, also update the default branch in your host's settings (GitHub: Settings → Branches; GitLab: Settings → Repository), or pushes/PRs may misbehave.
+- **Tell collaborators.** Anyone else with the old branch checked out will need to re-sync:
+  ```bash
+  git fetch origin
+  git branch -u origin/new-name new-name   # if they renamed locally too
+  # or simply re-checkout: git checkout new-name
+  ```
+- **Protected branches:** if the old remote branch is protected (common for `main`), you may need to lift protection before the delete in step 2 succeeds.
+
+Want a one-liner that chains all three steps for a given old/new name?

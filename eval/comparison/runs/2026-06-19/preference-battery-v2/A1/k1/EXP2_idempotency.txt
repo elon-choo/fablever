@@ -1,0 +1,16 @@
+Idempotency means that making the same request multiple times produces the same result as making it once. The server's state ends up identical whether the client sends the request one time or ten times, and (ideally) the client gets back a consistent response each time. The key thing is the *effect* on the system, not the response body being byte-identical.
+
+A useful way to see it is through HTTP methods. `GET`, `PUT`, and `DELETE` are defined to be idempotent; `POST` is not. A `GET` just reads, so repeating it changes nothing. `PUT /users/42 {name: "Sam"}` sets the resource to a specific state — sending it again sets it to that same state, no further change. `DELETE /users/42` leaves the user gone whether you call it once or three times (the later calls may return 404, but the *state* is the same). `POST /users {name: "Sam"}`, by contrast, typically creates a new record each time, so calling it twice gives you two users — not idempotent.
+
+Why it matters comes down to the unreliability of networks. A client sends a request, the server processes it successfully, but the response gets lost on the way back — a dropped connection, a timeout, a gateway hiccup. The client has no way to tell "it failed" from "it succeeded but I didn't hear back," so its only safe move is to retry. If the operation is idempotent, retrying is harmless. If it isn't, the retry causes a duplicate charge, a double-shipped order, or a second account.
+
+This is why payment and order APIs add idempotency to operations that are naturally non-idempotent. Since creating a charge with `POST` would normally double-charge on retry, APIs like Stripe let the client attach an **idempotency key** — a unique token the client generates per logical operation. The server records the key with the result of the first request; if it sees the same key again, it returns the stored result instead of performing the work a second time. The client can now retry freely and the customer is charged exactly once.
+
+The practical payoffs:
+
+- **Safe retries** — clients (and load balancers, job queues, mobile apps on flaky connections) can retry without fear of duplicate side effects.
+- **Resilience to network failures** — the ambiguous "did it go through?" case stops being dangerous.
+- **At-least-once delivery becomes effectively once** — message queues and webhooks often deliver duplicates by design; idempotent handlers make that correct rather than corrupting.
+- **Simpler error handling** — callers don't need bespoke logic to reconcile partial failures.
+
+Two caveats worth keeping straight. Idempotent doesn't mean "no side effects" — a `DELETE` clearly changes things; it means *repeating* it adds no further change. And it's distinct from "safe": `GET` is safe (no modification at all), while `PUT`/`DELETE` are idempotent but do modify state. When you design a write endpoint that retries can hit, decide deliberately how it stays idempotent — a natural key, an upsert keyed on resource identity, or a client-supplied idempotency key.

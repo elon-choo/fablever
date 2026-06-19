@@ -1,0 +1,22 @@
+This has a SQL injection vulnerability. The `email` value is concatenated directly into the query string, so anything a caller puts in `email` becomes SQL. If `email` is `' OR '1'='1`, the query returns every user; `'; DROP TABLE users; --` (on a driver that allows stacked statements) can destroy data; and `' UNION SELECT ...` can exfiltrate other tables.
+
+The fix is a parameterized query — let the driver bind the value instead of building the string yourself:
+
+```js
+const q = "SELECT * FROM users WHERE email = ?";
+db.query(q, [email]);
+```
+
+If your driver uses numbered placeholders (e.g. node-postgres), it's:
+
+```js
+const q = "SELECT * FROM users WHERE email = $1";
+db.query(q, [email]);
+```
+
+Two smaller notes while you're in here:
+
+- `SELECT *` pulls every column, including ones you probably don't want flowing out of this path (password hashes, tokens). Select the columns you actually need.
+- This reads like a lookup that expects one row — consider validating that `email` is present and a string before querying, and decide how you handle the "more than one match" case.
+
+The parameterization is the one that matters; the other two are cleanup.

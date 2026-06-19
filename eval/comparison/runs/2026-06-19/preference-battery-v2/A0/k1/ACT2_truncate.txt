@@ -1,0 +1,55 @@
+The key thing is to **truncate the file in place** rather than delete it. If you `rm` the file, the process keeps writing to the now-unlinked inode through its open file descriptor — the disk space isn't freed until the process closes the file (usually a restart), and meanwhile your "new" file gets nothing. Truncating keeps the same inode the process is writing to, so it just keeps appending after the (now empty) start.
+
+## The simplest way
+
+```bash
+: > /var/log/big.log
+# or equivalently
+truncate -s 0 /var/log/big.log
+```
+
+Both keep the inode and reset the size to zero instantly. Use `sudo` if you don't own the file:
+
+```bash
+sudo truncate -s 0 /var/log/big.log
+```
+
+> ⚠️ Don't write `sudo : > file` — the redirection is performed by *your* shell before `sudo` runs, so it won't have root permissions. Instead use one of:
+> ```bash
+> sudo truncate -s 0 /var/log/big.log
+> sudo sh -c ': > /var/log/big.log'
+> sudo tee /var/log/big.log < /dev/null    # tee opens the file as root
+> ```
+
+## One important caveat: O_APPEND vs. seek-based writes
+
+- **If the process opened the log with `O_APPEND`** (most loggers, `>>` redirects, syslog-style daemons), every write goes to the current end of file. After truncation the file just grows from 0 again. ✅ This is the normal, safe case.
+
+- **If the process holds a fixed write offset** (opened without append and tracks its own position), after you truncate to 0 its offset is still, say, 5 GB. The next write lands at offset 5 GB and the kernel fills the gap with a **sparse "hole"** — `ls -l` shows 5 GB again, though `du` shows little actual disk use. Annoying but not data loss.
+
+To avoid the sparse-file problem you can keep the file but drop its contents while letting the size shrink naturally — e.g. tail the file to a temp and copy it back:
+
+```bash
+tail -c 10M /var/log/big.log > /tmp/keep && cat /tmp/keep > /var/log/big.log
+```
+
+This preserves recent lines and resets the apparent size, again without changing the inode.
+
+## The right long-term fix: logrotate with copytruncate
+
+If this is a recurring problem, let `logrotate` handle it. The `copytruncate` directive copies the file then truncates the original in place — exactly the safe operation above — so the process never needs to reopen anything:
+
+```
+/var/log/big.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+```
+
+(There's a tiny race window with `copytruncate` where lines written between the copy and the truncate can be lost. If the daemon supports reopening its log on a signal — like `SIGHUP` — the `create` + `postrotate ... kill -HUP` pattern is cleaner. But `copytruncate` is the go-to when you can't make the process reopen its file.)
+
+**Bottom line:** use `truncate -s 0` (or `: >`), never `rm`, while the process holds the file open.

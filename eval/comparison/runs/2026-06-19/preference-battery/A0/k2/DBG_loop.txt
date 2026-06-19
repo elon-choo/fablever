@@ -1,0 +1,9 @@
+Your decrement is going the wrong way. The update expression is `i--`, so `i` goes `0, -1, -2, -3, …` — it never increases toward `arr.length`, so the condition `i < arr.length` stays true forever (and `arr[i]` is `undefined` after the first iteration).
+
+Use `i++`:
+
+```js
+for (let i = 0; i < arr.length; i++) { console.log(arr[i]); }
+```
+
+That walks `i` from `0` up to `arr.length - 1`, the condition eventually fails, and the loop ends.

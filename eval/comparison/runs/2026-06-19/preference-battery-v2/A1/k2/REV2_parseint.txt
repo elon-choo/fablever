@@ -1,0 +1,21 @@
+This snippet has three real bugs, all stemming from trusting `req.query.page` without validation.
+
+**1. `NaN` when `page` is missing or non-numeric.** If the query param is absent or garbage (`?page=abc`), `parseInt` returns `NaN`, so `offset = NaN * 20 = NaN`. That `NaN` then flows into your `LIMIT/OFFSET` (or `.skip()`), which either throws or silently returns wrong results. There's no default and no guard.
+
+**2. Negative / unbounded input.** `?page=-5` gives `offset = -100` (most SQL engines reject a negative OFFSET); `?page=999999999` is accepted and runs a huge-offset scan. No floor, no ceiling.
+
+**3. Missing radix.** `parseInt(req.query.page)` should be `parseInt(req.query.page, 10)`. Without it you're relying on the default-base inference, and lenient parsing also means `"12abc"` silently becomes `12`.
+
+One thing to confirm rather than a bug: the pagination is **0-indexed** (`page * 20`). If clients send `page=1` expecting the first page, they'll skip the first 20 rows. Fine if that's your documented convention — worth checking against the API contract.
+
+Suggested fix:
+
+```js
+const page = Math.max(0, parseInt(req.query.page, 10) || 0);
+const PAGE_SIZE = 20;
+const offset = page * PAGE_SIZE;
+```
+
+The `|| 0` collapses `NaN` to the first page, `Math.max(0, …)` floors negatives, and naming the page size kills the magic number. If page should be 1-based, use `(page - 1) * PAGE_SIZE` with a `Math.max(1, …)` floor instead.
+
+A note on process: your routing rule sends code-diff reviews through the adversarial-review skill, but that skill explicitly excludes simple bug scans like this two-line snippet, so I reviewed it directly. If you want the full red/blue/purple gate with a recorded verdict anyway, say so and I'll run it.

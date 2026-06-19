@@ -1,0 +1,21 @@
+EADDRINUSE means the port is already bound — so something *is* holding it; it's just not visible in your usual "is my app running?" check. On macOS the usual culprits, roughly in order:
+
+**1. An orphaned process from a previous run.** A crashed or backgrounded `node`/`nodemon`/`ts-node` that didn't get reaped still owns the socket. The parent terminal is gone, so it looks like nothing's running, but the child kept the port. This is the most common case.
+
+**2. The app conflicts with itself.** Two `server.listen()` calls on the same port, an HTTP server plus a second listener (websocket, metrics endpoint) on the same number, or a module that also calls `listen` on import. "Nothing else running" because the collision is internal.
+
+**3. A background daemon, not your code.** On this Mac specifically: **AirPlay Receiver grabs :5000 and :7000** (turn it off in System Settings → General → AirDrop & Handoff). Also PM2/launchd services — and you run a PM2/launchd bridge (`mac-bridge-server`) — or a forgotten Docker container with a published port mapping. These don't show up as "a node process I started."
+
+**4. IPv4/IPv6 dual-stack.** Binding to `::` (IPv6 any) also claims the IPv4 port via dual-stack; if something else holds one family you collide. Less common but sneaky.
+
+Note: TIME_WAIT is usually *not* the cause — Node sets `SO_REUSEADDR` by default on macOS/Linux, so a lingering closed socket normally won't block a fresh `listen`.
+
+To find the actual holder, run (substitute your port):
+
+```bash
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+```
+
+That prints the PID and command bound to the port. `kill <PID>` clears it, or change your app's port.
+
+If you tell me the port — or paste the `lsof` output — I'll pin down exactly what's holding it.

@@ -1,0 +1,26 @@
+No problem — here's the concrete plan without waiting on specifics. I'll give you the recommended path and where to deviate.
+
+**Phase 1 — Get the app loading offline (do this first, regardless of stack).**
+Add a service worker via a generator, not by hand. If you're on Vite (React/Vue/Svelte), use `vite-plugin-pwa`; on Next.js use `@serwist/next` (or `next-pwa`); on a plain static site use `workbox-cli` to generate the worker. Configure it to **precache the app shell** — your built HTML/JS/CSS, fonts, and icons. Add a **web app manifest** so it's installable. After this, the app opens and renders with the network fully off. This is a day's work and gets you 70% of the perceived benefit.
+
+**Phase 2 — Cache the content/data users read.**
+Set a runtime caching strategy per request type:
+- Static assets (images, fonts, versioned JS/CSS): **cache-first**.
+- API/content you want fresh but can tolerate stale: **network-first with cache fallback**.
+- Feeds/lists where instant load beats freshness: **stale-while-revalidate**.
+
+Add an **offline fallback page** for navigations to URLs that were never cached. Now previously-seen data is viewable offline.
+
+**Phase 3 — Only if users need to create or edit offline.**
+This is the expensive part; skip it if Phases 1–2 cover your need.
+- Store local state in **IndexedDB** (use a wrapper like `idb` or Dexie — don't touch raw IndexedDB).
+- Queue mutations made while offline, and replay them on reconnect via the **Background Sync API**, with a manual flush-on-`online`-event as the fallback (Background Sync isn't supported on Safari/iOS).
+- Handle **conflicts** explicitly — decide last-write-wins vs. merge per data type, and dedupe replayed requests so a double-sync doesn't create duplicates.
+
+If this phase is most of what you need, consider an **offline-first sync engine** (RxDB, ElectricSQL, PowerSync, or Replicache) instead of building the queue-and-sync yourself — they solve conflict resolution and ordering, which are the parts that bite.
+
+**Two things people forget:**
+- **Cache versioning / updates** — a stale service worker can pin users to an old build. The generators handle this, but you need a "new version available, refresh" prompt so updates actually land.
+- **Test it for real** — Chrome DevTools → Application → Service Workers, plus the Network "Offline" throttle. Don't trust that it works because the code looks right; toggle offline and reload.
+
+My recommendation: build Phase 1 + 2 now (low risk, high payoff), and only commit to Phase 3 if users genuinely need to *act* offline rather than just view. If you tell me your stack and whether offline writes matter, I'll turn this into exact files and commands.

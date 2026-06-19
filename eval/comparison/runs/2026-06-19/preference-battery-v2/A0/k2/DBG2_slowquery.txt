@@ -1,0 +1,43 @@
+The symptom — fine at small scale, slow at 2M rows — almost always means **a query went from "scan is cheap" to "scan is expensive."** Something that was O(n) is now running on a much bigger n. So look at queries before anything else.
+
+## First move: find the actual SQL the endpoint runs
+
+Don't theorize — capture it. Turn on slow query logging or use your APM/`pg_stat_statements`, hit the endpoint, and see which statement dominates the time.
+
+```sql
+-- Postgres: top queries by total time
+SELECT query, calls, mean_exec_time, total_exec_time
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 10;
+```
+
+Then run `EXPLAIN ANALYZE` on the offending query. This tells you in seconds what you'd otherwise guess at for an hour.
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS) SELECT ... ;
+```
+
+What you're looking for, in priority order:
+
+| Look for | Means | Fix |
+|---|---|---|
+| **Seq Scan** on the big table with a `WHERE`/`JOIN`/`ORDER BY` filter | Missing index — the #1 cause of "grew and got slow" | Add an index on the filtered/joined column |
+| **Rows estimated ≫ rows returned**, or a sort/hash on huge row counts | Query pulls far more than it needs | Index, or push filtering into SQL |
+| **Nested loop running N times** | This is your N+1, surfaced at the DB | See below |
+
+## The two usual culprits
+
+**1. Missing index.** The classic. At 50K rows a seq scan is milliseconds; at 2M it's a full read every request. If `EXPLAIN` shows a Seq Scan filtering on a column, index that column. Watch for filters on `WHERE status = ?`, foreign keys used in joins, and columns in `ORDER BY`.
+
+**2. N+1 queries.** The endpoint runs one query per row in a loop (common with ORMs / lazy-loaded relations). Looked instant at 20 rows, now fires 2,000 queries. Symptom: your APM shows hundreds/thousands of tiny identical queries per request, not one slow one. Fix with eager loading / a join / batching.
+
+## Quick triage order
+
+1. **Is it the DB or the app?** Check request time vs. DB time in your APM. If DB time is most of it → queries (above). If not → look at app-side work (loading all 2M rows into memory? serializing a huge response?).
+2. **One slow query or many small ones?** One → missing index. Many → N+1.
+3. **Did anything else change**, or *only* the row count? If only row count, it's almost certainly a scan/index issue, not new code.
+
+---
+
+If you can tell me the **stack (Postgres/MySQL/Mongo? which ORM?)** and **paste the `EXPLAIN ANALYZE` output** or the slow query, I'll point at the specific fix rather than the general one. Most of these resolve to a one-line index once we see the plan.

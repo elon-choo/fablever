@@ -1,0 +1,51 @@
+No worries — I'll give you the plan that covers the common case, and you can tell me where your app actually lands.
+
+Offline support is really three layers stacked on top of each other. Most apps only need the first one or two.
+
+## The foundation: a service worker
+
+Everything offline runs through a **service worker** — a script the browser keeps around even when your tab is closed, which can intercept network requests and answer them from a cache. This is the non-negotiable core. You don't usually hand-write it; you generate it with **Workbox** (or the plugin your framework ships):
+
+- **Next.js** → `@ducanh2912/next-pwa` (or Serwist)
+- **Vite (React/Vue/Svelte)** → `vite-plugin-pwa`
+- **Plain/static** → `workbox-cli` to generate the SW
+- **Angular** → built-in `@angular/pwa`
+
+Plus a **web app manifest** (`manifest.json`) so it's installable and the browser treats it as a real PWA.
+
+## Layer 1 — The app shell loads offline (almost everyone needs this)
+
+Precache your static assets (HTML shell, JS, CSS, fonts, icons) at install time. Result: the app *opens* offline instead of showing the dinosaur. Workbox does this automatically from your build manifest. This alone gets you a huge amount of perceived reliability.
+
+## Layer 2 — Data/content is available offline
+
+This is where strategy matters per request type:
+
+- **Runtime caching** for API/content reads. Pick a policy per route:
+  - `StaleWhileRevalidate` — show cached, refresh in background (great for feeds/content)
+  - `NetworkFirst` — try live, fall back to cache (good for data that should be fresh but tolerable when stale)
+  - `CacheFirst` — for immutable assets (images, versioned files)
+- **Structured data** that the app reads/queries → store it in **IndexedDB** (use a wrapper like `idb` or `Dexie`, not raw IndexedDB). Cache API is for HTTP responses; IndexedDB is for app data you query.
+- An **offline fallback page** for navigations that miss the cache.
+
+## Layer 3 — Writes work offline + sync (only if you need editing offline)
+
+This is the expensive layer:
+- Queue mutations locally (IndexedDB) when offline, replay them on reconnect via the **Background Sync API** (with a manual retry queue as fallback — Safari doesn't support Background Sync).
+- Decide a **conflict resolution** strategy: last-write-wins is simplest; if two people edit the same record you may need merge logic or CRDTs. If this is core to the product, consider a sync engine that handles it for you (**RxDB, ElectricSQL, PouchDB/CouchDB, Replicache, or Yjs** for collaborative editing) rather than building sync by hand.
+
+## Cross-cutting things people forget
+- **Online/offline UX** — listen to `navigator.onLine` + `online`/`offline` events, show a banner, disable actions that can't be queued.
+- **Cache versioning & updates** — service workers can pin users to stale code. Plan a "new version available, reload" prompt; Workbox handles `skipWaiting`/`clientsClaim`.
+- **HTTPS required** — service workers only run on HTTPS (localhost is exempt for dev).
+- **Storage limits & eviction** — the browser can evict your cache; call `navigator.storage.persist()` if the data matters.
+- **Testing** — Chrome DevTools → Application tab → "Offline" checkbox, and Lighthouse's PWA audit.
+
+## Suggested order to build it
+1. Add manifest + service worker via your framework's PWA plugin → **app shell loads offline** (Layer 1).
+2. Add runtime caching rules for your read APIs/content (Layer 2).
+3. Only if users must edit offline: add IndexedDB write queue + sync (Layer 3) — and seriously consider an off-the-shelf sync engine.
+
+---
+
+If you tell me **your stack** and **whether users only read offline or also need to create/edit offline**, I'll turn this into exact config — the plugin setup, the caching rules for your specific routes, and (if needed) the sync approach. And if there's an actual codebase you want me to look at, point me at it and I'll tailor the plan to what's already there.

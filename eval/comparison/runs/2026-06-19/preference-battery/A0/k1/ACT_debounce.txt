@@ -1,0 +1,48 @@
+The simplest approach is a custom hook that debounces the *value*, then react to the debounced value:
+
+```jsx
+import { useState, useEffect } from "react";
+
+function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id); // cancel if value changes before delay
+  }, [value, delay]);
+
+  return debounced;
+}
+```
+
+Use it like this:
+
+```jsx
+function Search() {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (!debouncedQuery) return;
+    fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`)
+      .then(/* ... */);
+  }, [debouncedQuery]);
+
+  return (
+    <input
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search…"
+    />
+  );
+}
+```
+
+**Why this works well:** the input stays fully controlled and responsive (updates on every keystroke), but `debouncedQuery` only changes after the user pauses typing for 300ms. The `clearTimeout` cleanup is what does the actual debouncing — each keystroke cancels the pending timer.
+
+A few notes:
+- **300ms** is a good default for search; 150–250ms feels snappier, 500ms is more conservative on API load.
+- If you want to **cancel stale in-flight requests**, add an `AbortController` in that effect.
+- Prefer not to roll your own? `useDebouncedValue` from [`@mantine/hooks`](https://mantine.dev/hooks/use-debounced-value/) or `useDebounce` from `use-debounce` do exactly this.
+
+Want me to add the `AbortController` version or adapt it to a specific data-fetching setup (React Query, SWR, etc.)?

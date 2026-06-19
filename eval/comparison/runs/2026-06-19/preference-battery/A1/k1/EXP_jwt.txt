@@ -1,0 +1,38 @@
+JWT (JSON Web Token) authentication works by giving the client a signed, self-contained token after login, which the client then presents on each request instead of re-authenticating. The key idea: the server doesn't store session state — it verifies the token's signature to trust its contents.
+
+## How it works
+
+A JWT is three Base64URL-encoded parts joined by dots: `header.payload.signature`.
+
+- **Header** — the signing algorithm (e.g. `HS256`, `RS256`) and token type.
+- **Payload** — the "claims": user ID, roles, an expiry (`exp`), issued-at (`iat`), issuer, etc. This is *encoded, not encrypted* — anyone can read it.
+- **Signature** — a hash of the header and payload, signed with a secret (HMAC) or a private key (RSA/ECDSA).
+
+The flow:
+
+1. User logs in with credentials. The server validates them and issues a JWT signed with its secret/private key.
+2. The client stores the token and sends it on each request, typically in an `Authorization: Bearer <token>` header.
+3. On each request the server *recomputes the signature* over the received header+payload and compares it to the token's signature. If they match and the token hasn't expired, the request is trusted — no database lookup required.
+
+The security hinges entirely on the signature: a client can read the payload but can't alter it (e.g. change `role: user` to `role: admin`) without invalidating the signature, since they don't hold the signing key.
+
+In practice you usually pair a short-lived **access token** (minutes) with a longer-lived **refresh token** (stored server-side or as a secure cookie) that mints new access tokens, which softens JWT's biggest weakness below.
+
+## What it's good at
+
+- **Stateless / scalable** — any server with the verification key can validate a token. No shared session store, no sticky sessions. This is the main reason it's popular for horizontally-scaled APIs and microservices.
+- **Cross-service / cross-domain** — one token can be trusted by many independent services. With asymmetric signing (`RS256`), services verify with a *public* key and never hold the secret, which is ideal for distributed systems and SSO/OAuth/OIDC.
+- **Self-contained** — the token carries the user context, so common authorization checks avoid a DB round-trip.
+
+## What it's bad at
+
+- **Revocation is genuinely hard.** This is the central tradeoff. Because the server keeps no state, a valid token is valid until it expires — you can't easily "log someone out" or kill a compromised token. Workarounds (a denylist, short expiries + refresh tokens, token versioning) all reintroduce the server-side state that JWTs were meant to eliminate.
+- **Payload is readable.** It's signed, not encrypted, so never put secrets in it. (JWE adds encryption but adds complexity.)
+- **Token size.** A JWT is much larger than a session ID and rides along on every request, adding overhead — and a tempting bloat that grows as you stuff in claims.
+- **Storage on the client is a security minefield.** `localStorage` is exposed to XSS; cookies are exposed to CSRF without protection. There's no XSS-and-CSRF-free option.
+- **Implementation footguns.** Historically the `alg: none` attack and algorithm-confusion attacks (tricking `RS256` verification into accepting an `HS256` token signed with the public key) have bitten people. You must pin the expected algorithm and use a vetted library.
+- **Stale data.** Permissions baked into the token at login won't reflect changes (a revoked role, a downgraded plan) until it expires.
+
+## Rule of thumb
+
+Reach for JWTs when you have multiple services or domains that need to trust a credential without a shared session store, or when you're already in an OAuth/OIDC ecosystem. For a classic single-server web app, a plain server-side **session with an opaque cookie** is often simpler and safer — easy instant revocation, nothing sensitive on the client, and the statelessness JWTs buy you isn't worth the revocation headache. The common mistake is adopting JWTs for the buzz when a session would do.

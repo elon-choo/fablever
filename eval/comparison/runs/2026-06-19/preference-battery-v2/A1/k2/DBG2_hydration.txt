@@ -1,0 +1,15 @@
+Hydration mismatches happen when the HTML React renders on the server doesn't match what it renders on the first client pass. The most common culprits, roughly in order of how often they bite:
+
+**Non-deterministic values in render.** `Date.now()`, `new Date()`, `Math.random()`, or anything that produces a different result on server vs. client. Locale- or timezone-dependent formatting (`toLocaleString()`, `Intl.*`) is a sneaky version of this — the server's locale/timezone differs from the browser's.
+
+**Browser-only APIs read during render.** Touching `window`, `localStorage`, `navigator`, or `matchMedia` while computing the rendered output. The server has no such value, so the markup diverges.
+
+**Invalid HTML nesting.** A `<div>` inside a `<p>`, a `<p>` inside a `<p>`, or a block element inside an `<a>`. The browser silently "fixes" the DOM on parse, so it no longer matches React's tree. This one's easy to miss because the warning points at hydration, not at the bad nesting.
+
+**Browser extensions** (password managers, Grammarly, dark-mode injectors) that mutate the DOM before React hydrates. If the warning only reproduces on some machines, suspect this.
+
+**Conditional rendering on `typeof window`.** Rendering different output when `typeof window !== 'undefined'` guarantees a mismatch, since render #1 on the client still has to match the server.
+
+The standard fixes: for genuinely client-only content, defer it with a mounted flag (`useState(false)` → `useEffect(() => setMounted(true))`, render the dynamic part only when `mounted`), or use `next/dynamic` with `ssr: false`. For a single element whose text legitimately differs (like a timestamp), `suppressHydrationWarning` is the escape hatch.
+
+If you paste the actual warning — React usually prints the specific text or attribute that differs — I can point you at the exact line.

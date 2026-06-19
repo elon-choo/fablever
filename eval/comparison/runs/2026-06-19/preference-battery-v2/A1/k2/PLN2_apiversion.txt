@@ -1,0 +1,19 @@
+The short version: don't version until you have to. Keep adding to v1 with only backward-compatible changes, and only cut a v2 the day you genuinely must break something — at which point you run both side by side and retire v1 on a published schedule. Versioning is the escape hatch, not the everyday tool.
+
+Here's the concrete plan.
+
+**1. Pin down what "breaking" means, in writing.** This is the whole game. Backward-compatible (safe to ship in place): adding an endpoint, adding an optional request field, adding a response field, adding a new enum value *only if clients were told to tolerate unknowns*. Breaking (requires a new version): removing or renaming any field, changing a type, making an optional param required, tightening validation, changing a default, changing pagination/sorting, or changing error codes and status semantics. Clients depend on more than you think — error shapes and ordering included.
+
+**2. Lock current behavior as v1 with contract tests.** Before touching anything, capture the existing responses as snapshot/contract tests in CI. That's what actually prevents an accidental break — a reviewer's eye won't catch a serializer change three layers down, but a failing golden-file test will.
+
+**3. Pick a versioning scheme — for a public REST API, use the URL path (`/v1/...`).** It's the most pragmatic for public consumers: trivially visible, cacheable, easy to curl, easy to route. Header/media-type versioning (`Accept: application/vnd.you.v2+json`) is technically cleaner but pushes friction onto every client, so reserve it only if you have a strong reason. Version on the *major* only — `v1`, `v2`, never `v1.2` in the path.
+
+**4. Grow v1 additively; branch v2 only when forced.** Most evolution never needs a new version — new fields and endpoints just land in v1. When you hit a genuine breaking change, stand up v2 alongside v1 rather than mutating v1. Share the underlying logic; let the version layer be a thin translation at the edge so you're not maintaining two full stacks.
+
+**5. Instrument usage per version/endpoint before you ever retire anything.** You cannot safely sunset v1 if you can't see who's on it. Log version + endpoint (+ client/API-key) so retirement is driven by real traffic, not a guess.
+
+**6. Deprecate on a published schedule, not abruptly.** When v2 ships: announce in a changelog and migration guide, set a sunset date, and emit the standard signals — the `Deprecation` header and `Sunset` header (RFC 8594) on v1 responses. Watch the telemetry from step 5 drop toward zero, reach out to the stragglers, then retire. A common public-API window is 6–12 months.
+
+The single most important habit is step 1 + 2: a written breaking-change rule enforced by contract tests in CI. That's what lets you ship confidently for years without minting new versions.
+
+If you tell me what this API actually is — REST service, GraphQL, gRPC, or a client library/SDK — I'll tailor this, since GraphQL (deprecate fields, never version) and libraries (semver + deprecation cycles) play by noticeably different rules.

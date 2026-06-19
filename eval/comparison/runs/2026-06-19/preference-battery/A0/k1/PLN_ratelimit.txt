@@ -1,0 +1,38 @@
+No answer needed — I'll give you a concrete plan you can act on, and tighten it once you point me at the actual API code.
+
+Since this repo has no public API, here's a **framework-agnostic plan to add rate limiting to a public API**. It's ordered so each step de-risks the next.
+
+## 1. Decide the policy before the mechanism
+- **Limit dimension(s):** per-API-key, per-IP, per-user, or per-route. Public APIs usually need *per-key for authed* + *per-IP for anonymous* (so one abuser can't exhaust the shared anonymous pool).
+- **Algorithm:** **token bucket** (allows bursts, smooth refill) is the right default for public APIs. Fixed-window is simplest but has the double-burst-at-boundary problem; sliding-window-log is accurate but memory-heavy. Pick token bucket unless you have a reason.
+- **Tiers:** e.g. anonymous 60 req/min, free key 600/min, paid 6000/min. Make the numbers config, not code.
+
+## 2. Pick where it lives
+- **Edge/gateway** (Cloudflare, API Gateway, Nginx `limit_req`, Kong) — cheapest, stops traffic before it hits your app. Best first line.
+- **App middleware** — needed for per-user/per-plan logic the edge can't see.
+- Most real setups use **both**: coarse limit at the edge, fine-grained in-app.
+
+## 3. Choose the counter store
+- **Single instance:** in-memory is fine.
+- **Multiple instances / serverless:** you need a **shared store** — Redis is the standard (atomic `INCR`+`EXPIRE`, or a Lua token-bucket script for correctness under concurrency). Don't use per-process memory behind a load balancer; limits will be N× too loose.
+
+## 4. Implement the limiter
+- Use a vetted library over hand-rolling: `express-rate-limit`+`rate-limit-redis` (Node), `slowapi`/`limits` (FastAPI/Flask), `Bucket4j` (JVM), `tower-governor` (Rust), or `golang.org/x/time/rate` + Redis (Go).
+- Make the limiter **fail-open** if the store is down (don't take the whole API offline because Redis blipped) — but log loudly.
+
+## 5. Make rejections correct and friendly
+- Return **HTTP 429** with `Retry-After`.
+- Include standard headers on every response: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` (the IETF draft naming).
+- Exempt health checks and internal traffic.
+
+## 6. Observe before you tighten
+- Emit metrics: allowed vs throttled per key/route. **Run in log-only / shadow mode first** to see what the limits *would* reject before enforcing — avoids paging yourself by throttling real customers on day one.
+
+## 7. Test
+- Unit: bucket refill math, boundary conditions.
+- Integration: concurrent requests across multiple app instances hit the *shared* limit (this is where in-memory bugs hide).
+- Load test to confirm the limiter itself isn't the bottleneck.
+
+---
+
+To turn this into a real, file-level plan I need the API codebase — **point me at the repo/path** (it's not under `/Users/elon/work/fable-profile`) and I'll inspect the framework, routing, and deploy target, then give you exact files and code. If instead you meant throttling *this* repo's **outbound** Anthropic calls (the orchestration 429-pacing logic), say so and I'll plan that — it's a different problem.

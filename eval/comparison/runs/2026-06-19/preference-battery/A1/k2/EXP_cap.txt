@@ -1,0 +1,36 @@
+The one practical takeaway: CAP only forces a choice *during a network partition* — when your database nodes can't talk to each other. The rest of the time you get consistency and availability both. So the real question CAP answers is: "when my nodes lose contact, do I want the system to refuse writes (stay correct) or keep accepting them (stay up)?"
+
+Here's the breakdown that matters when you're choosing.
+
+**The three letters, in usable terms**
+- **Consistency (C):** every read sees the most recent write. No stale data, no two clients seeing different values.
+- **Availability (A):** every request gets a non-error response — the system stays up.
+- **Partition tolerance (P):** the system keeps functioning even when the network drops or delays messages between nodes.
+
+**Why it's really a two-way choice, not three**
+Network partitions *will* happen in any system spread across multiple machines (and any real database at scale is). You don't get to opt out of P. So for a distributed database the choice collapses to: when a partition hits, do you sacrifice C or A?
+
+- **CP (keep consistency, drop availability):** during a partition, the minority side refuses to answer rather than risk serving stale or conflicting data. You get correctness; some requests fail or block until the partition heals.
+- **AP (keep availability, drop consistency):** every node keeps answering, but two sides of the partition can diverge. You get uptime; you accept temporarily stale reads and conflict resolution later (eventual consistency).
+
+**How to actually decide**
+Ask what's worse for *your* data when a node can't be reached:
+
+- If a wrong/stale answer causes real damage — money moving twice, double-booking the last seat, inventory going negative — lean **CP**. You'd rather an operation fail and retry than commit something incorrect.
+- If being unavailable is the bigger cost and stale-by-a-few-seconds is fine — feeds, carts, sessions, metrics, product catalogs, "likes" — lean **AP**.
+
+A useful gut check: would you rather show the user an error, or show them slightly old data? That answer is your CAP lean.
+
+**Where common databases sit**
+
+| Lean | Examples | Behavior under partition |
+|------|----------|--------------------------|
+| CP | MongoDB (default), HBase, Redis (single-primary), etcd/ZooKeeper, traditional RDBMS in sync-replication | Minority side rejects writes to stay correct |
+| AP | Cassandra, DynamoDB, Riak, Couchbase | All nodes keep serving; data reconciles afterward |
+
+Note these are *defaults*, not fixed identities. Cassandra and DynamoDB let you dial consistency per-query (e.g. quorum reads/writes push you toward CP for that operation). MongoDB's write concern and read concern do the same in the other direction. So you often tune the tradeoff per workload, not just per database.
+
+**The caveat that keeps you from over-trusting CAP**
+CAP is coarse — it only describes partition behavior, which is rare. The more honest model for everyday selection is **PACELC**: *during a Partition, choose A or C; Else (normal operation), choose between Latency and Consistency.* That "else" clause is what you actually live with 99.9% of the time — strong consistency across nodes costs latency (coordination round-trips), and many "AP" systems are really chosen because they're fast and low-latency in normal operation, not because anyone expects constant partitions.
+
+So when picking: use CAP to decide your failure-mode preference (fail vs. stale), and use the latency-vs-consistency question to judge the day-to-day cost. The database that fits is the one whose *default* behavior matches the answer you'd give under pressure, with enough tuning knobs to handle the exceptions.

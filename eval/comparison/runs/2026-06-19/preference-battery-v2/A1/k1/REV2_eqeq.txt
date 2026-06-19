@@ -1,0 +1,20 @@
+Yes — the second comparison is the real problem. `userInput == ''` uses loose equality, which coerces both sides to numbers, so `0`, `false`, and `[]` all equal `''` and get rejected as if empty. If `0` or `false` is a legitimate input, this wrongly throws them out.
+
+The first check is fine and idiomatic: `userInput == null` deliberately catches both `null` and `undefined` (since `null == undefined`). That's a common, intentional use of `==`.
+
+Two things to fix or consider:
+
+- **Use strict equality for the empty check:** `userInput === ''`. Combined: `if (userInput == null || userInput === '')`.
+- **Whitespace isn't caught.** `'   '` passes as valid. If you mean "no meaningful content," trim first: `userInput.trim() === ''` — but only after the null check, or `.trim()` throws on `null`/`undefined`/non-strings.
+
+One more, depending on context I can't see: there's no `return` before `reject()`. If `reject()` doesn't halt execution on its own, the function falls through and keeps running with invalid input. If this is a Promise's `reject`, that's almost certainly a bug — make it `return reject(...)`.
+
+Cleaned up:
+
+```js
+if (userInput == null || String(userInput).trim() === '') {
+  return reject();
+}
+```
+
+`String(userInput)` guards against non-string inputs if that's possible here; drop it if `userInput` is always a string by the time it reaches this line.

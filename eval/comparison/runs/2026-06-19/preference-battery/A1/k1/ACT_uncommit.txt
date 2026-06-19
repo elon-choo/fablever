@@ -1,0 +1,5 @@
+`git reset --soft HEAD~1`
+
+That moves the branch pointer back one commit while leaving everything in the index, so your changes stay staged exactly as they were — only the commit itself is undone. The commit message is recoverable from `git reflog` if you want it back.
+
+(Use `--mixed` instead of `--soft` if you'd rather unstage the changes too, or `--hard` to discard them entirely — but `--soft` is what keeps them staged.)

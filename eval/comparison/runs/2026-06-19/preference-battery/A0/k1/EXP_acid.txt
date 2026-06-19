@@ -1,0 +1,30 @@
+ACID is a set of four guarantees a database makes about how it handles **transactions** — units of work that may touch multiple rows/tables but should behave as a single, all-or-nothing operation.
+
+## The four properties
+
+**A — Atomicity**
+A transaction is all-or-nothing. If any part fails, the whole thing rolls back as if it never happened.
+*Example:* transferring $100 = debit one account + credit another. Atomicity guarantees you can't end up with the debit applied but the credit lost.
+
+**C — Consistency**
+A transaction moves the database from one valid state to another, never violating its rules (constraints, foreign keys, triggers). If a transaction would break a rule, it's rejected.
+*Example:* a `NOT NULL` or "balance ≥ 0" constraint can't be left violated after a commit.
+
+**I — Isolation**
+Concurrent transactions don't step on each other. The result of running them at the same time is as if they ran one after another.
+*Example:* two people buying the last concert ticket simultaneously — isolation prevents both from succeeding. (Databases offer tunable *isolation levels* trading strictness for speed.)
+
+**D — Durability**
+Once a transaction commits, it survives — even a crash or power loss the next millisecond. The data is safely persisted (typically via a write-ahead log).
+
+## Why you should care
+
+- **Correctness with money/inventory/anything that must add up.** Without ACID, partial failures and race conditions silently corrupt data. The classic failure cases — double-charges, lost orders, negative inventory — are exactly what these properties prevent.
+- **You can reason about failure.** Crashes, network drops, and overlapping requests are *normal* in production. ACID lets you write code assuming "either it all happened or none of it did," instead of writing recovery logic for every partial-failure permutation.
+- **It's a design trade-off, not a free lunch.** ACID guarantees cost performance and make horizontal scaling harder. That's why many distributed/NoSQL systems relax them in favor of **BASE** (Basically Available, Soft state, Eventually consistent) — they trade strict consistency for availability and scale. Knowing what you're giving up is the point.
+
+## Rule of thumb
+
+If wrong data is *expensive* — payments, bookings, user accounts, ledgers — lean ACID (PostgreSQL, MySQL/InnoDB, most SQL databases). If you need massive scale and can tolerate brief inconsistency — analytics, feeds, caches, logs — relaxed/eventual consistency is often the right call.
+
+Want me to go deeper on any one property, isolation levels (and anomalies like dirty/phantom reads), or how ACID vs. BASE plays out in a specific system you're working with?

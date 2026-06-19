@@ -1,0 +1,19 @@
+On macOS:
+
+```bash
+lsof -i :3000
+```
+
+That lists the process (with PID, command, user) bound to port 3000.
+
+If you just want the PID — e.g. to kill it:
+
+```bash
+lsof -ti :3000        # PID only
+kill -9 $(lsof -ti :3000)   # find + kill in one go
+```
+
+A couple of notes:
+- Add `sudo` if the port is owned by another user and you get no output.
+- `lsof -ti :3000` can return multiple PIDs (e.g. IPv4 + IPv6 listeners); `kill` handles them all at once.
+- Alternative if you prefer: `lsof -nP -iTCP:3000 -sTCP:LISTEN` shows only the listening socket without DNS/port-name lookups (a bit faster, clearer output).

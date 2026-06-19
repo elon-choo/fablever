@@ -1,0 +1,16 @@
+No problem — here's the plan in plain terms, and the one thing I need from you to make it concrete.
+
+The single biggest decision is **managed auth provider vs. building it yourself.** For almost every app, a managed provider (Clerk, Supabase Auth, Auth0, or Firebase Auth) is the right call: it handles password hashing, session management, email verification, password reset, social login, and MFA — all the security-sensitive parts that are easy to get subtly wrong. Roll your own only if you have a specific constraint (no third-party services allowed, an existing user table you must keep, etc.).
+
+The work itself, regardless of stack, is the same shape:
+
+1. **Data & provider setup** — either wire in the provider's SDK and create a project, or (if rolling your own) add a `users` table with email + hashed password, and pick a session strategy (httpOnly cookie session vs. JWT).
+2. **Signup flow** — form → create the account → hash the password (argon2/bcrypt) or hand off to the provider → send a verification email → establish a session.
+3. **Login flow** — form → verify credentials → establish a session → handle failures (wrong password, unverified email, rate limiting on repeated attempts).
+4. **Session plumbing** — middleware that reads the session on each request, a "current user" helper, and protected routes/redirects for unauthenticated users.
+5. **Logout + account basics** — clear the session, plus password reset and (ideally) email verification.
+6. **The security non-negotiables** — httpOnly + secure cookies, CSRF protection on form posts, rate limiting on login/signup, no leaking whether an email exists, and never logging credentials.
+
+To turn this into a real, file-by-file plan I need to see the code. **Point me at the repo** — the absolute path to your app — and tell me the framework if it's not obvious from the files. I'll read what's there (your existing routes, database, and any auth-adjacent dependencies) and come back with concrete steps and a recommended provider that fits what you already have.
+
+One note: your working directory is `/private/tmp`, which is a scratch folder, so wherever your app actually lives, give me that path.

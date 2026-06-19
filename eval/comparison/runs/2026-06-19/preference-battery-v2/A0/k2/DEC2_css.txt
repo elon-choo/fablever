@@ -1,0 +1,28 @@
+For a small team starting a new React app, **go with Tailwind.** Here's the reasoning, then the caveats.
+
+## Why Tailwind wins here
+
+**Small team is exactly the sweet spot.** The biggest cost of utility CSS — the learning curve and the "ugly markup" objection — is a one-time tax. The payoff is that nobody has to invent and maintain a naming system, and there's no growing `.css` file that everyone's afraid to delete from.
+
+- **No naming bikeshedding.** CSS Modules still make you name every class (`.cardWrapper`, `.cardInner`…). With a small team and no design-system lead, those conventions drift fast.
+- **No dead CSS.** Tailwind's purge means unused styles never ship. CSS Modules accumulate orphaned rules nobody dares remove.
+- **Colocation.** Styles live in the JSX. For a small team moving fast, fewer files to jump between.
+- **Constraints come built in.** The default spacing/color scale nudges everyone toward consistency without a written style guide.
+- **Ecosystem.** shadcn/ui, Headless UI, and most modern React component kits assume Tailwind — you get a huge head start.
+
+## When plain CSS Modules is the better call
+
+- The team already has strong CSS muscle and *dislikes* utility classes — fighting the team's taste isn't worth it.
+- Heavy, bespoke design work (complex animations, deeply custom layouts) where you'd be writing `[mask:...]` arbitrary values constantly anyway.
+- You want zero build-tool coupling / minimal dependencies.
+
+## Practical recommendation
+
+Tailwind, and add two things from day one to neutralize its main weakness (cluttered markup):
+
+1. **A component layer** (shadcn/ui or your own small `Button`, `Card` wrappers) so utility soup stays inside reusable components, not sprinkled across every page.
+2. **Prettier + `prettier-plugin-tailwindcss`** to auto-sort classes so diffs stay clean.
+
+The one honest tradeoff: your JSX will look busier. In practice small teams stop noticing within a week, and the maintenance savings compound. If half the team has a visceral reaction to that, CSS Modules is a perfectly fine fallback — it's the "boring and safe" choice, just with more manual upkeep.
+
+Want a quick starter setup (Vite + React + Tailwind + shadcn) scaffolded out?

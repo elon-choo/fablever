@@ -1,0 +1,56 @@
+Hydration mismatches happen when the HTML React generates on the **server** doesn't match what it generates on the **client** during the first render. React renders once on the server, sends that HTML, then re-renders on the client and expects an exact match. When they differ, you get the warning.
+
+The usual culprits:
+
+**1. Time / randomness / non-deterministic values**
+```jsx
+// ❌ server and client compute different values
+<span>{new Date().toLocaleString()}</span>
+<span>{Math.random()}</span>
+<div id={uuid()} />
+```
+The server renders one value; the client renders another.
+
+**2. Browser-only APIs read during render**
+```jsx
+// ❌ window/localStorage don't exist on the server
+const [theme] = useState(localStorage.getItem('theme'))
+const isMobile = window.innerWidth < 768
+```
+Server has no `window`, so the output diverges.
+
+**3. Invalid HTML nesting** — the browser "fixes" your markup before React hydrates, so the DOM no longer matches.
+```jsx
+// ❌ <div> inside <p>, <p> inside <p>, <a> inside <a>, etc.
+<p><div>hello</div></p>
+```
+
+**4. Locale/timezone-dependent formatting** — number, date, or currency formatting that depends on the machine's locale (server vs. user's browser).
+
+**5. Browser extensions** mutating the DOM (e.g. Grammarly adding attributes to `<body>`). Often a false alarm — usually only on `body`/`html`.
+
+---
+
+### How to fix
+
+**Defer client-only content to after mount:**
+```jsx
+const [mounted, setMounted] = useState(false)
+useEffect(() => setMounted(true), [])
+if (!mounted) return null   // or a stable placeholder
+return <span>{new Date().toLocaleString()}</span>
+```
+
+**Or use `next/dynamic` with SSR off** for components that genuinely can't render on the server:
+```jsx
+const NoSSR = dynamic(() => import('./ClientOnly'), { ssr: false })
+```
+
+**For unavoidable, intentional mismatches** (like a timestamp), `suppressHydrationWarning` silences it for that one element:
+```jsx
+<time suppressHydrationWarning>{new Date().toISOString()}</time>
+```
+
+---
+
+If you want, paste the component (or the warning — React usually prints the exact diff with `+`/`-` showing server vs. client), and I'll pinpoint the specific cause.

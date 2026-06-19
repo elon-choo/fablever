@@ -1,0 +1,30 @@
+Use `-X POST` with `-H` to set the content type and `-d` for the body:
+
+```bash
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Ada", "role": "admin"}'
+```
+
+A few practical variations:
+
+**Send a file instead of an inline string** (the `@` prefix reads from a file; `-` reads stdin):
+```bash
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -d @payload.json
+```
+
+**Add an auth header** (common with JSON APIs):
+```bash
+curl -X POST https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name": "Ada"}'
+```
+
+Notes worth knowing:
+- `-d` already implies a POST, so `-X POST` is technically redundant when you use `-d` — but it's harmless and makes intent explicit.
+- Use single quotes around the JSON so the shell doesn't try to expand `$` or choke on the double quotes inside. If you need a shell variable inside the body, switch to double quotes outside and escape the inner ones, or build the JSON with a tool like `jq`.
+- `-d` strips newlines; if you need the raw body byte-for-byte, use `--data-raw` or `--data-binary`.
+- Add `-i` to see response headers, or `-v` for the full request/response exchange when debugging.

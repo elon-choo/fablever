@@ -1,0 +1,20 @@
+Yes — the main problem is an N+1 query run sequentially. You fire one `findAll`, then one `findById` per order, each one awaited before the next starts. For 100 orders that's 101 round-trips end to end.
+
+Better is to fetch all the users in a single query keyed by id, then attach them in memory:
+
+```js
+const orders = await Order.findAll();
+const userIds = [...new Set(orders.map(o => o.userId))];
+const users = await User.findAll({ where: { id: userIds } });
+const usersById = new Map(users.map(u => [u.id, u]));
+for (const o of orders) o.user = usersById.get(o.userId);
+```
+
+That's two queries regardless of order count, and the dedup via `Set` avoids re-fetching the same user when several orders share one.
+
+A few things worth noting:
+- If `Order` and `User` are an ORM association (Sequelize-style, which the API suggests), the idiomatic fix is to let the ORM join: `Order.findAll({ include: User })` — one query, no manual mapping.
+- If you must keep per-order lookups, at least run them concurrently with `Promise.all(orders.map(...))` instead of `await` in a `for` loop — but the batched single-query approach above is still better because it's one DB call, not N.
+- Minor: `findAll()` with no limit loads the whole table into memory. Fine for small tables, a problem as orders grow — consider pagination if this runs on a large dataset.
+
+I'd go with the `include`/join approach if these are associated models; otherwise the batched-Map version.

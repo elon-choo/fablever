@@ -1,0 +1,33 @@
+This swallows every error silently — it's the classic anti-pattern, and it's worth fixing.
+
+The problem is that `catch (e) { /* ignore */ }` discards *all* failures from `doWork()` with no trace. A few concrete consequences:
+
+- **Real bugs go invisible.** A `TypeError`, a thrown programmer error, an out-of-memory, a failed network call — all vanish identically. You lose the ability to ever know something broke.
+- **You can't distinguish "expected" from "catastrophic."** Maybe you intended to ignore one specific recoverable condition, but this ignores everything, including errors you'd absolutely want to crash on.
+- **Debugging becomes guesswork.** When `doWork()` silently does nothing, there's no log, no stack trace, no signal pointing at the cause.
+
+When ignoring is genuinely correct, three things make it defensible: narrow it to the error you expect, say *why* in the comment, and at minimum log the rest.
+
+```js
+try {
+  await doWork();
+} catch (e) {
+  // doWork() throws NotFoundError when the cache entry is already gone —
+  // that's expected and safe to skip.
+  if (e.code !== 'NOT_FOUND') throw e;
+}
+```
+
+Or, if you truly want to continue but not lose the signal:
+
+```js
+try {
+  await doWork();
+} catch (e) {
+  logger.warn('doWork failed, continuing', e);
+}
+```
+
+The deciding question is: **if `doWork()` fails, should the program keep going as if nothing happened?** If yes, log it anyway. If no, don't catch here at all — let it propagate. A bare empty catch answers "I don't care why this failed," which is almost never what you actually mean.
+
+One caveat without the surrounding context: if this is a fire-and-forget cleanup path (closing a socket that may already be closed, best-effort telemetry), an ignore can be legitimate — but it should still name *that* reason in the comment so the next reader knows it's deliberate, not abandoned.

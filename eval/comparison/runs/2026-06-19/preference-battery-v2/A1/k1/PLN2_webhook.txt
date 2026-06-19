@@ -1,0 +1,21 @@
+The reliable pattern is: **verify → persist raw → ack fast → process async, made idempotent, with a reconciliation job as the safety net.** Almost every webhook reliability problem traces back to skipping one of those. Here's the plan.
+
+## The receive endpoint (synchronous — keep it dumb and fast)
+
+1. **Read the raw body first, verify the signature on those exact bytes.** Most providers sign the raw payload (HMAC-SHA256 with your shared secret); if you parse to JSON first and re-serialize, the signature won't match. Reject anything that fails before doing anything else.
+2. **Reject replays** using the provider's timestamp header (e.g. tolerate ±5 min) so a captured request can't be resent later.
+3. **Persist the raw event immediately** to an inbox table (or durable queue) keyed on the provider's event ID with a unique constraint. The unique constraint *is* your dedup — a duplicate delivery hits a conflict and is a no-op.
+4. **Return 2xx the moment it's durably stored** — before any business logic. Do no real processing inline. If your handler is slow, the provider times out, marks it failed, and retries, which multiplies your load exactly when you're already struggling.
+
+## The worker (asynchronous — where the actual work happens)
+
+5. **Process from the inbox in the background.** Make each handler idempotent: re-running the same event produces the same result (upsert, not insert; check "already applied" before acting). You will get duplicates — at-least-once delivery is the norm — so correctness must not depend on seeing each event once.
+6. **Don't trust ordering.** Events can arrive out of order or interleaved. Use the event's own timestamp/sequence number, or, for anything important, re-fetch current state from the provider's API rather than reconstructing it from the event stream.
+7. **Retry with exponential backoff, then dead-letter.** Failed processing goes back with a delay; after N attempts it lands in a DLQ so one poison event can't block the queue. Alert on DLQ depth and on processing lag.
+
+## The backstop (because webhooks *will* be lost)
+
+8. **Run a periodic reconciliation job** that pulls recent events/state from the provider's API and fills gaps the webhooks missed (outages on either side, dropped deliveries). This is the single most-skipped piece and the one that turns "mostly reliable" into "reliable." Many providers also offer an event-replay or list-events API — use it here.
+9. **Log every event end-to-end** (received, stored, processed, failed) so you can answer "did we get event X and what happened to it."
+
+The two things that tune this to your situation: which provider (its signing scheme, retry policy, and whether it offers a replay/list-events API decide steps 1, 4, and 8), and your stack (which decides whether the inbox is a Postgres table + cron worker, or SQS/a real queue). Tell me both and I'll turn this into concrete code and schema rather than a pattern.

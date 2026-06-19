@@ -1,0 +1,30 @@
+You didn't pick options, so I'll give you the plan for the most common case and flag the one assumption that would change it. If your situation differs, tell me and I'll adjust.
+
+**Assumption:** a Next.js/React app, and you want *in-app real-time* notifications first (a bell/toast that updates while the tab is open), with a clear path to add closed-tab browser push later. This is the right order — in-app delivers most of the value with a fraction of the work, and push builds on the same backend.
+
+## The recommended shape
+
+Persist notifications in your database as the source of truth, push them to open tabs over **Server-Sent Events (SSE)**, and render an unread badge + list in the UI. SSE over WebSockets here because notifications are one-directional (server → client); SSE auto-reconnects, runs over plain HTTP, and needs no extra protocol. Reach for WebSockets only if you later need bidirectional, low-latency traffic (chat, presence, collaborative editing).
+
+## Phased plan
+
+**1 — Data model.** A `notifications` table: `id`, `user_id`, `type`, `payload` (JSON), `read_at`, `created_at`. This makes notifications durable and queryable, so a user sees what they missed while offline — not just whatever was live.
+
+**2 — Write path.** Wherever an event happens (comment, mention, job done), insert a row. Keep this one function (`createNotification`) so every producer goes through the same place.
+
+**3 — Real-time transport (SSE).** An authenticated `/api/notifications/stream` endpoint holds an open connection per logged-in user and emits new rows as they're created. The bridge from "row inserted" to "emit on the stream" is the one real decision — see below.
+
+**4 — Client.** An `EventSource` (or a small hook) subscribes to the stream, updates a notification store, increments the unread badge, and optionally shows a toast. On mount, fetch the recent list via a normal `GET` so the panel is populated immediately; the stream only carries *new* ones.
+
+**5 — Read state.** `POST /api/notifications/read` to mark one/all read, clearing the badge.
+
+**6 — (Later) Web Push for closed tabs.** Add a service worker, collect a `PushSubscription` with VAPID keys, store it, and fan out via the Web Push protocol from the same write path. This is a separate, additive milestone — don't block in-app on it.
+
+## The one decision that shapes the backend
+
+How the write path notifies the SSE endpoint depends on how your app is deployed:
+
+- **Single long-lived Node server** → an in-process `EventEmitter` is enough; no extra infra.
+- **Serverless / multiple instances** (Vercel, Lambda, several pods) → in-memory won't work because the writer and the open connection live in different processes. Use a pub/sub layer — **Redis pub/sub** if you run Redis, or a managed realtime service (**Pusher, Ably, Supabase Realtime**) that removes the connection-management work entirely.
+
+If you confirm your stack and deployment (and whether you want push from day one), I'll turn this into concrete files and code for your setup.

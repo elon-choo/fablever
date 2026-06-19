@@ -1,0 +1,50 @@
+This is a one-liner I can review directly — no need to spin up tooling. Here's what's wrong, roughly in priority order.
+
+## 1. `readFileSync` blocks the entire event loop (critical)
+This is the headline issue. `fs.readFileSync` is synchronous, so for the whole time it takes to read `big.json` off disk, your Node process can serve **no other requests** — not other `/report` calls, not health checks, nothing. A single-threaded server under any concurrency will stall on every hit to this route. The bigger the file, the worse it gets, and the route is literally named for a *big* file.
+
+Use the async API (or a stream).
+
+## 2. `process(data)` almost certainly isn't what you think
+`process` is a **Node.js global object**. Unless you have a local function literally named `process` in scope, `process(data)` throws `TypeError: process is not a function`. Even if you *do* define one, shadowing the global `process` is a footgun. Rename it (`transform`, `render`, etc.).
+
+## 3. The file is read and re-processed on every request
+If `big.json` doesn't change at runtime, you're paying disk I/O + parse + `process()` cost on every single call. Read it once at startup (or cache with mtime invalidation) and reuse the result.
+
+## 4. No error handling
+If `big.json` is missing/unreadable or `process()` throws, the request fails ungracefully. Sync throws are caught by Express 4 and forwarded to error middleware *if you have any* — but if `process` is async (returns a promise), the rejection is **not** caught and you get an unhandled rejection. Wrap it and return a real 500.
+
+## 5. Relative path is resolved against `process.cwd()`, not the file
+`'big.json'` resolves relative to wherever the process was launched, not the module. Start the app from a different directory and it breaks. Use `path.join(__dirname, 'big.json')`.
+
+## 6. `res.send(Buffer)` + content type
+`readFileSync` with no encoding returns a `Buffer`. What `process` returns then drives the `Content-Type`: an object → JSON, a string → `text/html`. If you're returning JSON, use `res.json(...)` and be explicit.
+
+---
+
+### Suggested rewrite
+
+```js
+const path = require('path');
+const fs = require('fs/promises');
+
+// Read + process once at startup; reuse across requests.
+let reportPromise;
+function loadReport() {
+  reportPromise ??= fs.readFile(path.join(__dirname, 'big.json'), 'utf8')
+    .then(raw => transform(JSON.parse(raw)));   // renamed from process()
+  return reportPromise;
+}
+
+app.get('/report', async (req, res, next) => {
+  try {
+    res.json(await loadReport());
+  } catch (err) {
+    next(err); // -> error middleware -> 500
+  }
+});
+```
+
+If the data genuinely *must* be re-read per request (it changes on disk), keep the per-request `await fs.readFile(...)` inside the `try` instead of caching — but never go back to the sync version on a request path.
+
+Want me to adapt this to your actual setup (is `process` a real local function? does `big.json` change at runtime? ESM or CommonJS?) — tell me and I'll tailor it.

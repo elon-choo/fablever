@@ -1,0 +1,70 @@
+Big-O describes **how the work grows as your input grows** — not how fast something is in milliseconds, but how the cost scales when the data gets 10× or 1000× bigger. That's the question that actually bites you: code that's fine on 100 rows and falls over on 1,000,000.
+
+Here are the ones you'll actually meet, roughly worst-to-best as data grows:
+
+## O(1) — constant: the size doesn't matter
+```js
+const user = usersById[id];        // hash/dict lookup
+arr.length;                        // already stored
+arr.push(x);                       // append to end
+```
+Whether the map has 10 or 10 million entries, it's one step. This is your goal for lookups.
+
+## O(log n) — logarithmic: each step halves the problem
+```js
+// binary search in a SORTED array
+arr.indexOf(x)   // ❌ this is O(n), scans linearly
+// vs a real binary search, or a DB index lookup (B-tree)
+```
+A million items → ~20 steps. A billion → ~30. This is why **database indexes** matter so much: without one, a query scans every row (O(n)); with one, it's O(log n). Same query, wildly different cost.
+
+## O(n) — linear: touch each item once
+```js
+arr.filter(x => x.active);         // one pass
+arr.includes(x);                   // scan until found
+total = arr.reduce((a, b) => a + b);
+```
+Double the data, double the time. Totally fine and often unavoidable — you have to read the data to process it.
+
+## O(n log n) — the "good sort"
+```js
+arr.sort((a, b) => a - b);         // built-in sorts are here
+```
+This is essentially the floor for general-purpose sorting. When you see it, it usually means "sorting or a divide-and-conquer algorithm" — and that's a fine place to be.
+
+## O(n²) — quadratic: the classic trap 🚨
+```js
+// find duplicates the naive way
+for (const a of arr) {
+  for (const b of arr) {           // nested loop over the SAME data
+    if (a !== b && a.id === b.id) ...
+  }
+}
+```
+This is the one that silently kills you. 100 items = 10,000 operations (instant). 100,000 items = 10 billion (your server hangs). **The fix is almost always a hash set/map** to turn the inner loop into O(1):
+```js
+const seen = new Set();
+for (const a of arr) {             // now O(n)
+  if (seen.has(a.id)) ...;
+  seen.add(a.id);
+}
+```
+The other common real-world version: an **N+1 query** — looping over rows and firing one DB query per row. Same shape, same pain.
+
+## O(2ⁿ) / O(n!) — exponential: only on tiny inputs
+```js
+// naive recursive Fibonacci — recomputes everything
+function fib(n) { return n < 2 ? n : fib(n-1) + fib(n-2); }
+```
+`fib(50)` will hang. You'll mostly meet these in "try every combination" problems (brute-forcing passwords, the traveling-salesman). If you see this on real-sized input, you need a fundamentally different approach (caching/memoization, dynamic programming).
+
+---
+
+### How to actually use this day-to-day
+
+- **It's about growth, not stopwatch time.** O(n²) on 10 items beats O(n) on 10 million. Big-O only tells you who wins *as data grows* — for tiny, fixed inputs, simplest code wins.
+- **Constants are dropped on purpose.** Two passes over an array is `O(2n)` → just `O(n)`. Big-O ignores the 2 because it's about the *shape* of the curve, not the exact count.
+- **The practical smell test:** see a **loop inside a loop over the same data**? That's O(n²) — ask if a `Set`/`Map` can flatten it. See a query **inside a loop**? That's an N+1 — batch it into one query.
+- **Most performance wins in real code are one of two moves:** (1) replace a linear scan with a hash lookup, or (2) add a database index. Both turn an O(n) into O(1)/O(log n).
+
+Want me to work through optimizing a specific piece of code you have, or go deeper on any one of these (space complexity, or why hash lookups are "O(1)")?

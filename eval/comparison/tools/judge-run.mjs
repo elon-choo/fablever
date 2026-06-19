@@ -129,9 +129,11 @@ async function runTask(t) {
   const prompt = rubric(Q[t.id], ansA, ansB);
   const v = t.judge === 'gemini' ? await callGemini(prompt) : await callGPT(prompt);
   const rec = { id: t.id, k: t.k, order: t.order, judge: t.judge, slot1_arm, ok: !!v, verdict: v };
-  if (v) { rec.winner_arm = (v.overall_winner === 'A') ? slot1_arm : (slot1_arm === 'A0' ? 'A1' : 'A0'); }
-  fs.writeFileSync(t.outf, JSON.stringify(rec));
-  done++; if (done % 20 === 0 || !v) console.log(`[${done}/${tasks.length}] ${t.id} k${t.k} o${t.order} ${t.judge} -> ${rec.winner_arm || 'FAIL'}`);
+  if (v) {
+    rec.winner_arm = (v.overall_winner === 'A') ? slot1_arm : (slot1_arm === 'A0' ? 'A1' : 'A0');
+    fs.writeFileSync(t.outf, JSON.stringify(rec)); // only persist successes -> retries re-attempt failures
+  }
+  done++; if (done % 20 === 0 || !v) console.log(`[${done}/${tasks.length}] ${t.id} k${t.k} o${t.order} ${t.judge} -> ${rec.winner_arm || 'FAIL(no file)'}`);
 }
 
 async function pool(items, conc) {

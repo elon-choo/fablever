@@ -1,0 +1,44 @@
+The short version: keep config in `process.env`, load it from a `.env` file locally, set real environment variables on the platform in prod, and never commit secrets. Don't branch on `NODE_ENV` to decide *which secret to use* — let the environment supply the value and keep your code identical everywhere.
+
+Here's how that breaks down.
+
+**Loading locally.** As of Node 20.6+ there's a built-in flag, so you often don't need a dependency at all:
+
+```bash
+node --env-file=.env app.js
+```
+
+If you support older Node or want layered files (`.env`, `.env.local`), `dotenv` is still the standard:
+
+```js
+import 'dotenv/config'; // or require('dotenv').config()
+```
+
+**In production, don't ship a `.env` file.** Set real environment variables through whatever runs your app — the host's dashboard (Vercel/Render/Railway/Fly), `docker run -e` / compose `environment:`, Kubernetes secrets, systemd `Environment=`, or your CI/CD secret store. The app reads `process.env` the same way; only the source differs. This keeps prod secrets out of the filesystem and out of git.
+
+**Git hygiene.** Commit a `.env.example` with the *keys* and dummy values so collaborators know what's required, and gitignore the real ones:
+
+```
+# .gitignore
+.env
+.env.local
+.env.*.local
+```
+
+**Validate at startup.** The most common production failure is a missing or malformed variable discovered at request time. Parse and validate once when the process boots so it crashes loudly and immediately if something's wrong. `zod` or `envalid` both work well:
+
+```js
+import { z } from 'zod';
+
+const env = z.object({
+  DATABASE_URL: z.string().url(),
+  PORT: z.coerce.number().default(3000),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+}).parse(process.env);
+
+export default env; // import this everywhere instead of touching process.env directly
+```
+
+**A few things to avoid:** don't hardcode `if (NODE_ENV === 'production')` to pick different credentials — supply the right value per environment instead, so prod and local exercise the same code path. Don't read `process.env` scattered across the codebase; centralize it in one validated module. And treat `NODE_ENV` as *only* a mode flag (it affects framework optimizations), not a general-purpose "am I in prod" switch — use a separate variable like `APP_ENV` if you need finer-grained environments (staging, preview, etc.).
+
+If you tell me your deployment target, I can give the exact way to wire secrets in for that platform.

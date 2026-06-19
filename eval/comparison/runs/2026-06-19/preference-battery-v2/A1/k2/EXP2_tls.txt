@@ -1,0 +1,34 @@
+HTTPS is just HTTP running inside a TLS tunnel. TLS gives the connection three guarantees at once — **confidentiality** (eavesdroppers see only ciphertext), **integrity** (tampering is detected), and **authentication** (you're really talking to the server named in the URL, not an imposter). Here's how it actually delivers those.
+
+## The core trick: asymmetric crypto bootstraps symmetric crypto
+
+Public-key (asymmetric) cryptography is mathematically elegant but slow — too slow to encrypt a video stream. Symmetric crypto (one shared key for both encrypt and decrypt) is fast but has a chicken-and-egg problem: how do two strangers agree on a secret key over a wire that an attacker is watching?
+
+TLS solves this by using asymmetric crypto **only to agree on a shared symmetric key**, then encrypting all real traffic with that fast symmetric key. The handshake is the part that does the bootstrapping.
+
+## The handshake (TLS 1.3, the modern version)
+
+1. **ClientHello** — your browser sends the TLS versions and cipher suites it supports, a random nonce, and a *key share*: an ephemeral Diffie-Hellman public value it just generated.
+
+2. **ServerHello** — the server picks a cipher, sends its own random nonce and its own ephemeral DH key share, plus its **certificate** and a **signature** over the handshake so far.
+
+3. **Shared secret via Diffie-Hellman** — this is the magic. Each side combines *its own private value* with *the other side's public value* and independently arrives at the **same** secret number. That secret is never transmitted — an eavesdropper sees both public shares but cannot derive the secret from them (the discrete-log problem). From this secret, both sides derive the symmetric session keys.
+
+4. **Authentication** — encryption alone would still let an attacker sit in the middle and key-exchange with you while pretending to be the bank. The certificate stops that. The server's certificate contains its public key and is **signed by a Certificate Authority (CA)**, which is signed by another, up to a root CA your operating system or browser already trusts. Your client verifies that signature chain, checks the certificate's hostname matches the URL, checks it hasn't expired, and checks revocation status. Then the server **signs the handshake transcript** with the private key matching its certificate — proving it actually holds that key and isn't just replaying someone else's certificate.
+
+5. **Finished** — both sides confirm they derived identical keys, and application data starts flowing.
+
+## After the handshake
+
+All HTTP data is now encrypted with a symmetric **AEAD** cipher (Authenticated Encryption with Associated Data — typically AES-GCM or ChaCha20-Poly1305). AEAD does two jobs in one: it encrypts (confidentiality) and attaches an authentication tag (integrity). If even one byte is flipped in transit, the tag fails to verify and the connection is torn down rather than delivering corrupted or attacker-injected data.
+
+## Why this resists the obvious attacks
+
+- **Passive eavesdropper** — sees only ciphertext and the two public DH shares, which don't reveal the secret.
+- **Man-in-the-middle** — can relay messages, but cannot forge a CA-signed certificate for the real hostname, so the certificate check fails and the browser warns you.
+- **Tampering / replay** — AEAD tags plus the per-connection nonces and sequence numbers make modified or replayed records detectable.
+- **Future key compromise** — because the DH keys are *ephemeral* (fresh per connection and thrown away), recording today's traffic and stealing the server's private key later still doesn't decrypt it. This property is **forward secrecy**, and TLS 1.3 mandates it.
+
+One worthwhile contrast: older TLS 1.2 often used RSA key exchange, where the client encrypted the secret with the server's public key and sent it. That worked but had no forward secrecy — one stolen private key decrypted all past recorded sessions. TLS 1.3 removed that mode entirely and requires ephemeral Diffie-Hellman, which is the single biggest security improvement between the two versions.
+
+So the short version: **TLS authenticates the server with certificates, agrees on a secret nobody can overhear using Diffie-Hellman, and then uses that secret with a fast authenticated cipher to keep every byte both private and tamper-evident.**

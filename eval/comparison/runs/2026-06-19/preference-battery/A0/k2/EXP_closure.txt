@@ -1,0 +1,69 @@
+# Closures in JavaScript
+
+A **closure** is a function that "remembers" the variables from the scope where it was *created*, even after that outer scope has finished executing. In other words, the inner function keeps a live reference to its surrounding variables — it carries its environment with it.
+
+Three things make it work:
+1. Functions in JS can be nested.
+2. An inner function can access variables from its outer function.
+3. The inner function can outlive the outer function (e.g. by being returned or passed as a callback), and it still keeps access to those variables.
+
+## Practical example: a private counter
+
+```javascript
+function createCounter() {
+  let count = 0; // private — not accessible from outside
+
+  return {
+    increment() { count += 1; return count; },
+    decrement() { count -= 1; return count; },
+    value()     { return count; },
+  };
+}
+
+const counter = createCounter();
+counter.increment(); // 1
+counter.increment(); // 2
+counter.decrement(); // 1
+counter.value();     // 1
+
+console.log(counter.count); // undefined — can't touch it directly
+```
+
+`createCounter()` has already returned, yet the three methods still share and mutate the same `count`. That `count` lives on *only* because the returned functions close over it. This is the classic way to get **data privacy** before `#private` class fields existed.
+
+## Why it matters in practice
+
+**1. Function factories** — bake in a parameter once, reuse the result:
+
+```javascript
+function multiplier(factor) {
+  return (n) => n * factor; // closes over `factor`
+}
+
+const double = multiplier(2);
+const triple = multiplier(3);
+double(5); // 10
+triple(5); // 15
+```
+
+**2. A common gotcha — `var` in loops:**
+
+```javascript
+// Bug: all three log 3, because `var` is shared across iterations
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 100); // 3, 3, 3
+}
+
+// Fix: `let` creates a new binding each iteration
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 100); // 0, 1, 2
+}
+```
+
+Each callback closes over `i`. With `var` there's one shared `i` (which is `3` by the time the timeouts fire); with `let` each loop iteration gets its own `i`.
+
+## The mental model
+
+> A closure = **function + the variables it had access to when it was defined.**
+
+Whenever you see a function returned from another function, stored as an event handler, or passed to `setTimeout`/`map`/`then`, it's likely a closure holding onto its birthplace's variables.

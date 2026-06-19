@@ -1,0 +1,13 @@
+On macOS:
+
+```bash
+lsof -ti :8080 | xargs kill
+```
+
+`lsof -ti :8080` prints just the PID(s) listening on that port, and `xargs kill` sends them a TERM signal. If a process refuses to die, force it with `kill -9`:
+
+```bash
+lsof -ti :8080 | xargs kill -9
+```
+
+If nothing is listening, `lsof` outputs nothing and `xargs` runs no command (harmless). To see what you'd be killing first, run `lsof -i :8080` on its own.

@@ -1,0 +1,28 @@
+Use the promise-based API — Node ships one, so you don't need to wrap anything yourself.
+
+```js
+import { readFile } from 'node:fs/promises';
+
+const data = await readFile('file.txt', 'utf8');
+```
+
+Or with CommonJS `require`:
+
+```js
+const { readFile } = require('node:fs/promises');
+const data = await readFile('file.txt', 'utf8');
+```
+
+If you're stuck with a callback-style function that has no promise variant (some third-party libs), wrap it once with `util.promisify`:
+
+```js
+const { promisify } = require('node:util');
+const fs = require('node:fs');
+
+const readFile = promisify(fs.readFile);
+const data = await readFile('file.txt', 'utf8');
+```
+
+A few notes: the `await` has to be inside an `async` function (or at the top level of an ES module). Pass the encoding (`'utf8'`) to get a string back; omit it and you get a `Buffer`. And wrap the call in `try/catch` to handle read errors, since the rejected promise throws.
+
+For `fs.readFile` specifically, prefer `node:fs/promises` over `promisify` — it's the built-in promise API and avoids the extra wrapper.

@@ -1,0 +1,24 @@
+A database index is a separate data structure that stores a sorted (or hashed) copy of one or more columns, along with pointers back to the actual rows. It exists to make lookups fast: instead of scanning every row to find matches (a "full table scan"), the database walks the index — usually a B-tree — and jumps straight to the rows it needs. The trade-off is that the index takes extra disk space and has to be updated on every insert, update, and delete, so it speeds up reads at the cost of slower writes and more storage.
+
+A useful mental model is the index at the back of a book. Without it, finding every mention of a topic means reading every page. With it, you look up the term alphabetically and get the page numbers directly. The database index is the same idea, kept automatically in sync with the table.
+
+**When to add one**
+
+- **Columns you filter on frequently** — anything that shows up in a `WHERE` clause a lot, like `WHERE email = ?` or `WHERE status = 'active'`.
+- **Join columns** — foreign keys used to join tables. These are queried constantly and often aren't indexed automatically (the primary key side usually is; the foreign key side usually isn't).
+- **Columns you sort or group by** — `ORDER BY created_at` or `GROUP BY user_id` can use an index to avoid sorting the whole result set.
+- **Uniqueness constraints** — a unique index both enforces "no duplicates" and speeds up the lookup.
+- **Large tables** — indexes matter most when there are many rows. On a table with a few hundred rows, a full scan is already fast and an index buys you little.
+
+**When to skip or be cautious**
+
+- **Small tables** — the overhead isn't worth it; the database may scan anyway.
+- **Write-heavy tables with few reads** — every index slows down inserts and updates, so don't index speculatively.
+- **Low-cardinality columns** — a column with only a couple of distinct values (like a boolean `is_deleted`) often doesn't benefit, because the index can't narrow things down much. Composite or partial indexes sometimes help here instead.
+- **Redundant indexes** — an index on `(a, b)` already covers queries that filter on `a` alone, so you don't also need a separate index on `a`.
+
+**A couple of things worth knowing once you're past the basics:**
+
+Column order matters in a multi-column (composite) index. An index on `(last_name, first_name)` helps queries that filter on `last_name` alone or on both, but not queries that filter on `first_name` alone. Put the column you filter on most selectively first.
+
+The practical workflow is: don't guess. Write your queries, then use `EXPLAIN` (or `EXPLAIN ANALYZE` in Postgres) to see whether a query is doing a sequential scan on a column it shouldn't be. Add the index, re-check the plan, and confirm the scan turned into an index lookup. That keeps you from adding indexes you don't need, which is the most common mistake — every unused index is pure write-time and storage cost with no payoff.

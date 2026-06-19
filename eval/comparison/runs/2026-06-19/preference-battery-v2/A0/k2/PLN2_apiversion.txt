@@ -1,0 +1,53 @@
+Good news: most API changes don't actually require a new version. The plan is to make breaking changes *rare and explicit*, and absorb everything else through backward-compatible evolution. Here's the playbook.
+
+## 1. First, decide what counts as "breaking"
+This is your contract — write it down and put it in CI.
+
+**Non-breaking (ship freely, no version bump):**
+- Adding a new endpoint or a new *optional* request field/param
+- Adding a new field to a response
+- Relaxing a validation rule
+- Adding a new optional header
+
+**Breaking (requires a new version):**
+- Removing or renaming a field/endpoint/param
+- Changing a field's type, format, or units
+- Making an optional field required, or tightening validation
+- Changing default values or error codes/semantics
+- Adding a new *enum value* if clients do strict matching (subtle — treat as breaking unless you've documented "ignore unknown values")
+
+## 2. Adopt the "tolerant reader" contract up front
+Document explicitly that **clients must ignore unknown fields** and not break on additive changes. This one rule is what lets you evolve without versioning at all. Most well-run public APIs (Stripe, GitHub) lean heavily on it.
+
+## 3. Pick a versioning scheme — recommendation: major version in the URL path
+| Scheme | Example | Verdict |
+|---|---|---|
+| **URL path** | `/v1/orders` | **Default choice** — visible, cache-friendly, trivial to test/route |
+| Header / media-type | `Accept: application/vnd.acme.v2+json` | Cleaner URLs, but harder to debug; use if you dislike version in path |
+| Date pinning (Stripe-style) | client sends `Api-Version: 2026-06-19` | Best at scale — pin per-client, transform old shapes server-side. More infra |
+
+Only expose the **major** version (`v1`, `v2`). Minor/additive changes never get a number — they just ship. Bump to `v2` *only* for genuine breaking changes.
+
+## 4. The rollout playbook (expand → migrate → contract)
+This is how you change a live API without an outage:
+1. **Expand** — add the new field/endpoint/version *alongside* the old. Nothing is removed.
+2. **Dual-run** — old and new coexist. Ideally implement the old version as a thin **adapter over your new internal model** so you don't fork business logic.
+3. **Deprecate** — announce it. Emit HTTP `Deprecation` and `Sunset` headers (RFC 8594), update the changelog, set a retirement date.
+4. **Migrate** — give clients a real window (public APIs usually 6–12 months). Track who's still on the old path.
+5. **Contract** — remove the old version only after usage hits ~zero.
+
+## 5. Guardrails that make this safe
+- **Pin existing clients; never auto-upgrade them.** New clients get the current version; existing clients stay on whatever they integrated against. Silent "latest" defaults are the #1 cause of surprise breakage.
+- **Per-version usage metrics** (attributed by API key) — you cannot safely retire a version you can't measure.
+- **Breaking-change detection in CI** — diff your schema on every PR: `oasdiff`/`openapi-diff` for OpenAPI, `buf breaking` for Protobuf/gRPC. Fail the build on an unintended break.
+- **Consumer-driven contract tests** (e.g. Pact) if you have known major integrators.
+
+## Transport-specific note
+- **REST/HTTP** → exactly as above.
+- **GraphQL** → don't version the endpoint; use field-level `@deprecated` and additive schema evolution (this is GraphQL's whole model).
+- **gRPC/Protobuf** → never reuse field numbers, only add fields, use `buf breaking` — the wire format is designed for this.
+- **Library/SDK** → SemVer proper; breaking change = major bump, with deprecation shims for one major cycle.
+
+---
+
+If you tell me the **transport** (REST, GraphQL, gRPC, or a client library) and whether you're setting up a scheme from scratch vs. about to make one specific breaking change, I'll turn this into concrete steps — schema diff config, the exact deprecation headers, and an adapter sketch for your stack.

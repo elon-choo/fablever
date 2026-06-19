@@ -1,0 +1,74 @@
+They're the same thing under the hood — `async/await` is syntax sugar over Promises. That's the key point most explanations bury. There is no separate "async mechanism"; an `async` function *returns* a Promise, and `await` just unwraps one. So the question isn't really "which is faster/better" — it's "which spelling of the same machinery reads better here."
+
+Here's where the actual differences show up in practice:
+
+## 1. Control flow reads like synchronous code
+
+```js
+// Promises
+function getUser(id) {
+  return fetch(`/users/${id}`)
+    .then(res => res.json())
+    .then(user => fetch(`/orders/${user.orderId}`))
+    .then(res => res.json());
+}
+
+// async/await
+async function getUser(id) {
+  const res = await fetch(`/users/${id}`);
+  const user = await res.json();
+  const orders = await fetch(`/orders/${user.orderId}`);
+  return orders.json();
+}
+```
+
+Both do the identical thing. The `await` version wins when later steps depend on earlier values — no nesting, no threading variables through `.then` closures.
+
+## 2. Error handling
+
+`await` lets you use normal `try/catch`, including mixing sync and async errors in one block:
+
+```js
+try {
+  const user = await getUser(id);
+  doSomethingSync(user);   // sync throw caught here too
+} catch (err) {
+  // both await rejections AND sync throws land here
+}
+```
+
+With raw Promises you use `.catch()`, which only catches Promise rejections — a synchronous throw elsewhere needs separate handling.
+
+## 3. The trap: `await` serializes things that could run in parallel
+
+This is the real gotcha, and where "just use async/await everywhere" bites people:
+
+```js
+// SLOW — b waits for a even though they're independent
+const a = await fetchA();
+const b = await fetchB();
+
+// FAST — both fire immediately, then await together
+const [a, b] = await Promise.all([fetchA(), fetchB()]);
+```
+
+`await` pauses the function at each statement. If two operations don't depend on each other, sequential `await`s waste time. Here you reach back for the Promise API (`Promise.all`, `Promise.race`, `Promise.allSettled`) — `async/await` has no equivalent. **You use both together:** start the Promises eagerly, `await` the combinator.
+
+## 4. Where plain Promises are still the better tool
+
+- **Fire-and-forget / not awaiting in the current function** — passing a Promise around, storing it, attaching `.then` later.
+- **Combinators** — `Promise.all/race/any/allSettled` have no syntactic equivalent.
+- **Top-level in non-async contexts** (though top-level `await` now exists in ES modules).
+- **A single transformation** — `doThing().then(format)` is sometimes cleaner than wrapping in an `async` IIFE.
+
+## Mental model
+
+| | Promise | async/await |
+|---|---|---|
+| What it is | the object representing a future value | syntax for producing/consuming that object |
+| Returns | a Promise | a Promise (always) |
+| Errors | `.catch()` | `try/catch` |
+| Parallelism | `Promise.all` etc. | must still call `Promise.all` |
+| Best for | combinators, fire-and-forget | sequential dependent steps |
+
+**Bottom line:** `async/await` is for *consuming* Promises readably when steps are sequential; the Promise API is for *composing* concurrency. They're not competitors — idiomatic code uses `async` functions that call `Promise.all` inside. The one thing to internalize is #3: every `await` is a potential point where you accidentally made concurrent work sequential.

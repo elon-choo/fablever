@@ -1,0 +1,21 @@
+On macOS:
+
+```bash
+lsof -ti :8080 | xargs kill
+```
+
+- `lsof -ti :8080` lists just the PID(s) listening on that port (`-t` = terse/PID-only).
+- `xargs kill` sends them `SIGTERM`.
+
+If a process won't die gracefully, force it:
+
+```bash
+lsof -ti :8080 | xargs kill -9
+```
+
+Quick variants:
+- **See what it is first** (recommended before killing): `lsof -i :8080`
+- **One-liner with guard** (avoids `xargs` erroring on no match): `kill $(lsof -ti :8080)`
+- **Newer macOS / Linux alt:** `fuser -k 8080/tcp`
+
+Want me to run it?

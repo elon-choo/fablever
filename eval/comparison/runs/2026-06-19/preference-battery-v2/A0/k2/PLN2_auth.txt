@@ -1,0 +1,37 @@
+It looks like the question prompt got dismissed without an answer — no problem. Let me give you a concrete default plan so you're not stuck, and you can correct any assumption.
+
+First, the blocker: **I couldn't find your app's code.** The working directory (`/private/tmp`) is just a scratch folder. Point me at the repo (a path, or `cd` into it) and I can make this plan specific instead of generic.
+
+## Recommended default plan
+
+Absent other info, the fastest safe path for most apps is **a managed auth provider** rather than hand-rolling password hashing and sessions (that's where security bugs live). Here's the shape:
+
+**1. Pick a provider based on your stack**
+- Next.js / full-stack JS → **Clerk** or **Supabase Auth** (drop-in UI components)
+- SPA + your own API → **Auth0** or **Supabase Auth**
+- Already on Firebase/Supabase → use their built-in auth
+
+**2. Wire up the core flows**
+- **Signup** — email + password, with email verification
+- **Login** — credentials + "Sign in with Google" (social is cheap to add via a provider, high user value)
+- **Password reset** — forgot-password email flow (provider handles the token security)
+- **Session handling** — provider issues a session/JWT; protect your routes/pages with it
+
+**3. App integration**
+- Add `<SignIn>` / `<SignUp>` screens (or the provider's hosted pages)
+- Add an auth guard/middleware for protected routes
+- Add a "logged-in user" context + sign-out button
+- Store the provider's user ID on your own records so your DB rows link to the authed user
+
+**4. Before shipping**
+- Verify the full flow end-to-end (signup → verify email → login → reset → logout)
+- Lock down protected API endpoints server-side (never trust the client)
+
+---
+
+To turn this into real steps with file paths, I need two things from you:
+
+1. **Where's the app?** (repo path)
+2. **Build-your-own or managed provider?** And do you want just email/password, or social/magic-link too?
+
+Tell me those and I'll tailor it — or if you'd rather, I can spin up a proper architecture plan once I can see the code.

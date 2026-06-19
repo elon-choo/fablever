@@ -1,0 +1,34 @@
+Vitest. For a new TypeScript project starting today, it's the better default.
+
+The short reasoning:
+
+**Why Vitest wins for greenfield TS**
+- **Native ESM + TypeScript** out of the box. No `ts-jest` transformer config, no `babel-jest`, no fighting `moduleNameMapper` for path aliases. It reads your `tsconfig.json` paths via Vite's resolver.
+- **Speed.** Watch mode is near-instant because it reuses Vite's transform pipeline and only re-runs affected tests. This is the most noticeable day-to-day difference.
+- **Jest-compatible API.** `describe`/`it`/`expect`, `vi.fn()` instead of `jest.fn()`, mostly drop-in. If you know Jest, there's almost no learning curve.
+- **One toolchain** if you're already using Vite (or any Vite-based framework — Vue, SvelteKit, modern React, Astro). Same config, same plugins.
+
+**When to pick Jest instead**
+- You're in a **React Native / Expo** project — Jest is the supported default there and Vitest's RN story is rough.
+- You're working in an **existing Jest codebase** or org standard — consistency beats marginal gains.
+- You depend on a **mature plugin/library that assumes Jest internals** (some older snapshot or serializer tooling).
+
+For a clean new TypeScript project with no React Native constraint, Vitest. Setup is roughly:
+
+```bash
+npm i -D vitest
+```
+
+```ts
+// vitest.config.ts
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    globals: true,        // optional: use describe/it/expect without imports
+    environment: 'node',  // or 'jsdom' / 'happy-dom' for DOM tests
+  },
+})
+```
+
+If you tell me what the project is (Node backend, React frontend, library, CLI), I can narrow the config — but the default answer is Vitest.

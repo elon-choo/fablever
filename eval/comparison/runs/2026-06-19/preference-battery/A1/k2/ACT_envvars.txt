@@ -1,0 +1,49 @@
+The short answer: don't hand-roll it. Use environment variables loaded from `.env` files that are **not** committed, keep a committed `.env.example` as the template, and validate everything at startup so a missing var fails loudly instead of surfacing as a weird bug in prod.
+
+Here's the setup I'd recommend.
+
+**Loading.** On Node 20.6+ you don't need the `dotenv` package at all — Node has it built in:
+
+```bash
+node --env-file=.env app.js
+```
+
+You can pass multiple files, and later ones override earlier ones, which is exactly the local-vs-prod pattern:
+
+```bash
+node --env-file=.env --env-file=.env.local app.js
+```
+
+If you're on older Node or want programmatic control, `dotenv` is still the standard and works the same way.
+
+**File layout.** The convention that scales well:
+
+- `.env` — shared defaults, safe-ish, committed *only* if it has no secrets (often gitignored too)
+- `.env.local` — your machine's overrides and secrets, **gitignored**
+- `.env.example` — committed template with every key present but values blank or fake, so a new dev knows what to fill in
+- Add `.env`, `.env.local`, `.env.*.local` to `.gitignore`
+
+**Prod is different — don't ship a `.env` file.** In production, inject the values through the platform's real environment (Docker/Kubernetes secrets, your host's config, a secrets manager like AWS Secrets Manager / Vault). The app reads `process.env` the same way; the *source* changes. The mental model that keeps you out of trouble: local reads from a file, prod reads from the environment, and your code never knows the difference.
+
+**Validate at boot.** This is the part most people skip and regret. Parse and type-check `process.env` once at startup with a schema so the process crashes immediately on a missing or malformed var:
+
+```js
+// env.js
+import { z } from "zod";
+
+const env = z
+  .object({
+    NODE_ENV: z.enum(["development", "production", "test"]),
+    PORT: z.coerce.number().default(3000),
+    DATABASE_URL: z.string().url(),
+  })
+  .parse(process.env);
+
+export default env;
+```
+
+Then import `env` everywhere instead of reaching into `process.env` directly. You get one source of truth, real types (note `PORT` is a number, not a string), and a clear crash message naming the missing key.
+
+A few things to avoid: don't switch behavior on `NODE_ENV` for anything other than dev/prod build concerns — drive features off explicit vars instead; never commit real secrets even briefly (rotate immediately if you do); and don't read `process.env` scattered across the codebase, since that's how a typo'd key silently becomes `undefined`.
+
+If you tell me your runtime (plain Node, Next.js, Docker, a specific host) I can give the exact `.gitignore` lines and load order for that case.

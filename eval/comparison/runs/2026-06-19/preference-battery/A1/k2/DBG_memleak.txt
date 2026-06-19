@@ -1,0 +1,38 @@
+The reliable method is heap snapshot diffing: capture two or three snapshots while the process grows, compare them, and look at what's accumulating. Everything else is narrowing down where to point that. Here's the sequence I'd actually follow.
+
+**1. First confirm it's a JS heap leak, not native/RSS growth.** Log `process.memoryUsage()` on an interval:
+
+```js
+setInterval(() => {
+  const m = process.memoryUsage();
+  console.log(JSON.stringify({
+    rss: m.rss, heapUsed: m.heapUsed, heapTotal: m.heapTotal, external: m.external
+  }));
+}, 30_000);
+```
+
+If `heapUsed` climbs steadily, it's a V8 heap leak and snapshots will find it. If `rss` and `external` grow while `heapUsed` stays flat, the leak is in native memory (Buffers, native addons, ArrayBuffers) and snapshots won't show it — that's a different hunt (Buffer accumulation, a leaking C++ addon, or fragmentation).
+
+**2. Auto-capture a snapshot right before it dies.** This flag dumps a heap snapshot when V8 approaches the limit, so you catch the process in its leaked state without babysitting it:
+
+```bash
+node --heapsnapshot-near-heap-limit=2 --max-old-space-size=512 app.js
+```
+
+Lowering `--max-old-space-size` makes it OOM in minutes instead of hours, which tightens the loop a lot.
+
+**3. Better: take snapshots at intervals and diff them.** A single near-death snapshot tells you what's big; comparing two snapshots taken an hour apart tells you what's *growing*, which is what you actually want. Either trigger manually:
+
+```js
+const v8 = require('v8');
+// call this on a signal or timer, e.g. at T=10min and T=70min
+v8.writeHeapSnapshot(`/tmp/heap-${Date.now()}.heapsnapshot`);
+```
+
+or attach with `node --inspect` and use Chrome DevTools → Memory tab.
+
+**4. Load the snapshots in Chrome DevTools and use the Comparison view.** Open `chrome://inspect` → "Open dedicated DevTools for Node" → Memory → Load both `.heapsnapshot` files → switch the dropdown to **Comparison**, base = earlier snapshot. Sort by "Delta" or "# New". The constructor with a large positive delta that keeps climbing across snapshots is your leak. Click into it and use the **Retainers** pane at the bottom — that shows the reference chain holding the objects alive, which points straight at the offending code.
+
+**What you're usually looking for**, in rough order of likelihood: an unbounded `Map`/array/cache that only ever gets `.set`/`.push` and never evicted; event listeners added per-request without removal (Node prints a `MaxListenersExceededWarning` for this — run with `--trace-warnings` to get the stack); closures captured by long-lived timers or global handlers; or sockets/streams/DB connections that aren't being closed.
+
+If you can share what the process does (HTTP server, worker, queue consumer?) and whether `heapUsed` or `rss` is the one growing, I can point you at the likely culprit faster.

@@ -1,0 +1,54 @@
+This is the classic **silently-swallowed exception** anti-pattern. The `await` means `doWork()` can reject for any reason — network failure, bug, bad input — and the empty `catch` discards all of it. Here's what's wrong and how to fix it.
+
+## Problems
+
+1. **No diagnostics.** When something breaks in production, there's zero trace. No log, no stack, no signal. You'll be debugging blind.
+2. **Hides real bugs.** A `TypeError` from a typo or a programming error gets swallowed exactly like an expected network blip. You lose the ability to distinguish "expected, recoverable" from "this should never happen."
+3. **Lies about success.** Code after this block proceeds as if `doWork()` succeeded. If later logic depends on its side effects, you get silent data corruption or cascading failures far from the root cause.
+4. **Unconditional catch.** It catches *everything*, including things you probably don't want to suppress (e.g. cancellation/`AbortError`, out-of-memory).
+
+## When "ignore" is actually legitimate
+
+Rarely — but it does happen (best-effort cleanup, optional telemetry). The rule: **silence must be a deliberate, documented decision, not a default.**
+
+```js
+try {
+  await flushMetrics();
+} catch (err) {
+  // Telemetry is best-effort; failing to flush must not break the request path.
+  logger.debug('metrics flush failed (non-fatal)', err);
+}
+```
+
+The difference is the comment explains *why* it's safe to continue, and it still leaves a breadcrumb.
+
+## Better defaults
+
+**Log and rethrow** if the caller can't actually recover:
+```js
+try {
+  await doWork();
+} catch (err) {
+  logger.error('doWork failed', err);
+  throw err; // let it propagate to a real handler
+}
+```
+
+**Handle specifically** if you can recover, and narrow what you catch:
+```js
+try {
+  await doWork();
+} catch (err) {
+  if (err instanceof TransientNetworkError) {
+    await retryWithBackoff(doWork);
+  } else {
+    throw err; // don't swallow unexpected errors
+  }
+}
+```
+
+## Bottom line
+
+As written, this is a latent-bug factory: it converts every failure into a silent no-op. At minimum, **log the error**. Prefer to **rethrow or handle a specific error type**. Only suppress when you can articulate, in a comment, why continuing is safe — and even then, leave a log line.
+
+Want me to look at the surrounding code so I can suggest the right fix for this specific call site rather than the general case?

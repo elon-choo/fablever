@@ -1,0 +1,78 @@
+A closure is a function that "remembers" the variables from the scope where it was created, even after that outer scope has finished running. In JavaScript, every function keeps a live reference to the variables it was defined alongside — so those variables stay alive as long as the inner function does.
+
+Here's the mechanism in a nutshell, then a practical use.
+
+```javascript
+function makeCounter() {
+  let count = 0;              // local to makeCounter
+
+  return function () {        // this inner function is the closure
+    count += 1;
+    return count;
+  };
+}
+
+const counter = makeCounter();
+counter(); // 1
+counter(); // 2
+counter(); // 3
+```
+
+`makeCounter` has already returned by the time you call `counter()`, yet `count` isn't gone. The returned function closed over `count`, so it holds a private, persistent reference to it. Each `makeCounter()` call creates a fresh `count`, so two counters don't interfere:
+
+```javascript
+const a = makeCounter();
+const b = makeCounter();
+a(); // 1
+a(); // 2
+b(); // 1  — independent
+```
+
+**A practical example: private state without a class.** Say you want a small module that manages a bank balance but doesn't let outside code reach in and set the balance directly.
+
+```javascript
+function createAccount(initial) {
+  let balance = initial;     // truly private — no outside access
+
+  return {
+    deposit(amount) {
+      balance += amount;
+      return balance;
+    },
+    withdraw(amount) {
+      if (amount > balance) throw new Error("Insufficient funds");
+      balance -= amount;
+      return balance;
+    },
+    getBalance() {
+      return balance;
+    },
+  };
+}
+
+const account = createAccount(100);
+account.deposit(50);   // 150
+account.withdraw(30);  // 120
+account.getBalance();  // 120
+account.balance;       // undefined — can't touch it directly
+```
+
+All three methods share the same `balance` through closure. There's no way to mutate `balance` except through `deposit` and `withdraw`, which is exactly the encapsulation you'd otherwise reach for a class and `#private` fields to get.
+
+**One common gotcha.** Closures capture the variable, not a snapshot of its value. With `var` in a loop this bites people:
+
+```javascript
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0); // prints 3, 3, 3
+}
+```
+
+All three callbacks closed over the *same* `i`, which is `3` by the time they run. Switching to `let` fixes it, because `let` creates a new binding per iteration:
+
+```javascript
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0); // prints 0, 1, 2
+}
+```
+
+The short version: a closure is a function plus the variable bindings it captured from its birthplace. It's what makes callbacks, event handlers, and module-style private state work in JavaScript.

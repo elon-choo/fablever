@@ -1,0 +1,45 @@
+Good instinct to fix rather than just bump the retry count. Here's the approach I'd take, in order:
+
+## 1. Reproduce it before touching anything
+A flake you can't reproduce is a flake you can't verify fixed. Run the test in a loop locally — say 50–100x — and try to make it fail:
+
+```bash
+# generic: loop until failure
+for i in $(seq 1 100); do <run-one-test> || { echo "FAILED on run $i"; break; }; done
+```
+
+Match CI's conditions as closely as you can — same parallelism, same ordering, same seed. Most "passes locally, fails in CI" cases come from a difference in *how* CI runs the suite, not the machine.
+
+## 2. Isolate: does it fail alone, or only with the suite?
+This single question splits the diagnosis in half:
+
+- **Fails only in the full suite → shared/leaked state or order dependence.** Some other test mutates a global, a DB row, a singleton, the filesystem, env vars, or a cached module, and your test inherits it. Run with randomized order and a fixed seed; bisect which preceding test triggers it.
+- **Fails in isolation too → the test itself is non-deterministic.**
+
+## 3. Match the failure to a root-cause category
+Flakes almost always trace to one of these:
+
+| Cause | Tell-tale sign |
+|---|---|
+| **Async/timing race** | `sleep(500)` waits, polling for a fixed time, asserting before a promise settles |
+| **Order/shared state** | passes alone, fails in suite (see step 2) |
+| **Time & timezone** | breaks at midnight/month-end, near DST, or only in CI's UTC |
+| **Unseeded randomness** | random data, `Math.random`, UUIDs, hash/map iteration order |
+| **External dependency** | real network/service/DB call, port binding, temp file collision |
+| **Resource contention** | only flakes under parallel execution / high load |
+
+## 4. Fix the cause, not the symptom
+- Race → **wait on the condition, not the clock** (poll/await the actual state).
+- Shared state → ensure proper setup/teardown isolation; don't rely on test order.
+- Time → inject a fixed clock.
+- Randomness → seed it, and log the seed on failure so failures are reproducible.
+- External calls → mock/stub them, or pin to a controlled fixture.
+
+Retries and `@flaky` quarantine are legitimate **stopgaps** to unblock the team — but tag them with a tracking issue so they don't become permanent cover for a real bug. A race in a test sometimes mirrors a real race in the product code.
+
+## 5. Verify with the same loop from step 1
+Run the fix the same way you reproduced the failure (100x, CI-matched conditions). No failures = done. If you couldn't reproduce in step 1, you can't claim it's fixed — only that you didn't see it.
+
+---
+
+If you point me at the test and the CI logs (or just paste the failure), I'll diagnose the specific cause and propose the fix — that's usually faster than the general checklist. What's the language/framework and what does the failure look like?

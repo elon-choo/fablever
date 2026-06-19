@@ -1,0 +1,19 @@
+Truncate it in place instead of deleting it. Deleting (`rm`) just removes the directory entry — the process still holds the file descriptor and keeps writing to the now-unlinked inode, so you don't reclaim the space until the process closes or restarts. Truncating keeps the same inode the process is writing to and frees the blocks immediately:
+
+```bash
+truncate -s 0 /path/to/logfile      # explicit, clearest
+# or
+: > /path/to/logfile                 # POSIX shell builtin, no external command
+# or
+> /path/to/logfile                   # same thing, even shorter
+```
+
+Use `sudo` if you don't own the file, e.g. `sudo truncate -s 0 /var/log/app.log` (note that `sudo > file` won't work since the redirect happens as your user — use `truncate` or `sudo tee` for that case).
+
+**The one caveat that bites people:** this is clean only if the process opened the log in *append mode* (`O_APPEND`), which well-behaved loggers do — each write recomputes the end of the file. If the process opened it without append mode and tracks its own write offset, truncating to zero leaves that offset unchanged. The next write lands at the old position and the kernel fills the gap with zeros, giving you a **sparse file** that *looks* huge again (`ls -l` shows the big size) even though it uses few blocks (`du` shows the real usage). It doesn't lose you disk space, but it's confusing.
+
+If you suspect that situation, or you want a guaranteed-clean reset, two options:
+- `cp /dev/null /path/to/logfile` — same in-place truncation effect.
+- Better long-term: use `logrotate` with `copytruncate`, or send the process its log-reopen signal (many daemons reopen on `SIGHUP`) after rotating, so it starts a fresh file from offset zero.
+
+For routine cron-driven log management, `logrotate` is the right tool — it handles rotation, compression, and the reopen signaling for you.

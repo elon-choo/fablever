@@ -1,0 +1,28 @@
+EADDRINUSE means a socket is already bound to the address/port you're trying to `listen()` on. "Nothing obvious is running" is the classic misdirection — the binder is almost always one of these:
+
+**1. A stale copy of your own process is still holding the port.** A previous run crashed, was backgrounded, or a watcher (`nodemon`, `ts-node-dev`) spawned a duplicate. The terminal looks clean but the process is orphaned. Find it:
+```bash
+lsof -nP -iTCP:<PORT> -sTCP:LISTEN     # who is LISTENing (macOS-friendly)
+# kill -9 <PID>
+```
+
+**2. A process manager is respawning it faster than you can kill it.** This is the big one on *your* machine specifically — you run Node under a **PM2/launchd bridge**. When you `kill` the visible node, PM2/launchd's keep-alive immediately restarts it and it re-grabs the port. You'll `lsof` it, kill it, and a new PID is instantly back on the same port. Check:
+```bash
+pm2 list                 # is your app (or the bridge) managed here?
+launchctl list | grep -i node
+```
+Stop it through the manager (`pm2 stop <app>` / unload the launchd plist), not with `kill`.
+
+**3. Another app legitimately owns the port — including macOS itself.** On macOS, **AirPlay Receiver / Control Center grabs ports 5000 and 7000** by default, which bites anyone defaulting their dev server to 5000. Turn it off in System Settings → General → AirDrop & Handoff → AirPlay Receiver, or just use another port. Docker port-forwards are another common silent holder.
+
+**4. Your code binds twice.** Calling `server.listen()` twice, importing a module that auto-listens plus listening yourself, or two server instances sharing one port. The "other" process is *you*.
+
+**5. Unix domain socket, not a TCP port.** If you `listen()` on a socket *path* (e.g. `/tmp/app.sock`), a leftover socket file from an unclean shutdown throws EADDRINUSE. Fix: `fs.unlink` the path on startup, or `rm` it.
+
+**6. Wildcard vs specific-address collision.** One process on `0.0.0.0:3000` (or IPv6 `::`) conflicts with another on `127.0.0.1:3000`. Node sets `SO_REUSEADDR` on `listen`, so TIME_WAIT sockets are *usually* not the cause — suspect an actual live binder first.
+
+---
+
+Quickest triage: tell me the port (or run `lsof -nP -iTCP:<PORT> -sTCP:LISTEN`). If `lsof` shows a PID that **comes back after you kill it**, it's #2 (PM2/launchd) — your environment makes that the most likely culprit. If `lsof` shows nothing at all yet `listen()` still fails, it's almost certainly #5 (stale Unix socket file) or you're checking a different port than the code actually binds.
+
+Want me to run the diagnostic? Just give me the port number.

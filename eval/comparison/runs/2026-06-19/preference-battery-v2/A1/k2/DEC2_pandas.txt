@@ -1,0 +1,13 @@
+Plain Python.
+
+For a small one-off cleaning script, pandas is usually the wrong call:
+
+- **Startup cost dominates.** `import pandas` takes ~0.5–1s; the whole job might be smaller than that. Plain `csv` imports instantly.
+- **Fewer moving parts.** No dependency to install, no version pinning, nothing to break when you run it again in six months. `csv`, `json`, and `re` are in the standard library.
+- **Row-at-a-time logic is clearer in plain Python.** Cleaning rules like "strip whitespace, drop blank rows, fix this one malformed date" read naturally as a loop. Expressing the same conditional fixes as vectorized pandas operations is often more contortion than it's worth.
+
+Reach for pandas when the task actually wants it: the file is big enough that you care about speed, you need group-by/join/pivot aggregation, or you're already in a notebook with it loaded and analysis comes next.
+
+Rough rule: if you can describe the cleaning as "go through each row and fix X," use plain Python with the `csv` module. If it's "reshape and summarize the whole table," use pandas.
+
+If you tell me what the data looks like and what's wrong with it, I'll point you at the specific approach.

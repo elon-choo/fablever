@@ -1,0 +1,29 @@
+Short answer: **default to auto-increment `BIGINT`, reach for UUIDs (specifically UUIDv7) when you have a concrete reason to.** Don't use random UUIDv4 as a primary key, and never store any UUID as a string.
+
+## The tradeoffs
+
+**Auto-increment integers** (`BIGINT IDENTITY`/`serial`)
+- ✅ Compact (8 bytes), monotonic → excellent index locality, fast appends, no page splits
+- ✅ Fast joins, smaller secondary indexes, less RAM/disk, easy to read & debug
+- ❌ Enumerable — `/orders/1002` invites IDOR and leaks your volume/growth to competitors
+- ❌ Need the DB round-trip to get the ID; awkward for distributed/multi-master/offline-first generation
+
+**UUIDs**
+- ✅ Generate anywhere (client, multiple writers) with no coordination → great for sharding, merges, offline sync
+- ✅ Non-sequential, so they don't leak counts or let people enumerate rows
+- ❌ 16 bytes, and if **random (v4)** they scatter inserts across the index → fragmentation, page splits, bloated secondary indexes. This is *especially* bad in MySQL/InnoDB where the PK is the clustered index.
+- ❌ As a 36-char string they're a performance disaster — 2–3× the size and dog-slow comparisons.
+
+## The modern middle ground: UUIDv7
+
+UUIDv7 (RFC 9562) is time-ordered, so you get UUID's global uniqueness and non-coordination **plus** the insert locality of an integer. It's the right choice when you want UUID benefits without trashing your index. Postgres 18 has native `uuidv7()`; otherwise generate it in the app. ULID/KSUID/Snowflake solve the same problem.
+
+## Practical guidance
+
+- **Most single-DB apps:** `BIGINT` auto-increment. Simple and fast. (`INT`/4 bytes only if you're *certain* you'll never exceed ~2.1B rows — usually not worth the risk.)
+- **Need distributed generation, want to hide volume, expect to merge/shard:** UUIDv7.
+- **Hybrid (great default for web apps):** `BIGINT` as the internal PK + a separate indexed UUID/slug column for anything exposed in URLs or APIs. You get fast joins internally and unguessable external IDs.
+- **Storage:** Postgres → native `uuid` type. MySQL → `BINARY(16)`. Never `VARCHAR`/`CHAR(36)`.
+- **Postgres note:** tables are heaps (PK isn't clustered), so random UUIDs hurt less than in MySQL — but UUIDv7 still wins on index health.
+
+If you tell me your database engine, whether IDs get exposed in URLs/APIs, and whether you'll ever have multiple writers, I'll give you a definitive pick.

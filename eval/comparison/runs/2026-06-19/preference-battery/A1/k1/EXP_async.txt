@@ -1,0 +1,52 @@
+They're the same machinery — async/await is syntax sugar over Promises. An `async` function always returns a Promise, and `await` is just a way to unwrap one. So the difference isn't capability; it's how the code reads and a few sharp edges around control flow.
+
+**What's actually identical**
+
+This:
+
+```js
+function getUser(id) {
+  return fetch(`/users/${id}`)
+    .then(res => res.json())
+    .then(user => user.name);
+}
+```
+
+compiles to the same behavior as this:
+
+```js
+async function getUser(id) {
+  const res = await fetch(`/users/${id}`);
+  const user = await res.json();
+  return user.name;
+}
+```
+
+Both return a Promise. The caller can `.then()` either one or `await` either one. `await somePromise` is mechanically equivalent to registering a `.then()` callback and resuming when it resolves.
+
+**Where they genuinely differ**
+
+*Error handling.* Promises use `.catch()`; async/await uses ordinary `try/catch`. The async version lets you wrap synchronous and asynchronous failures in one block, and you get real stack traces that point at your code rather than the Promise internals.
+
+*Sequential dependent steps.* This is where async/await pulls ahead. When step B needs the result of step A, the `.then()` chain forces nesting or threading values through closures. `await` reads top-to-bottom like synchronous code, and intermediate values are just local variables in the same scope — no closure gymnastics.
+
+*Conditionals and loops.* Branching mid-chain (`if (x) { await ... }`) or awaiting inside a loop is natural with async/await and awkward with raw `.then()`. But note the classic trap: `array.forEach(async ...)` does **not** wait — `forEach` ignores the returned Promises. Use a `for...of` loop with `await` inside, or `Promise.all(array.map(...))`.
+
+**Where plain Promises are still better**
+
+*Concurrency.* `await` is a sequencing tool — naively, each `await` waits for the previous one. If two operations are independent, awaiting them in sequence is needlessly slow:
+
+```js
+const a = await taskA();   // waits
+const b = await taskB();   // only starts after A finishes
+```
+
+The fix uses the Promise API directly:
+
+```js
+const [a, b] = await Promise.all([taskA(), taskB()]);  // both run at once
+```
+
+`Promise.all`, `Promise.race`, `Promise.allSettled`, and `Promise.any` have no keyword equivalent — you reach for the Promise object itself. Mixing the two (kick off Promises, then `await` them together) is the idiomatic pattern, not a compromise.
+
+**The one-line version:** use async/await for readability and sequential logic; drop to the Promise API when you need to coordinate multiple operations concurrently. They interoperate freely, so it's not either/or.

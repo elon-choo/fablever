@@ -1,0 +1,16 @@
+It's an infinite loop. `x` never exactly equals `1`, so the `x !== 1` condition never becomes false.
+
+The reason is floating point: `0.1` has no exact binary representation, so accumulating it doesn't land cleanly on `1.0`. Stepping `0 += 0.1` ten times gives `0.9999999999999999`, the next step jumps to `1.0999999999999999`, and `x` sails past `1` without ever being equal to it. The loop then runs forever (well — until `x` overflows to `Infinity`, where `Infinity !== 1` is still true, so genuinely forever).
+
+Two things make this dangerous beyond just this case:
+- **Exact `!==`/`===` against a float accumulator is the core mistake.** Any non-power-of-2 step (0.1, 0.3, etc.) can miss the target.
+- **It's silent** — no error, just a hang.
+
+If you want it to run 10 ticks, the robust fixes are to iterate over integers and derive the float, or use a `<` bound:
+
+```javascript
+for (let i = 0; i < 10; i++) { tick(i * 0.1); }   // integer counter, exact termination
+for (let x = 0; x < 1; x += 0.1) { tick(x); }      // < instead of !==, runs 10 times
+```
+
+The integer-counter version is better — it also avoids accumulated rounding drift in the value passed to `tick` (with `x += 0.1` the later values are slightly off, e.g. `0.30000000000000004`).

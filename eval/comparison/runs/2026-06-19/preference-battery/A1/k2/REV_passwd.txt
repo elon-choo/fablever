@@ -1,0 +1,20 @@
+No — this has a couple of real security problems. The short version: you're comparing passwords in plaintext, and you're using a comparison that leaks timing information.
+
+**Plaintext password storage.** `user.password === req.body.password` only works if `user.password` is the raw password. Passwords should never be stored in recoverable form. Store a salted hash using a slow, purpose-built algorithm (bcrypt, scrypt, or Argon2) and verify against that:
+
+```js
+const ok = await bcrypt.compare(req.body.password, user.passwordHash);
+if (ok) { issueToken(user); }
+```
+
+If your database leaks, plaintext passwords mean every user's password — and likely their reused passwords on other sites — is immediately compromised. A bcrypt/Argon2 hash buys you time and protection.
+
+**Timing attack.** `===` on strings short-circuits at the first differing byte, so the comparison time varies with how many leading characters match. An attacker can measure that to recover a secret byte-by-byte. Using `bcrypt.compare` (or `crypto.timingSafeEqual` for raw token comparisons) avoids this because it runs in constant time.
+
+A few more things worth checking, depending on the surrounding code:
+
+- **Guard the lookup.** If the user isn't found, `user` may be `null`/`undefined` and this throws. Make sure a missing user is handled the same as a wrong password (ideally indistinguishable, including in timing) so you don't leak which accounts exist.
+- **Brute-force protection.** This snippet has no rate limiting or lockout. Add throttling on failed attempts at the route level.
+- **Validate input.** Confirm `req.body.password` is actually a string before using it, so an attacker can't pass an object/array to confuse the comparison.
+
+The fix that matters most is the first one: hash passwords at signup and compare with the hashing library's verify function instead of `===`.

@@ -1,0 +1,59 @@
+## CAP in one sentence
+
+When your database is spread across multiple machines and the network between them breaks (a "partition"), you can keep serving reads/writes **or** keep every node agreeing on the same data — not both. You must pick which one to sacrifice *during the failure*.
+
+That's it. The three letters:
+
+- **C**onsistency — every read sees the latest write (one global truth).
+- **A**vailability — every request gets a non-error answer.
+- **P**artition tolerance — the system keeps working when the network drops messages between nodes.
+
+## The trap everyone falls into
+
+CAP is usually drawn as "pick 2 of 3." That framing is misleading. **In any real distributed database, P is not optional** — networks *will* partition, and you don't get to opt out of physics. So the real choice is only ever:
+
+> **When a partition happens, do I want CP or AP?**
+
+- **CP** (consistency over availability): during a partition, the minority side refuses requests (errors or hangs) rather than risk serving stale/conflicting data.
+- **AP** (availability over consistency): every node keeps answering, but two nodes may briefly disagree, and you reconcile later.
+
+"CA" (consistency + availability, no partition tolerance) effectively means **a single node / single box** — a non-distributed database. That's a real and often correct choice, just not a distributed one.
+
+## How to actually use it when picking a database
+
+Ask: **"If the data is wrong/stale for a few seconds, does someone lose money, safety, or trust?"**
+
+| Your situation | Lean | Why |
+|---|---|---|
+| Money movement, inventory/seat booking, balances, anything with "can't double-spend" | **CP** | A stale read = overselling or losing money. Better to reject the request. |
+| Likes, view counts, feeds, presence, carts, telemetry, sessions | **AP** | A stale count for 2 seconds is invisible to users; downtime isn't. |
+| One server is plenty, simplicity wins | **CA / single-node** | Don't pay for distributed complexity you don't need. |
+
+Map to common databases (with their *default/typical* posture — most are tunable):
+
+- **CP-leaning:** Postgres/MySQL (single-primary), MongoDB, HBase, Zookeeper/etcd/Consul, Spanner, CockroachDB.
+- **AP-leaning:** Cassandra, DynamoDB, Riak, CouchDB (default tunings).
+- Many (Cassandra, DynamoDB, Mongo) let you **tune per-query** — e.g. Cassandra's `QUORUM` vs `ONE`, Dynamo's strong vs eventual reads. So the *database* and the *operation* both matter.
+
+## The upgrade you should actually carry around: PACELC
+
+CAP only describes behavior *during a partition* — which is rare. PACELC adds what matters the other 99% of the time:
+
+> **If Partition → trade A vs C. Else (normal operation) → trade Latency vs C.**
+
+This is the more useful lens, because the everyday cost of strong consistency isn't downtime — it's **latency**. Coordinating nodes to guarantee one global truth takes round-trips. So:
+
+- Want strong consistency everywhere? Expect higher write latency and cross-region slowness (Spanner, CockroachDB live here — "PC/EC").
+- Want low latency at scale? Accept eventual consistency (Cassandra, Dynamo — "PA/EL").
+
+## Practical decision recipe
+
+1. **Classify your data, not your whole app.** Orders = CP; activity feed = AP. Use different stores or different consistency settings per dataset. Few systems are uniformly one or the other.
+2. **Default to CP/strong consistency** unless you have a scale or latency reason not to — bugs from eventual consistency (lost updates, conflicting writes) are subtle and expensive to debug. Reach for AP deliberately, not by accident.
+3. **Check it's tunable.** "What's the consistency knob, and what's the default?" A surprising number of outages come from a default like Dynamo's eventual reads no one noticed.
+4. **Ask the latency question (PACELC).** Even with no partition, does strong consistency blow your p99? Cross-region especially.
+5. **Don't distribute if you don't have to.** A single beefy Postgres with a replica handles enormous load. CAP tradeoffs are the price of horizontal scale — only pay it when you need the scale or the availability.
+
+**Bottom line:** Don't pick a database by its CAP label. Decide, per dataset, whether stale data is dangerous (→ CP) or whether downtime is the bigger enemy (→ AP), then pick a store whose *default and tuning knobs* match — and remember that in normal operation the real tax is latency, not availability.
+
+If you tell me the specific workload you're choosing a database for, I'll turn this into a concrete recommendation.

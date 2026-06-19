@@ -1,0 +1,40 @@
+Garbage collection (GC) means the runtime — not you — decides when to reclaim memory that your program no longer needs. You allocate objects freely; a background system finds the ones that are no longer in use and frees them. Both JavaScript and Go do this, and both are built on the same core idea, but they make different tradeoffs.
+
+## The core idea: reachability
+
+The fundamental question a garbage collector answers is *"can the program still reach this object?"* — not "is this object still useful?" It starts from a set of **roots**: global variables, the current call stack's local variables, and CPU registers. From those roots it follows every reference (object → its fields → their objects, and so on). Anything it can reach is *live*; everything else is *garbage* and can be freed.
+
+This is why both languages use **mark-and-sweep** rather than simple reference counting. Reference counting (free an object when its count of references hits zero) is simple but can't reclaim *cycles* — if object A points to B and B points back to A, but nothing else points to either, their counts never hit zero even though they're unreachable. Reachability tracing handles cycles naturally because it only cares about what's connected to the roots.
+
+## JavaScript (V8, the engine in Chrome and Node)
+
+V8 is **generational**. It exploits the empirical observation that most objects die young (the "generational hypothesis" — think of temporary objects inside a loop).
+
+- **Young generation:** A small space where new objects are allocated. It's collected very frequently with a fast *copying* collector (a "scavenger"): live objects are copied to a second half of the space, and the entire old half is discarded in one shot. Because most young objects are already dead, copying the few survivors is cheap.
+- **Old generation:** Objects that survive a couple of young-gen collections get *promoted* here. This larger space is collected less often using **mark-sweep** (and occasionally **mark-compact** to defragment).
+
+To avoid freezing the program during a big old-gen collection, V8 does the marking **incrementally and concurrently** — spreading the work across small slices and on background threads. It uses **write barriers** (small bits of bookkeeping inserted on every pointer write) to notice when your running code modifies an object the collector already examined, so nothing is missed.
+
+You don't control any of this directly; there's no `free()`. You influence it only by dropping references (letting variables go out of scope, removing things from arrays/maps). `WeakMap`, `WeakRef`, and `FinalizationRegistry` exist for cases where you want to hold a reference *without* keeping the object alive.
+
+## Go
+
+Go's collector is a **concurrent, tri-color, mark-and-sweep** collector tuned aggressively for **low latency** rather than maximum throughput. Two notable differences from V8:
+
+- It is **non-generational** and **non-moving** (it doesn't copy or compact objects). Go instead reduces GC pressure at the source through **escape analysis** at compile time: if the compiler can prove an object doesn't outlive the function that created it, it's allocated on the stack and never touches the GC at all.
+- Pauses are extremely short — typically well under a millisecond — because almost all the marking runs *concurrently* with your program. The only stop-the-world moments are brief pauses to turn the write barrier on and off.
+
+**Tri-color marking** is the mental model worth knowing, since it's how concurrent collectors stay correct while the program mutates memory underneath them:
+- **White** — not yet proven reachable (a candidate for collection).
+- **Grey** — known reachable, but its outgoing references haven't been scanned yet.
+- **Black** — reachable and fully scanned.
+
+The collector starts by greying the roots, then repeatedly scans a grey object, blackens it, and greys whatever it points to. When no grey objects remain, anything still white is garbage. A **write barrier** preserves the key invariant (a black object must never end up pointing to a white one) when your code changes pointers mid-collection.
+
+Tuning is done with two knobs: `GOGC` (default 100, meaning "run GC when the heap has grown ~100% since the last collection" — a tradeoff of CPU vs. memory) and `GOMEMLIMIT` (a soft memory ceiling, added in Go 1.19).
+
+## The tradeoffs at the heart of it
+
+Every collector balances three things that pull against each other: **throughput** (total time spent collecting), **latency** (length of individual pauses), and **memory footprint** (collecting less often uses more RAM). V8's generational design leans toward throughput for typical short-lived web workloads; Go's design deliberately sacrifices some throughput and memory to keep pauses tiny, which matters for servers. Both moved away from naive "stop the whole world and scan everything" toward concurrent, incremental work precisely to shrink those pauses.
+
+If you'd like, I can go deeper on any one piece — the copying collector's mechanics, why write barriers are needed for correctness, or how to read and tune Go's GC behavior in practice.

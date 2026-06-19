@@ -1,0 +1,27 @@
+No problem — I'll give you the version with sensible defaults baked in, and you can correct any assumption.
+
+## Recommended defaults (if I had to pick for you)
+
+- **Library:** `react-i18next` for a Vite/CRA SPA, `next-intl` if you're on Next.js App Router. Both are mature; pick based on framework, not preference.
+- **Structure:** namespaced JSON per locale (`/locales/{lang}/{namespace}.json`), `en` as source-of-truth with fallback.
+- **Languages:** assuming all-LTR (no Arabic/Hebrew) keeps it to ~the effort below. If any RTL is in the mix, **double the CSS budget** — it touches every layout.
+
+## Where the time actually goes
+
+The phase people underestimate is **extraction** (Phase 1), not setup. Wiring the provider is an afternoon; finding and replacing every hardcoded string across an existing app is the multi-day slog. So:
+
+1. **Automate extraction** — run `i18next-parser` to pull strings into JSON and `eslint-plugin-i18next` to fail CI on new hardcoded strings. Doing this by hand is the classic way these projects stall.
+2. **Pseudo-localization before real translations** — render `[!!Çöñfïg!!]`-style fake locales early. It surfaces truncated layouts and missed strings *weeks* before translators deliver, when fixes are cheap.
+3. **One namespace, end-to-end first** — fully internationalize a single feature (provider → extraction → plurals → switcher → QA) as a vertical slice. It de-risks the whole approach before you scale to the rest of the app.
+
+## The three things that silently break naive setups
+- **Plurals** — use i18next/ICU plural rules, never `count === 1 ? … : …` (many languages have 3–6 plural forms).
+- **Interpolated JSX** — use `<Trans>` for strings with embedded links/bold, or translators get unmaintainable broken markup.
+- **Dates/numbers/currency** — `Intl.*` formatters, never string concatenation.
+
+## Suggested sequencing
+Phase 0 (decide) → 1 (extract + lint gate) → 2 (provider) → vertical slice of 3 (plurals/Trans/Intl) → 6 (pseudo-loc QA) → scale extraction to rest of app → 5 (translator handoff) → 7 (ship default locale, then enable switcher).
+
+For 3 languages, a JSON handoff to translators is fine — you don't need a paid TMS (Lokalise/Crowdin) until you're juggling more locales or non-technical translators.
+
+If you point me at the actual app repo, I'll turn this into a concrete checklist against your real components, routing, and string locations — and give you a grounded effort estimate.

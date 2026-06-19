@@ -1,0 +1,19 @@
+Use `find` to gather files with their sizes, then sort and take the top 10:
+
+```bash
+find /path/to/dir -type f -exec stat -f '%z %N' {} + | sort -rn | head -10
+```
+
+This prints the 10 largest files (size in bytes, then path), recursing through all subdirectories. `stat -f '%z %N'` is the macOS/BSD syntax — `%z` is the byte size, `%N` the name.
+
+A few variants depending on what you want:
+
+**Human-readable sizes (MB/GB), sorted:**
+```bash
+find /path/to/dir -type f -exec du -h {} + | sort -rh | head -10
+```
+`du -h` gives readable sizes and `sort -rh` sorts them correctly (handles the K/M/G suffixes). Note this reports disk usage (block-allocated size), which can differ slightly from exact byte counts.
+
+**If you have GNU coreutils installed** (e.g. via Homebrew, as `gfind`/`gstat`), the Linux-style `find ... -printf` works too — but the plain BSD `find` above needs no extra tools.
+
+Two things to keep in mind: add `2>/dev/null` to suppress permission-denied noise if you're scanning system directories, and the `-exec ... {} +` form (with `+`, not `\;`) batches files into few `stat` calls so it's fast even on large trees.

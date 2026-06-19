@@ -1,0 +1,16 @@
+No worries — we can skip the menu. Just tell me in your own words and I'll take it from there:
+
+- **Where the app lives** (project path), and
+- **What it's built with** (framework + database, roughly).
+
+Once I can see the code, here's what I'll produce — a concrete, stack-specific plan covering:
+
+1. **Approach** — managed auth provider (Clerk/Auth0/Supabase/Firebase) vs. self-built (Auth.js/Lucia/Devise/Django auth), with a recommendation for *your* stack.
+2. **Data model** — users table/collection, password hashing (argon2/bcrypt), and what to store vs. delegate.
+3. **Flows** — signup, login, logout, email verification, password reset.
+4. **Sessions** — cookie-based sessions vs. JWT, CSRF, and secure cookie settings.
+5. **Routes/UI** — the pages and endpoints to add, plus route protection/middleware.
+6. **Security baseline** — rate limiting, lockout, secrets handling, HTTPS-only cookies.
+7. **Rollout** — migrations, env vars, and a test checklist.
+
+A one-liner on your stack is all I need to turn that skeleton into real steps. What are you working in?

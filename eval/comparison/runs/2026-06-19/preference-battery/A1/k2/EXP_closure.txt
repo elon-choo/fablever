@@ -1,0 +1,57 @@
+A closure is a function that keeps access to variables from the scope where it was *defined*, even after that outer scope has finished running. In JavaScript, every function "closes over" the variables it references, and those variables stay alive as long as the inner function does.
+
+The practical payoff is **private state**: data that only a specific set of functions can touch, with no way to reach it from outside.
+
+Here's a counter that demonstrates it:
+
+```javascript
+function makeCounter() {
+  let count = 0; // private — exists only inside makeCounter
+
+  return {
+    increment() { count += 1; return count; },
+    decrement() { count -= 1; return count; },
+    value()     { return count; },
+  };
+}
+
+const counter = makeCounter();
+counter.increment(); // 1
+counter.increment(); // 2
+counter.decrement(); // 1
+counter.value();     // 1
+
+console.log(counter.count); // undefined — no direct access
+```
+
+`makeCounter` has already returned by the time you call `counter.increment()`, yet `count` is still there. The three returned functions share the *same* `count` variable because they were all defined in the same scope. Each call to `makeCounter()` creates a fresh, independent `count`, so two counters don't interfere with each other.
+
+A common real-world use is a function that "remembers" a configuration value:
+
+```javascript
+function multiplier(factor) {
+  return (n) => n * factor; // closes over `factor`
+}
+
+const double = multiplier(2);
+const triple = multiplier(3);
+
+double(5); // 10
+triple(5); // 15
+```
+
+`double` permanently remembers `factor === 2` without you passing it again.
+
+The classic gotcha is loops with `var`, since `var` is function-scoped rather than block-scoped, so every closure captures the *same* variable:
+
+```javascript
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0); // prints 3, 3, 3
+}
+
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0); // prints 0, 1, 2
+}
+```
+
+With `let`, each iteration gets its own binding of `i`, so each closure captures a different value — which is usually what you want.

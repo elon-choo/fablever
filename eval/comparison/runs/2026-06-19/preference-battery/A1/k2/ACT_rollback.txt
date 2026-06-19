@@ -1,0 +1,28 @@
+Use `rails db:rollback` to undo the most recent migration:
+
+```bash
+rails db:rollback           # reverts the last migration
+rails db:rollback STEP=3    # reverts the last 3 migrations
+```
+
+A few things worth knowing depending on your situation:
+
+**Roll back to a specific migration.** If you know the version (the timestamp prefix on the file), migrate down to it:
+
+```bash
+rails db:migrate:down VERSION=20260615123045
+```
+
+That runs the `down`/`change` of just that one migration. To bring the whole schema back to a known point, use `rails db:migrate:status` to see versions, then `rails db:migrate VERSION=...` to move to that target.
+
+**Check status first.** `rails db:migrate:status` shows which migrations are `up` vs `down`, so you can confirm what you're about to revert.
+
+**The common gotcha — a migration that already half-ran.** If a migration failed partway (e.g. on a non-transactional database like MySQL, or it created a table then errored), the database can be left in a state where neither `rollback` nor re-running works cleanly. In that case you usually have to fix the schema by hand (drop the leftover table/column in `rails dbconsole` or a repair migration) to get back to a consistent state, then continue.
+
+**Irreversible migrations.** If your migration used `change` with an operation Rails can't auto-reverse (like raw SQL or `remove_column` without type info), `rollback` raises `ActiveRecord::IrreversibleMigration`. The fix is to write explicit `up` and `down` methods instead of `change`, then roll back.
+
+**Don't edit-and-rerun an already-applied migration.** Editing the file won't help, because Rails tracks applied versions in the `schema_migrations` table and won't re-run one it considers `up`. Roll it back first, then edit, then `rails db:migrate` again.
+
+One caution: rolling back a migration that dropped or altered data will not bring that data back — `down` only reverses the schema, not the contents. If the bad migration destroyed data on a shared/production database, treat that as a restore-from-backup situation rather than a rollback.
+
+If you tell me what the migration actually did and what state it's stuck in, I can give you the exact commands for your case.

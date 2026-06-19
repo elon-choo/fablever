@@ -1,0 +1,10 @@
+There's no Express app in this directory, so I can't ground a plan in your actual code yet. The current repo (`/Users/elon/work/fable-profile`) is `fablever` — a Claude profile / eval-comparison project (READMEs, `profiles/`, `eval/`, `mcp/`, `whitepaper/`). The only two files mentioning "express" are eval test fixtures (`eval/comparison/tasks/coding*/build-fixtures.mjs`), not a server.
+
+So before I sketch anything, where's the Express app? A couple of options:
+
+- **It's a different repo on this machine** — tell me the path (or `cd` there) and I'll read your route structure, storage setup, and existing middleware, then give a plan that fits what's already there.
+- **You want a generic plan** for a fresh upload endpoint, independent of any specific codebase — say so and I'll lay out the standard approach (multer for multipart parsing, disk vs. memory vs. streaming straight to S3, size/type/count limits, filename sanitization, auth, and where validation actually has to live).
+
+The reason I'm not just dropping the generic version: a real plan depends on things I'd otherwise be guessing at — what storage you're targeting (local disk, S3/GCS, a CDN), whether uploads are authenticated, expected file sizes and whether you need streaming, and what your existing middleware/error-handling conventions look like. Point me at the code and the plan gets concrete instead of boilerplate.
+
+Which of the two do you want?

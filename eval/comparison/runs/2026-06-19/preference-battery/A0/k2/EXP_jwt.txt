@@ -1,0 +1,59 @@
+## How JWT authentication works
+
+A **JWT (JSON Web Token)** is a signed, self-contained token that carries claims about a user. The flow:
+
+1. **Login** — The user sends credentials. The server verifies them.
+2. **Issue** — The server creates a JWT, signs it with a secret (or private key), and returns it to the client.
+3. **Store** — The client keeps the token (in memory, `localStorage`, or a cookie).
+4. **Send** — On each request, the client attaches it, usually `Authorization: Bearer <token>`.
+5. **Verify** — The server checks the signature and expiry. If valid, it trusts the claims inside **without a database lookup**. That's the key property.
+
+### Anatomy of the token
+
+Three Base64URL-encoded parts joined by dots: `header.payload.signature`
+
+```
+eyJhbGc...   .   eyJzdWIi...   .   SflKxwRJ...
+  header           payload         signature
+```
+
+- **Header** — algorithm and token type, e.g. `{"alg":"HS256","typ":"JWT"}`
+- **Payload** — claims: `sub` (user id), `exp` (expiry), `iat` (issued-at), plus your own (roles, tenant, etc.)
+- **Signature** — `HMAC/RSA(header + payload, key)`. This is what makes the token tamper-evident.
+
+**Critical point:** the payload is *encoded, not encrypted*. Anyone holding the token can read its contents. The signature only guarantees it wasn't *modified* — not that it's secret. Never put passwords or sensitive data in it.
+
+### Signing schemes
+
+- **HS256 (symmetric)** — one shared secret signs and verifies. Simple, but every verifier needs the secret, so any of them could also *mint* tokens.
+- **RS256 / ES256 (asymmetric)** — private key signs, public key verifies. Better when many services need to verify but only one (the auth server) should issue. Standard for OIDC.
+
+---
+
+## What it's good at
+
+- **Stateless / scalable** — Any server with the key can verify a token; no shared session store or sticky sessions. Great for horizontal scaling and serverless.
+- **Cross-service / SSO** — One token works across microservices and domains. Backbone of OAuth 2.0 / OpenID Connect.
+- **Self-contained** — Claims travel with the request, avoiding a DB/session lookup on every call (lower latency).
+- **Decoupled trust** — With asymmetric keys, services verify without being able to issue tokens.
+
+## What it's bad at
+
+- **Revocation is hard** — This is the big one. Because tokens are stateless and self-validating, you can't easily "log someone out" or kill a stolen token before it expires. Workarounds (denylists, short TTLs) reintroduce the very state JWTs were meant to avoid.
+- **No built-in confidentiality** — The payload is readable by anyone. Encryption needs JWE, which most people don't use.
+- **Bloat** — A signed token is far larger than a session ID, and it's sent on *every* request.
+- **Foot-guns in implementation:**
+  - The `alg: none` attack — a token claiming "no signature." Always pin allowed algorithms server-side.
+  - Algorithm confusion — tricking an RS256 verifier into treating the public key as an HMAC secret. Don't let the token's header choose the verification mode.
+  - Storage trade-off — `localStorage` is exposed to XSS; cookies are exposed to CSRF (mitigate with `HttpOnly` + `SameSite`).
+- **Stale claims** — If a user's role/permissions change, the old token still asserts the old claims until it expires.
+
+---
+
+## The common, sane pattern
+
+Use **two tokens**: a short-lived **access token** (a JWT, minutes-long) and a long-lived **refresh token** (an opaque, *stored*, revocable value). The access token stays stateless for speed; the refresh token is checked against a database so you retain real revocation control. This is the standard way to get JWT's scaling benefits while neutralizing its weakest point.
+
+**Rule of thumb:** JWTs shine for short-lived, cross-service authorization. If you have a single monolith and need instant revocation, a plain server-side session with an opaque cookie is often simpler and safer — don't reach for JWTs by default just because they're popular.
+
+Want me to go deeper on any part — the refresh-token flow, the specific attacks, or storage choices for a particular stack?

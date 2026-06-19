@@ -1,0 +1,37 @@
+## The short version
+
+This is almost always a **timezone bug** — specifically, a *date-only* value (no real time-of-day meaning, like a birthday, due date, or "posted on") getting pushed through a timezone conversion somewhere between storage and display.
+
+The "some users but not others" part is the tell: **it splits by the user's timezone offset**, not by user account or data. Users *behind* UTC (the Americas, UTC−X) see the date jump back a day; users *at or ahead of* UTC (Europe, Asia, UTC+X) usually see it correctly. That asymmetry is the fingerprint.
+
+## Why it happens
+
+The classic mechanism (JavaScript, but the same shape exists in Python/Java/etc.):
+
+```js
+new Date("2024-03-15")        // parsed as 2024-03-15T00:00:00 UTC
+  .toLocaleDateString()        // rendered in the user's local TZ
+// UTC-8 user → 2024-03-14 16:00 → shows "March 14"  ❌
+// UTC+9 user → 2024-03-15 09:00 → shows "March 15"  ✅
+```
+
+A date-only string gets parsed as **UTC midnight**, then formatted in **local time**. Subtracting a few hours crosses back over midnight for anyone west of Greenwich.
+
+The reverse also exists: a *local* date getting `.toISOString()`'d for storage truncates forward/back, so the wrong day gets *saved* — then everyone reads it wrong, but it originated from one user's TZ.
+
+## How to confirm quickly
+
+1. Check whether affected users cluster in negative-UTC timezones.
+2. Find where the value is parsed/formatted and look for an **implicit UTC↔local conversion**: `new Date("YYYY-MM-DD")`, `toISOString()` feeding a date display, `Date.UTC` mixed with `getDate()`, a DB `timestamptz` column holding what's logically a date.
+3. Test with your machine set to UTC−8 (or just `TZ=America/Los_Angeles` for a Node/Python process) — the bug should reproduce.
+
+## The fix — decide what the value *means*
+
+- **It's a calendar date (no time):** never let it touch a timezone. Keep it as a `"YYYY-MM-DD"` string end to end, use a date-only type (`DATE` in SQL, `LocalDate`, `temporal.PlainDate`), and parse/format by components — not via `Date`. Avoid the single-arg `new Date(str)`.
+- **It's a real instant (time matters):** store UTC (`timestamptz`), and *always* format with an **explicit** timezone — the user's, chosen deliberately — rather than relying on the server's or browser's implicit local zone.
+
+The bug is the mismatch: a date-only value being treated as an instant. Pick one model and apply it consistently across DB → API → client.
+
+---
+
+If you point me at the code (the storage column type + where it's parsed and where it's rendered), I can tell you exactly which of these it is and the one-line fix.

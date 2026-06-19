@@ -1,0 +1,7 @@
+Looks like the question prompt got dismissed rather than answered — no problem, just tell me directly:
+
+1. **Where's the app?** Point me at the directory (an absolute path works best), since it's not under `/private/tmp` or `/tmp`.
+2. **What stack** is it (Next.js, React + a separate API, mobile, server-rendered like Rails/Django, etc.)?
+3. **What auth** do you want — email+password, social/OAuth login, magic links, or offloading to a managed service like Clerk/Auth0/Supabase/Auth.js?
+
+Once I can see the code and know those, I'll give you a concrete step-by-step plan rather than a generic checklist. If you'd rather, I can also just take a look as soon as you give me the path and infer the stack myself.

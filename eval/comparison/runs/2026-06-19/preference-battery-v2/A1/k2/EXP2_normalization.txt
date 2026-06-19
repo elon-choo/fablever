@@ -1,0 +1,41 @@
+Normalization is the process of structuring relational tables so that each fact lives in exactly one place. You decompose tables to eliminate redundancy, and the payoff is that updates, inserts, and deletes can't leave the data contradicting itself. The progression is usually described as a series of "normal forms," each fixing a specific kind of anomaly.
+
+## The normal forms that matter in practice
+
+**First normal form (1NF)** — every column holds a single atomic value, no repeating groups or comma-packed lists in one cell. A `phone_numbers` column containing `"555-1234, 555-9876"` violates it; you split those into rows.
+
+**Second normal form (2NF)** — no non-key column depends on only *part* of a composite primary key. If a table keyed on `(order_id, product_id)` also stores `product_name`, that name depends on `product_id` alone, not the whole key. It belongs in a `products` table.
+
+**Third normal form (3NF)** — no non-key column depends on another non-key column (no transitive dependencies). If an `employees` table stores `department_id` and `department_name`, the name depends on the department, not the employee. Move it to a `departments` table.
+
+**Boyce-Codd (BCNF)** — a stricter 3NF that closes an edge case where a determinant isn't a candidate key. Most well-designed 3NF schemas are already in BCNF.
+
+3NF/BCNF is the practical target for transactional systems. Fourth and fifth normal forms exist (they handle multi-valued and join dependencies) but you rarely reason about them explicitly.
+
+The core idea underneath all of them: **a piece of information should have one authoritative home.** When it does, you never face the situation where two rows disagree about the same fact.
+
+## What normalization buys and costs
+
+The benefit is integrity and write efficiency: a customer's address changes in one row, not in ten thousand order records. The cost is that answering a question often requires joining many tables back together, and joins — especially across large tables — take time and CPU.
+
+That tension is the whole reason denormalization exists.
+
+## When you'd deliberately denormalize
+
+Denormalization means knowingly storing redundant or pre-computed data, accepting the maintenance burden in exchange for read performance or simplicity. You do it deliberately, with a plan to keep the copies consistent — not by accident. The common cases:
+
+- **Read-heavy analytics and reporting.** Data warehouses use star/snowflake schemas precisely because analysts run huge aggregate queries and almost never update individual rows. A wide denormalized fact table beats a dozen joins. This is the canonical case.
+
+- **Expensive aggregates that are read constantly.** A `comment_count` on a post, an account `balance`, a "total orders" on a customer. Recomputing with `COUNT`/`SUM` on every page load is wasteful when reads vastly outnumber writes. You store the running value and update it on write (via triggers, application logic, or a periodic job).
+
+- **Joins that have become a proven bottleneck.** When profiling shows a specific multi-table join dominating latency on a hot path, copying a few columns into the table that's queried (e.g. denormalizing `author_name` onto `posts` to skip a `users` join) can remove it. Do this from measurement, not speculation.
+
+- **Capturing a point-in-time snapshot.** An invoice should store the price and address *as they were at purchase*, not join live to a `products` or `customers` table whose values change later. Here the "redundant" copy isn't redundant at all — it's a historical record, and arguably the correct normalized design.
+
+- **Distributed systems and NoSQL.** When data is sharded or you're using a document/key-value store, joins across nodes are expensive or unsupported. You often embed related data together so a single read serves a request. Aggregate-oriented stores assume this.
+
+- **Materialized views / caches.** A middle path: keep the source schema normalized and let a materialized view hold the denormalized, query-optimized shape, refreshed on a schedule. You get read speed without hand-maintaining the duplication in your write path.
+
+## The rule of thumb
+
+Normalize first, by default — it keeps your data correct and your write logic simple, and it's the safer place to start. Denormalize later, selectively, when a measured read problem justifies it and you have a concrete mechanism (trigger, app code, scheduled refresh, or materialized view) to keep the duplicated data honest. The price of denormalization is always the same: you now own the consistency that the database was enforcing for you, so every redundant copy needs a clear owner responsible for updating it.

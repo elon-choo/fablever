@@ -1,0 +1,22 @@
+Offline support for a web app means turning it into a **Progressive Web App (PWA)** built around a service worker — that's the engine that intercepts network requests and serves cached responses when there's no connection. The plan splits cleanly depending on one decision, so let me lay it out around that.
+
+**The decision that shapes everything: read-only or read-write offline?**
+
+- **Read-only** (app loads and shows last-known content while offline) — roughly a day of work, mostly configuration.
+- **Read-write** (users create/edit offline and it syncs when they reconnect) — substantially bigger, because you now own a local database, a sync queue, and conflict resolution.
+
+**Building blocks you need either way:**
+
+1. **Web App Manifest** — makes it installable, gives it an icon and a standalone window.
+2. **Service worker** — the offline engine. Don't hand-roll it; use [Workbox](https://developer.chrome.com/docs/workbox), or whatever your framework already wraps (Vite has `vite-plugin-pwa`, Next has plugins, etc.).
+3. **Caching strategies**, applied per resource type:
+   - App shell (HTML/JS/CSS) → **precache**, served cache-first, updated on new deploys.
+   - API/data → **stale-while-revalidate** (show cached, refresh in background) or **network-first** (fresh when online, cached as fallback).
+4. **HTTPS** — service workers only run over HTTPS (localhost is exempt for dev).
+5. **An offline indicator in the UI** so users know they're seeing cached data, not stale-but-presented-as-live data.
+
+**If you need read-write:** add **IndexedDB** for local storage, an **outbox queue** of pending changes, the **Background Sync API** to flush them on reconnect, and a **conflict-resolution policy** (last-write-wins is simplest; merge logic if that's not safe for your data).
+
+**Verifying it:** Chrome DevTools → Network → Offline to simulate, plus a Lighthouse PWA audit to catch missing manifest/SW pieces.
+
+To make this concrete rather than generic, two things I'd need: **what's your stack** (framework + whether it's an SPA or server-rendered), and **does it need offline writes or just offline reads?** Point me at the repo and I'll turn this into specific steps for your setup.

@@ -1,0 +1,25 @@
+The core move: make the flakiness reproducible *before* you try to fix it. A flaky test fails because of hidden non-determinism, and you can't confirm a fix for something you can't trigger on demand. Most "fixes" for flaky tests are just the flake not happening to show up that run.
+
+Here's the approach I'd take:
+
+**1. Confirm it's the test, not the code.** A flaky test sometimes means a real race in the production code. Before treating it as a test problem, decide which you're looking at — an intermittent real bug is worth more than a green CI.
+
+**2. Reproduce it locally in a loop.** Run just that test many times:
+- `for i in $(seq 100); do <test command> || break; done` — or your runner's repeat flag (`pytest --count=100`, `go test -count=100 -run TestX`, `jest --runInBand` with a loop).
+- Add `--randomly-seed` / shuffle if your runner orders tests, since ordering is a common cause.
+- If it won't fail locally, the cause is environmental — see step 4.
+
+**3. Identify the category.** Flakiness almost always traces to one of:
+- **Timing/async** — fixed `sleep`s, waiting on wall-clock instead of a condition, unawaited promises.
+- **Shared state / ordering** — leftover DB rows, global vars, temp files, module-level caches bleeding between tests.
+- **Concurrency** — real races, parallel tests touching the same resource.
+- **Nondeterministic inputs** — `now()`, random seeds, map/dict iteration order, locale/timezone.
+- **External deps** — network, real clock, ports, filesystem.
+
+**4. If it only fails in CI, suspect the environment.** Less CPU/parallelism changes timing; resource contention exposes races that a fast laptop hides. Reproduce by constraining locally (`pytest -n auto`, CPU limits, run under load).
+
+**5. Fix the cause, not the symptom.** Replace sleeps with polling/await-condition, isolate state with proper setup/teardown, inject the clock and random seed, mock the external dependency. Retrying the test (`@flaky`, `--retries`) is a last resort that hides the problem.
+
+**6. Prove the fix.** Run the same loop from step 2 and confirm it's green across many runs (e.g. 100+). That's the only evidence that the flake is actually gone.
+
+If you point me at the test and its CI failure output, I'll identify which category it's in and propose the specific fix.

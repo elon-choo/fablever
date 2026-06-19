@@ -1,0 +1,17 @@
+For most applications, default to **bigint auto-increment** unless you have a specific reason not to — and if you do need distributed/global uniqueness, reach for **UUIDv7 rather than UUIDv4**. Here's the reasoning.
+
+**Auto-increment integers** are compact (4–8 bytes), and because they're sequential they preserve B-tree index locality — new rows append to the end of the index instead of inserting randomly. That keeps writes fast, indexes small, and joins cheap. The downsides: they leak information (IDs are enumerable, and `max(id)` roughly tells an outsider your row count), and they're awkward in distributed systems because generating one requires coordination with the database.
+
+**Random UUIDs (v4)** solve the distributed problem — any node or client can generate one before insert, with no round-trip and no collisions — and they don't leak counts. But as a clustered primary key they're actively harmful: their randomness scatters inserts across the index, causing page splits, write amplification, and index bloat. They're also 16 bytes, which inflates every foreign key and index that references them. In InnoDB (MySQL) especially, a random UUID PK is a well-known performance trap.
+
+**UUIDv7 / ULID** is the modern compromise and increasingly the right default when you need UUID properties. It's time-ordered, so it keeps the sequential-insert locality of integers while staying globally unique and client-generatable. If your motivation for UUIDs is "distributed generation" or "no central coordination," use v7, not v4.
+
+A very common production pattern sidesteps the dichotomy: keep a `bigint` auto-increment as the internal primary key (compact joins, fast indexes) and add a separate random/UUID column for anything externally visible — API responses, URLs. You get fast internal relationships and non-enumerable public identifiers.
+
+So, concretely:
+- **Single database, you control inserts** → bigint auto-increment.
+- **Need client-side IDs, sharding, offline generation, or data merging** → UUIDv7.
+- **Care about not exposing internal IDs** → bigint PK + external UUID column.
+- **Avoid** UUIDv4 as a clustered primary key.
+
+If you tell me your database engine and whether you're distributed or single-node, I can give you a definite pick and the column definition.

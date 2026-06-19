@@ -1,0 +1,37 @@
+It depends on the workload, but here's the practical breakdown and a recommendation.
+
+## The honest default
+
+**Use `bigint` auto-increment (identity) unless you have a specific reason not to.** It's smaller, faster to index, and simpler. Most apps never outgrow it.
+
+## Trade-offs
+
+| Concern | Auto-increment `bigint` | UUID |
+|---|---|---|
+| Storage | 8 bytes | 16 bytes (+ more in every index & FK) |
+| Index locality | Excellent (monotonic inserts) | Poor for random UUIDv4 → page splits, cache churn |
+| Generated where | DB only (need a round-trip) | Anywhere — client, app, before insert |
+| Distributed/merge | Painful (collisions across shards) | Trivial (globally unique) |
+| Enumeration leak | Exposes count/ordering (`/users/123`) | Opaque |
+| Readability/debugging | Easy | Harder |
+
+## How to choose
+
+- **Single database, internal IDs, you control inserts** → auto-increment `bigint`.
+- **You need to generate IDs client-side, merge data across systems, shard, or do offline-first sync** → UUID.
+- **You don't want to leak row counts or allow ID enumeration in public URLs/APIs** → UUID (or a separate opaque public token).
+
+## Two important refinements
+
+1. **If you go UUID, don't use UUIDv4 (random) as a clustered/primary key.** Random values destroy index locality and bloat your B-tree. Use a **time-ordered UUID** — UUIDv7 (or ULID) — which keeps inserts roughly sequential while staying globally unique. This removes most of UUID's performance penalty.
+   - Postgres: store as the native `uuid` type, not `text`/`varchar` — half the size and faster.
+   - MySQL/InnoDB: store as `BINARY(16)`, and definitely prefer time-ordered values since the PK *is* the clustered index.
+
+2. **You can have both.** A very common pattern: keep an internal auto-increment `bigint` as the actual primary key / FK target (fast joins, compact), and add a separate **UUID/ULID column for external exposure** in URLs and APIs. You get internal performance *and* opaque, non-enumerable public identifiers.
+
+## My recommendation
+
+- Boring internal app, one DB → **`bigint` identity**.
+- Public-facing IDs or any distributed/sync/sharding story → **UUIDv7 (native `uuid` / `BINARY(16)`)**, or the hybrid bigint-PK + UUID-public-column approach.
+
+If you tell me your database (Postgres/MySQL/etc.) and whether IDs ever appear in public URLs or get generated outside the DB, I'll give you the exact column definition.

@@ -1,0 +1,17 @@
+The critical problem is the synchronous read: `fs.readFileSync` blocks Node's single event loop on every request, so while `big.json` is being read from disk, *every* other request to your server — not just `/report` — stalls. Under any real concurrency this serializes your whole app. That's the one thing I'd fix before shipping.
+
+In priority order:
+
+1. **Blocking I/O (critical).** Swap to async — `const data = await fs.promises.readFile(...)` in an `async` handler. Even better, if `big.json` doesn't change at runtime, read it *once* at startup and serve the cached result; you're currently re-reading the same file from disk on every hit.
+
+2. **No error handling.** If `big.json` is missing/unreadable, `readFileSync` throws. Express 4 will catch a synchronous throw and return a default 500, but an `async` handler's rejected promise is *not* caught automatically — you'd get an unhandled rejection unless you `try/catch` or wrap it. So whichever way you go async, you need explicit error handling. Same applies if `process(data)` can throw on malformed input.
+
+3. **`process` shadows the Node global.** Naming the function `process` hides the built-in `process` object within scope. Harmless here, but it's a footgun the moment someone reaches for `process.env` nearby. Rename it.
+
+4. **Relative path.** `'big.json'` resolves against the process working directory, not the file's location — run the app from a different cwd and it breaks. Use `path.join(__dirname, 'big.json')`.
+
+5. **Content-Type is implicit.** `readFileSync` with no encoding returns a Buffer; what `res.send` sets for `Content-Type` depends on what `process()` returns (object → JSON, string → HTML, Buffer → octet-stream). Worth setting the type explicitly so it's not accidental.
+
+A reasonable rewrite would be: load and process `big.json` once at startup, then have the route just `res.json(cached)` (or `res.type(...).send(cached)`). If the file genuinely changes per request, keep the read but make it async with a `try/catch`.
+
+I've only reviewed the snippet as pasted — I didn't apply any changes. Want me to write the corrected version?

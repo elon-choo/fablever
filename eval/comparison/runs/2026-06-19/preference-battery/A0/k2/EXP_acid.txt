@@ -1,0 +1,26 @@
+**ACID** is a set of four guarantees a database makes about *transactions* — groups of operations that should succeed or fail as a unit. The acronym stands for **Atomicity, Consistency, Isolation, Durability**.
+
+## The four properties
+
+**A — Atomicity** ("all or nothing")
+A transaction either completes fully or has no effect at all. If you transfer $100 between accounts — debit one, credit the other — atomicity guarantees you can never end up with the money debited but not credited. A crash mid-transaction rolls everything back.
+
+**C — Consistency** ("rules stay true")
+A transaction moves the database from one valid state to another, never violating defined rules (constraints, foreign keys, uniqueness, etc.). If a rule would be broken, the whole transaction is rejected. The account balances always add up.
+
+**I — Isolation** ("no stepping on each other")
+Concurrent transactions don't see each other's half-finished work. If two people transfer money at the same time, each transaction behaves as if it ran alone. Databases offer different *isolation levels* (read committed, repeatable read, serializable) that trade strictness for performance.
+
+**D — Durability** ("once saved, stays saved")
+Once a transaction is committed, it survives crashes, power loss, or restarts — it's written to permanent storage (typically via a write-ahead log). The bank doesn't "forget" your deposit because a server rebooted.
+
+## Why you should care
+
+- **Correctness under failure.** Real systems crash, lose network connections, and run many requests at once. ACID is what lets you reason about your data being correct *despite* all that, instead of hand-writing recovery logic for every edge case.
+- **It's why you can trust money, inventory, bookings.** Any domain where a half-applied change is a real bug (payments, e-commerce stock, seat reservations) leans on these guarantees.
+- **It shapes your tech choices.** Traditional relational databases (PostgreSQL, MySQL/InnoDB, Oracle, SQL Server) are fully ACID. Many NoSQL systems historically relaxed some of it — often Isolation or Consistency — in favor of scale and availability (the "BASE" / eventual-consistency model). Knowing what you're giving up matters: a "lost update" or "dirty read" bug usually traces back to weak isolation.
+- **Isolation is the subtle one.** Most ACID-related bugs in practice come from choosing too weak an isolation level for concurrent workloads. It's worth understanding which level your database defaults to (e.g., PostgreSQL defaults to Read Committed).
+
+**One-line takeaway:** ACID is the database's promise that your data stays correct even when things fail or happen simultaneously — so you can build on top of it instead of constantly defending against corruption.
+
+Want me to go deeper on any one (e.g., isolation levels and the anomalies they prevent, or how ACID compares to eventual consistency)?

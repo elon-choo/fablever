@@ -1,0 +1,32 @@
+For 3 related services, my default recommendation is a **monorepo** — and the bar to justify splitting them is higher than most people assume. But it genuinely depends on a few things, so let me give you the decision rather than a survey.
+
+## Default: monorepo
+
+For a small number of services that are *related* (share types, call each other, ship together, or are built by the same team), a monorepo usually wins because:
+
+- **Atomic cross-service changes.** Change an API contract and update all 3 callers in one commit/PR. With separate repos this becomes a multi-PR dance with version bumps and a window where things are out of sync.
+- **One source of truth for shared code.** Shared types, clients, and utilities live in one place — no publishing internal packages to a registry just so service B can use service A's types.
+- **Unified tooling.** One CI config, one lint/format/test setup, one dependency version policy. You fix the build pipeline once.
+- **Easier refactoring & discoverability.** Grep/rename across the whole system; new devs clone one thing.
+
+## When separate repos actually win
+
+Split them if **two or more** of these are true:
+
+- **Independent ownership/access** — different teams, or you need to grant a contractor/partner access to just one service.
+- **Independent release cadence with hard isolation** — each service versions and deploys on its own schedule and you want a repo boundary enforcing that.
+- **Divergent tech stacks** with little shared code (e.g., a Go service, a Python ML service, a TS frontend that share almost nothing).
+- **Scale pain** — repo size, CI minutes, or clone times become a real problem. At 3 services this is very unlikely.
+- **Open-sourcing one** component while keeping others private.
+
+## The nuance that trips people up
+
+A monorepo does **not** mean a monolith, and it does **not** mean coupled deploys. You can (and should) keep independent build/test/deploy pipelines per service inside one repo — trigger CI only for the service whose files changed (path filters), deploy each independently. You get code-sharing convenience without giving up deployment independence.
+
+The real cost of a monorepo shows up at scale (hundreds of projects → you need tooling like Nx, Turborepo, Bazel, or Pants). At 3 services you're nowhere near that; a plain workspace (npm/pnpm/yarn workspaces, Cargo workspace, Go modules, etc.) is plenty.
+
+---
+
+**My call:** start with a monorepo using your language's native workspace tooling. It's the cheaper-to-reverse decision early on, and 3 related services almost never hit the problems that justify splitting.
+
+If you tell me the **languages/stack**, **team structure**, and whether these services **deploy together or independently**, I can make this concrete — including a suggested directory layout.

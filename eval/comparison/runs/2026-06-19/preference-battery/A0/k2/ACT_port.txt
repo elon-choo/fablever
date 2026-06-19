@@ -1,0 +1,18 @@
+On macOS (your setup):
+
+```bash
+lsof -i :3000
+```
+
+Add `-t` to get just the PID — handy for piping into kill:
+
+```bash
+kill -9 $(lsof -t -i:3000)
+```
+
+A couple of alternatives:
+
+- **`lsof -nP -i :3000`** — `-n` skips DNS, `-P` skips port-name lookup, so it returns faster and shows the raw number.
+- **`netstat -anv | grep 3000`** — no extra install, but noisier and doesn't show the process name directly.
+
+`lsof -i :3000` is the one to remember. The output's `PID` and `COMMAND` columns tell you exactly what's holding the port.

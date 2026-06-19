@@ -1,0 +1,10 @@
+`lsof -i :3000` — it lists the process holding the port, with its PID and command name.
+
+If you just want the PID to kill it:
+
+```bash
+lsof -ti :3000        # prints just the PID(s)
+kill -9 $(lsof -ti :3000)   # find and kill in one step
+```
+
+On macOS `lsof` is the standard tool. Add `sudo` if the port is held by another user's process and nothing shows up.

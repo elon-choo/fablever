@@ -1,0 +1,7 @@
+The decrement. `i--` makes `i` go *down* every iteration (0, -1, -2, …), so the condition `i < arr.length` is always true — `i` never reaches `arr.length`. It loops forever (logging `undefined` after the first element).
+
+Change it to `i++`:
+
+```js
+for (let i = 0; i < arr.length; i++) { console.log(arr[i]); }
+```

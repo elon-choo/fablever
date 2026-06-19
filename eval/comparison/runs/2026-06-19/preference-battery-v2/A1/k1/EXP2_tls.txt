@@ -1,0 +1,38 @@
+HTTPS is just HTTP running inside a TLS tunnel. TLS gives you three guarantees at once — **confidentiality** (eavesdroppers see only ciphertext), **integrity** (tampering is detected), and **authentication** (you're really talking to the server named in the URL, not an impostor). Here's how it actually delivers them.
+
+## The core trick: asymmetric crypto to bootstrap symmetric crypto
+
+Public-key cryptography (RSA, or more commonly elliptic-curve today) is slow but lets two strangers agree on a secret over an open wire. Symmetric crypto (AES, ChaCha20) is fast but needs both sides to already share a key. TLS uses the slow method *once*, at the start, to establish a shared secret — then switches to the fast method for the actual data. The handshake is the part that does this.
+
+## The handshake (TLS 1.3, the modern version)
+
+1. **ClientHello** — your browser says hello, lists the cipher suites and TLS versions it supports, and (this is the 1.3 speedup) immediately throws in its **key-share**: an ephemeral Diffie-Hellman public value.
+
+2. **ServerHello** — the server picks a cipher suite, sends back *its* ephemeral key-share, and includes its **certificate** plus a signature. From the two key-shares, both sides independently compute the same shared secret via Diffie-Hellman — and crucially, that secret never crosses the wire. An attacker recording everything still can't derive it.
+
+3. **Key derivation** — both sides run the shared secret through a key-derivation function (HKDF) to produce the symmetric session keys. Everything after this point is AES/ChaCha20-encrypted.
+
+TLS 1.3 finishes this in **one round trip** (1-RTT), versus two in TLS 1.2. It also dropped the old RSA key-transport mode entirely, which matters for the next point.
+
+## Why each guarantee holds
+
+**Confidentiality** comes from the symmetric cipher using keys that were never transmitted. Modern TLS uses **AEAD** ciphers (e.g. AES-GCM, ChaCha20-Poly1305) which encrypt and authenticate in one operation.
+
+**Integrity** comes from the AEAD authentication tag attached to every record. Flip a single bit in transit and the tag fails to verify — the connection aborts rather than delivering corrupted or injected data.
+
+**Authentication** is the part people underestimate, and it's what stops a man-in-the-middle. Diffie-Hellman alone protects you from a *passive* eavesdropper but not an *active* attacker who sits in the middle and does two separate handshakes. The certificate closes that hole:
+
+- The server's certificate contains its public key and domain name, signed by a **Certificate Authority** (CA).
+- Your browser/OS ships with a trusted **root store** of CA public keys. It walks the **chain** from the server's cert up through intermediate CAs to a trusted root, checking each signature.
+- It verifies the cert's domain matches the URL, that it hasn't expired, and that it isn't revoked (OCSP/CRL).
+- Then the server **proves it owns the private key** by signing the handshake transcript. A MITM can copy the real cert but can't produce this signature without the private key — so the impersonation fails right there.
+
+## Forward secrecy
+
+Because the Diffie-Hellman keys are **ephemeral** — fresh per session, then discarded — even if the server's long-term private key is stolen *later*, an attacker who recorded past traffic still can't decrypt it. That property is **forward secrecy**, and it's why TLS 1.3 made ephemeral key exchange mandatory.
+
+## The mental model
+
+Certificates answer "who am I talking to," Diffie-Hellman answers "how do we get a shared secret past eavesdroppers," and the symmetric AEAD cipher answers "how do we move data fast while keeping it private and tamper-evident." The handshake's job is to chain those together so that by the time your first byte of real HTTP goes out, all three are already locked in.
+
+One common misconception worth flagging: HTTPS secures data **in transit only**. It says nothing about whether the server stores your data safely, and it doesn't hide *which* site you're visiting — the domain leaks via DNS and the TLS SNI field (unless Encrypted Client Hello is in use), and traffic size/timing can still reveal patterns.

@@ -1,0 +1,18 @@
+For a small app, use the database. Reach for Redis only when you've actually outgrown it.
+
+The reasoning:
+
+**The database wins on simplicity.** Sessions in your existing database (a `sessions` table, or Postgres-backed session storage) means one fewer piece of infrastructure to run, secure, back up, and monitor. For a small app, operational simplicity matters more than the raw speed difference — and Redis's speed advantage on session lookups is usually invisible at small scale. You're talking sub-millisecond vs. low-single-digit-millisecond reads, against a network request that's tens of milliseconds anyway.
+
+**Most frameworks already have a DB session store.** Django, Rails, Express (`connect-pg-simple`), Laravel, etc. all ship or have first-class DB-backed session adapters. It's a config line, not a project.
+
+**Expiry is the one thing to handle.** The database won't evict stale sessions for you the way Redis does with TTLs. Add an indexed `expires_at` column and a periodic cleanup job (a cron or a scheduled task that deletes expired rows). That's the entire downside, and it's minor.
+
+When Redis becomes the better choice:
+
+- You're running **multiple app servers** and want a fast shared session store without adding DB load.
+- Session reads/writes become a **measurable hot path** — e.g. every request touches the session and your DB is feeling it.
+- You already run Redis for **caching, queues, or rate-limiting**, so sessions are nearly free to add.
+- You need **automatic TTL eviction** and don't want to manage cleanup jobs.
+
+If you anticipate growing into any of those soon, it's reasonable to start with Redis — but I wouldn't add it preemptively for a small app. Start with the database, and move sessions to Redis the day you have a concrete reason. It's a low-cost migration when that day comes.

@@ -1,0 +1,68 @@
+Hoisting is JavaScript's behavior of moving the *declarations* of variables and functions to the top of their enclosing scope before any code runs. The key nuance is that only the declaration is hoisted, not the assignment — and the rules differ sharply between `var`, `let`/`const`, and function declarations.
+
+## What actually happens
+
+JavaScript runs code in two passes. During the **compilation pass**, the engine scans each scope and registers every declaration it finds. During the **execution pass**, it runs your statements top to bottom. Hoisting is just the observable result of that first pass: a name can exist before the line where you wrote it.
+
+## `var`
+
+A `var` declaration is hoisted and initialized to `undefined`. So you can reference it before its line without a crash — you just get `undefined`, not the assigned value.
+
+```js
+console.log(x); // undefined — declaration hoisted, assignment not
+var x = 5;
+console.log(x); // 5
+```
+
+What the engine effectively sees:
+
+```js
+var x;          // hoisted, initialized to undefined
+console.log(x); // undefined
+x = 5;          // assignment stays put
+```
+
+`var` is also function-scoped, not block-scoped, so it hoists to the top of the nearest function (or the global scope), ignoring blocks like `if` or `for`.
+
+## `let` and `const`
+
+These are also hoisted, but **not initialized**. From the start of the block until the declaration line, the variable sits in the **Temporal Dead Zone (TDZ)**. Touching it there throws a `ReferenceError` rather than giving `undefined`.
+
+```js
+console.log(y); // ReferenceError: Cannot access 'y' before initialization
+let y = 5;
+```
+
+This is why people sometimes say "let isn't hoisted" — it is, but the TDZ makes early access an error instead of a silent `undefined`. `const` behaves the same way and additionally requires an initializer at the declaration. Both are block-scoped.
+
+## Function declarations
+
+A function *declaration* is fully hoisted — name and body — so you can call it before it appears in the source.
+
+```js
+greet(); // "hi" — works
+function greet() {
+  console.log("hi");
+}
+```
+
+## Function expressions and arrow functions
+
+These follow the rules of the variable they're assigned to. The variable hoists, but the function value does not.
+
+```js
+greet(); // TypeError: greet is not a function
+var greet = function () {
+  console.log("hi");
+};
+```
+
+Here `greet` is hoisted as `var` and is `undefined` at the call, so invoking it throws a `TypeError`. With `let`/`const` you'd instead get a `ReferenceError` from the TDZ.
+
+## Precedence when names collide
+
+Within a scope, function declarations are hoisted above variable declarations. If a `var` and a function share a name, the function wins during hoisting; a later assignment can still overwrite it at execution time.
+
+## Practical takeaway
+
+Hoisting is mostly a footgun to understand rather than a feature to use. Declare before you use, prefer `let`/`const` over `var` so early access fails loudly instead of silently yielding `undefined`, and define functions before calling them for readability even though declarations technically allow otherwise.

@@ -1,0 +1,22 @@
+The main problem is an N+1 query: you run one `User.findById` per order, sequentially (each `await` blocks the next), so 100 orders means 101 round-trips to the database.
+
+Two ways to fix it, depending on whether `Order` and `User` have an association defined (the `findAll`/`findById` naming looks like Sequelize):
+
+**Best — eager load in a single query** (if the association exists):
+```js
+const orders = await Order.findAll({ include: User });
+// each order's user is now populated by the join
+```
+
+**Otherwise — batch the lookup into one query:**
+```js
+const orders = await Order.findAll();
+const ids = [...new Set(orders.map(o => o.userId))];
+const users = await User.findAll({ where: { id: ids } });
+const byId = new Map(users.map(u => [u.id, u]));
+for (const o of orders) o.user = byId.get(o.userId);
+```
+
+Both collapse N+1 queries into 2 (or 1 with the join). The batch version also de-duplicates `userId`, so shared users aren't fetched twice.
+
+One smaller note even if you kept the loop: `await` inside a `for` runs the queries one after another. Replacing it with `Promise.all` would at least parallelize them — but that still fires N queries and can swamp the connection pool, so batching is the better fix, not parallelizing.

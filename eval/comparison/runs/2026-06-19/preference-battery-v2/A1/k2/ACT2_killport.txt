@@ -1,0 +1,9 @@
+On macOS, this finds the process and kills it:
+
+```bash
+lsof -ti :8080 | xargs kill -9
+```
+
+`lsof -ti :8080` prints just the PIDs listening on the port, and `xargs kill -9` force-kills them. Drop the `-9` for a graceful `SIGTERM` first if you'd rather let the process clean up.
+
+If nothing is on the port, `lsof` outputs nothing and `xargs` runs `kill` with no arguments — harmless. To see what you'd be killing before pulling the trigger, run `lsof -i :8080` on its own first.

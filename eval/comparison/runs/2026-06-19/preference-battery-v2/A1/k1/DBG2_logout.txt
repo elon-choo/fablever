@@ -1,0 +1,16 @@
+Most likely: your access tokens have a short expiry (a few-minute `exp`) and the refresh path isn't actually working — so when the token dies, there's nothing to silently renew it and the user gets bounced to login. "A few minutes" is almost always the `exp` you set on the token.
+
+A close second, and the better fit if the logouts feel *random* rather than clockwork-consistent: **the signing secret isn't stable across your backend.** Two common shapes of this —
+
+- **Multiple instances, mismatched secrets.** If you run more than one backend instance behind a load balancer and the JWT secret is generated at boot (or pulled from different config) instead of shared from one env var, a token signed by instance A fails verification on instance B. Every time the LB rotates you to a different instance you get a 401 — which feels exactly like "random logout after a few minutes."
+- **Restarts regenerating the secret.** If the secret is created at startup rather than persisted, every deploy, crash, or autoscale event invalidates every live token at once.
+
+How to tell them apart quickly:
+
+1. **Decode a token** (paste into jwt.io or `base64 -d` the middle segment) and look at `exp` − `iat`. If that gap is ~5–15 min, it's a short-TTL/refresh problem. If the gap is long but you're still getting logged out sooner, it's a verification problem (secret/clock), not expiry.
+2. **Count your backend instances and check where the secret comes from.** One hardcoded shared env var across all instances = fine; per-instance random secret = found it.
+3. **Check whether logouts cluster around deploys/restarts** (→ secret regenerated at boot) or scale with traffic/load (→ multi-instance secret mismatch).
+
+Lower-probability suspects worth a glance if the above clear: clock skew between servers tripping `exp`/`nbf` validation; a refresh-token rotation race where two concurrent requests both refresh and one invalidates the other; or a cookie issue (too-short `Max-Age`, or `Secure`/`SameSite`/domain causing the token cookie to intermittently not be sent).
+
+If you can share how the token is stored (cookie vs. localStorage), the `exp` value, and how many backend instances you run, I can narrow it to one.

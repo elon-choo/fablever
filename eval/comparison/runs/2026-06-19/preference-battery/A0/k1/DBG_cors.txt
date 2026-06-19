@@ -1,0 +1,43 @@
+This is one of the most common "it works in Postman but not the browser" confusions. The short answer: **CORS is a browser-only security mechanism. Postman isn't a browser, so it doesn't enforce it.** Your request was never actually broken — the browser is just refusing to let your JavaScript read the response.
+
+## Why the difference exists
+
+CORS (Cross-Origin Resource Sharing) is enforced by the browser to protect *users*. When your JS on `https://app.example.com` calls `https://api.other.com`, the browser asks the server "are you OK with app.example.com reading your response?" via response headers. If the server doesn't say yes, the browser blocks *your script* from seeing the result.
+
+- **Postman / curl / your backend** are HTTP clients with no "origin" and no same-origin policy. They send the request and hand you whatever comes back. No CORS check ever happens.
+- **The browser** adds an `Origin` header automatically and refuses to expose the response to JS unless the server returns the matching `Access-Control-Allow-*` headers.
+
+So the server is responding fine (that's why Postman works) — the browser is the one slamming the door.
+
+## What's actually failing
+
+Look closely at the failure. The request usually *does* hit the server; it's the response that gets blocked. Two flavors:
+
+1. **Simple requests** (GET/POST with simple headers) — the request goes through, server processes it, but the browser discards the response because `Access-Control-Allow-Origin` is missing/mismatched.
+2. **Preflighted requests** — if you use methods like `PUT`/`DELETE`, custom headers (e.g. `Authorization`, `Content-Type: application/json`), the browser first sends an `OPTIONS` "preflight". If the server doesn't answer that correctly, your real request never even fires. **Postman never sends a preflight**, which is why it sails through.
+
+## How to fix it (in order of correctness)
+
+**The real fix is on the server**, not the client. CORS headers must come from the API:
+
+```
+Access-Control-Allow-Origin: https://app.example.com   (or a specific origin, not * if you send credentials)
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+```
+
+And the server must handle `OPTIONS` preflight requests, returning `204`/`200` with those headers.
+
+Gotchas:
+- **Credentials (cookies/auth):** if you send `credentials: 'include'`, you **cannot** use `Access-Control-Allow-Origin: *` — it must echo the exact origin, plus `Access-Control-Allow-Credentials: true`.
+- **It's not the API you own?** Use a proxy — call your own backend (or a dev proxy / Vite's `server.proxy`) which calls the third-party API server-to-server. No browser = no CORS.
+- **Local dev only:** dev-server proxies or browser flags work, but never ship those as the "fix."
+
+## What *won't* fix it
+- Adding `Access-Control-*` headers to the **request** from JS — those are *response* headers; the browser ignores them on requests.
+- `mode: 'no-cors'` — this doesn't bypass anything useful; it gives you an opaque response you can't read.
+- Disabling CORS in the browser permanently — it's a real user-protection feature, not a bug.
+
+---
+
+If you paste the **exact console error** (e.g. "No 'Access-Control-Allow-Origin' header" vs "Method ... not allowed by Access-Control-Allow-Methods" vs a preflight failure) plus your `fetch` options, I can tell you precisely which case you're hitting and what the server needs to return.

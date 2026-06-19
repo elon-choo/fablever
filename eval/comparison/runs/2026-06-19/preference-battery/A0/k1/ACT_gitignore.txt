@@ -1,0 +1,27 @@
+You already committed `node_modules`, so adding it to `.gitignore` alone won't help — git keeps tracking files it already knows about. You need to remove it from tracking (while keeping it on disk), then ignore it.
+
+```bash
+# 1. Add the ignore rule (if not already there)
+echo "node_modules/" >> .gitignore
+
+# 2. Stop tracking it — but keep the files on disk (--cached)
+git rm -r --cached node_modules
+
+# 3. Commit the removal
+git commit -m "Stop tracking node_modules"
+```
+
+### Key points
+
+- **`--cached` is critical.** It removes the files from git's index only, leaving your actual `node_modules/` directory untouched on disk. Without it, `git rm -r node_modules` would delete the real files.
+- After this, `node_modules` stays on your machine, npm/yarn keeps working, and git ignores future changes to it.
+- **History note:** this removes it going *forward*. The old commits still contain `node_modules`, so your repo history (and clone size) won't shrink. For most cases that's fine. If you need to purge it from all history (e.g. it bloated the repo or leaked something), that's a separate, more invasive operation with [`git filter-repo`](https://github.com/newren/git-filter-repo) — and it rewrites history, so coordinate with anyone else on the repo first.
+
+### Verify it worked
+
+```bash
+git status                    # node_modules should no longer appear
+git ls-files | grep node_modules   # should print nothing
+```
+
+Want me to run these in your current repo, or is this for a different project?

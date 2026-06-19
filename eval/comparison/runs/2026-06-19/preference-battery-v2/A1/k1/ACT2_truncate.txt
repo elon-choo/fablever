@@ -1,0 +1,26 @@
+Truncate it in place rather than deleting and recreating it. The simplest way:
+
+```bash
+: > /path/to/logfile      # or  > /path/to/logfile
+```
+
+This keeps the same inode, so the process's open file descriptor stays valid and it keeps writing to the now-empty file. Equivalent options:
+
+```bash
+truncate -s 0 /path/to/logfile
+cat /dev/null > /path/to/logfile
+```
+
+Why not `rm`: if you delete the file, the process still holds the open inode, so the disk space **isn't freed** until that process closes the descriptor or exits — the file lives on as an unlinked inode. Any new file you create with the same name gets a different inode, and the process keeps writing to the old, invisible one. So you'd see "the file is gone" but the disk stays full.
+
+Two caveats:
+
+- **Append mode vs. seek offset.** If the process opened the log with `O_APPEND` (most loggers do), truncation is clean — the next write goes to offset 0. If it opened *without* append and tracks its own offset, the file will look empty but the process keeps writing at the old offset, leaving a sparse file with a multi-gigabyte hole. It still doesn't waste disk (the hole isn't allocated), but `ls -l` will show the old large size. In that case the right fix is log rotation with `copytruncate`, or signaling the process to reopen its log.
+
+- **The redirect runs in your shell**, so your shell's user needs write permission on the file; use `sudo tee`/`sudo truncate` if it's root-owned:
+
+```bash
+sudo truncate -s 0 /path/to/logfile
+```
+
+If this is a recurring problem, `logrotate` with the `copytruncate` directive (or, better, an `HUP`-to-reopen handler if the daemon supports one) is the durable answer.

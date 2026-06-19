@@ -1,0 +1,42 @@
+Because your GET is a **"simple request"** and your POST isn't — so the POST triggers a **preflight** `OPTIONS` request that your server probably isn't answering.
+
+## The mechanism
+
+The browser splits cross-origin requests into two categories:
+
+**Simple requests** — sent directly, no preflight. To qualify, the request must use `GET`, `HEAD`, or `POST` **and** only use "safe" headers **and** have a `Content-Type` of one of:
+- `application/x-www-form-urlencoded`
+- `multipart/form-data`
+- `text/plain`
+
+**Preflighted requests** — the browser first sends an `OPTIONS` request to ask "am I allowed to do this?" before sending the real one.
+
+## Why your POST gets blocked
+
+Your POST is almost certainly sending `Content-Type: application/json` (or a custom header like `Authorization`). That **disqualifies it from being a simple request**, so the browser fires a preflight:
+
+```
+OPTIONS /api/thing
+Origin: https://yourapp.com
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: content-type
+```
+
+The server must answer that `OPTIONS` with the right headers:
+
+```
+Access-Control-Allow-Origin: https://yourapp.com
+Access-Control-Allow-Methods: POST, GET, OPTIONS
+Access-Control-Allow-Headers: Content-Type
+```
+
+If your server only handles `GET`/`POST` but returns a 404/405 or no CORS headers on `OPTIONS`, the preflight fails and the browser blocks the POST **before it's ever sent**. The GET sailed through because it never needed a preflight.
+
+> Note: it's not "POST is blocked" per se — it's *this particular* POST. A `text/plain` or form-encoded POST with no custom headers would be a simple request and go through just like the GET.
+
+## How to confirm & fix
+
+1. **Confirm:** Open DevTools → Network. You'll see an `OPTIONS` request before the POST, failing or missing CORS response headers.
+2. **Fix:** Make your server (or its CORS middleware) respond to `OPTIONS` with `Access-Control-Allow-Origin`, `-Allow-Methods`, and crucially `Access-Control-Allow-Headers: Content-Type`. Most frameworks have a CORS package that does this — just ensure it's mounted *before* your routes and that it handles `OPTIONS`.
+
+What's your stack (Express, Flask, nginx, etc.)? I can give you the exact config.

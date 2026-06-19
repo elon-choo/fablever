@@ -1,0 +1,36 @@
+Yes — this is a classic **N+1 query** problem, made worse by being **sequential**. For N orders you fire 1 + N queries, each awaited one-at-a-time (round-trip × N).
+
+Two fixes, best first:
+
+**1. Single batched query (best)** — fetch all users at once, map in memory:
+
+```js
+const orders = await Order.findAll();
+const userIds = [...new Set(orders.map(o => o.userId))];
+const users = await User.findAll({ where: { id: userIds } });
+const byId = new Map(users.map(u => [u.id, u]));
+for (const o of orders) o.user = byId.get(o.userId);
+```
+
+2 queries total regardless of order count. The `Set` also dedupes shared users.
+
+**2. Eager-load / join at the source (even better if your ORM supports it)** — looks like Sequelize:
+
+```js
+const orders = await Order.findAll({ include: [{ model: User }] });
+// each order already has order.User populated — 1 query (a JOIN)
+```
+
+This is the cleanest if `Order` has the association defined.
+
+---
+
+If you genuinely must do per-order lookups, at least don't serialize them:
+
+```js
+await Promise.all(orders.map(async o => { o.user = await User.findById(o.userId); }));
+```
+
+That keeps N+1 queries but runs them concurrently instead of back-to-back. Still inferior to the batched/join approach — prefer those, and watch the connection pool if N is large.
+
+Which ORM is this? If it's Sequelize/TypeORM/Prisma I can give you the exact `include`/`relations`/`with` syntax.

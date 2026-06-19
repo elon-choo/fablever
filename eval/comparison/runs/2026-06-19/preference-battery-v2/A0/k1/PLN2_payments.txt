@@ -1,0 +1,54 @@
+No worries — I'll lay out the plan for the most common SaaS case (**recurring subscriptions + Stripe-hosted Checkout**, which is what I'd recommend by default), and flag where it changes if your situation differs. Adjust any assumption and I'll re-tailor.
+
+## The mental model
+
+Stripe is the source of truth for billing; your DB is a cache of it. The webhook is the contract between them. Almost every Stripe bug comes from trusting the client-side redirect instead of the webhook — so the plan is built around that.
+
+## Core objects to set up (in Stripe Dashboard first)
+
+- **Products** = your plans (Pro, Team). **Prices** = the actual amounts attached to a product (Pro monthly $20, Pro annual $200). You reference *Price IDs* in code, never hard-coded amounts.
+- Turn on the **Customer Portal** (Settings → Billing) — this gives you upgrade/downgrade/cancel/update-card for free, saving you the most painful UI work.
+- Set up a **test-mode** API key first; ship everything against test mode before touching live keys.
+
+## Implementation steps
+
+**1. Data model.** Add to your `users`/`accounts` table (or a `subscriptions` table):
+- `stripe_customer_id`
+- `stripe_subscription_id`
+- `plan` / `price_id`
+- `subscription_status` (`active`, `past_due`, `canceled`, `trialing`…)
+- `current_period_end` (so you can gate access without calling Stripe on every request)
+
+**2. Create a Customer** when a user signs up (or lazily at first checkout). Store the `customer_id`. One Stripe Customer per account, forever.
+
+**3. Checkout session endpoint.** Backend route `POST /api/checkout` → creates a `checkout.session` with the chosen Price ID, the customer ID, success/cancel URLs → returns the URL → frontend redirects. Never set prices client-side; the client sends a *plan identifier*, the server maps it to a trusted Price ID.
+
+**4. Webhook handler — the critical piece.** A single endpoint (`POST /api/stripe/webhook`) that:
+- Verifies the signature with your webhook signing secret (raw body, *before* JSON parsing — this trips people up).
+- Handles at minimum: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid`, `invoice.payment_failed`.
+- Is **idempotent** (Stripe retries; dedupe on event ID).
+- Updates your DB to mirror Stripe. This — not the success redirect — is what grants access.
+
+**5. Customer Portal endpoint.** `POST /api/portal` → creates a billing portal session → redirect. Done; no custom billing-management UI needed.
+
+**6. Access gating.** Middleware checks `subscription_status` + `current_period_end` from *your* DB to allow/deny features. Fast, no Stripe round-trip.
+
+## Test before live
+
+- Use Stripe test cards (`4242…` success, `4000 0000 0000 9995` decline, plus the 3DS-required ones).
+- Run `stripe listen --forward-to localhost/...` (Stripe CLI) to replay webhooks locally — essential.
+- Verify the failure paths: declined card, `payment_failed` → dunning, cancellation → access revoked at period end.
+
+## Where this changes based on your choices
+
+- **Usage-based / hybrid:** add metered usage reporting (Billing Meters) and the plan/webhook set grows — tell me and I'll expand step 3–4.
+- **Embedded Elements instead of hosted Checkout:** steps 3 becomes a PaymentIntent + client-side Elements flow, and you take on more PCI scope and SCA/3DS handling yourself.
+- **One-time payments:** drop the whole subscription lifecycle — just `checkout.session.completed` + fulfillment.
+
+## What I'd want to confirm to go further
+
+1. **Stack** — so I can write the actual checkout + webhook handlers in your framework's idioms.
+2. **Billing model** — subscriptions vs usage-based materially changes steps 3–4.
+3. **Tax/invoicing needs** — Stripe Tax is a checkbox but worth knowing if you sell internationally.
+
+Want me to scaffold the concrete code (checkout endpoint + webhook handler + data model migration) for a specific stack? If so, just name the stack and billing model and I'll write it.

@@ -1,0 +1,15 @@
+For a side project, default to a platform (Render/Fly) unless you specifically want to learn server administration. The thing a side project is short on is *your time and attention*, not money — and a platform buys back exactly that: no patching the OS, no configuring nginx/systemd/TLS renewal, no getting paged because the disk filled with logs. You push, it deploys, it restarts on crash. That's the whole pitch and it's the right trade for something you work on in spare hours.
+
+Pick the platform by shape of the app:
+- **Render** — simplest mental model. Web service + managed Postgres + cron, all in a dashboard. Best if you just want it running and forgotten.
+- **Fly** — containers run close to users, cheap always-on small VMs, real persistent volumes. Better if you want multi-region, raw TCP, or more control while still avoiding ops.
+
+Reach for a **plain VPS** (Hetzner is the value pick, DigitalOcean the polished one) when one of these is actually true:
+- Learning Linux/ops *is* a goal of the project.
+- You're running several services and want to pack them onto one $5–10 box — a VPS is meaningfully cheaper at that density than per-service platform pricing.
+- You need something the platform won't let you do: a specific kernel, GPU, odd daemon, custom networking.
+- The app is steady-state and you don't want usage-based pricing surprises.
+
+The honest caveat on cost: platform free tiers are real but they sleep idle apps and the paid tiers climb once you add a database and a couple of services — a VPS is a flat, predictable bill. But that bill includes you being the sysadmin. For most side projects that's the worse deal.
+
+If you tell me what the project is (web app + DB? a bot? a static frontend + API? background workers?), I'll name the specific setup I'd use.

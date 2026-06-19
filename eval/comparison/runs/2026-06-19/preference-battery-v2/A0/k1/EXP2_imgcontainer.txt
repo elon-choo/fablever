@@ -1,0 +1,56 @@
+A **Docker image** and a **Docker container** are related but distinct concepts. The simplest way to think about it: an **image is the blueprint, a container is the running instance** built from that blueprint.
+
+## Docker Image
+
+An image is a **read-only template** — a packaged, immutable snapshot containing everything needed to run an application:
+
+- Application code
+- Runtime (e.g., Node, Python)
+- System libraries and dependencies
+- Environment variables and config
+- Filesystem laid out in **layers** (each `Dockerfile` instruction adds a layer)
+
+Key traits:
+- **Immutable** — never changes once built
+- **Shareable** — pushed/pulled from registries like Docker Hub
+- Exists on disk whether or not anything is running
+- Built once, reused many times
+
+```bash
+docker build -t myapp .      # create an image
+docker images                # list images
+```
+
+## Docker Container
+
+A container is a **running (or stopped) instance of an image** — a live, isolated process with its own writable layer on top of the image's read-only layers.
+
+Key traits:
+- **Mutable at runtime** — writes go to a thin writable layer (lost when the container is removed, unless you use volumes)
+- **Isolated** — own filesystem view, network, and process space
+- **Ephemeral** — can be started, stopped, deleted freely
+- You can run **many containers from one image**, each independent
+
+```bash
+docker run myapp             # create + start a container from the image
+docker ps                    # list running containers
+```
+
+## The Core Analogy
+
+| Concept | Analogy | Programming Analogy |
+|---------|---------|---------------------|
+| **Image** | A recipe / class blueprint | A **class** |
+| **Container** | A cooked meal / a built house | An **object (instance)** |
+
+Just as one class can produce many objects, **one image can spawn many containers**. The image defines *what* will run; the container is *it actually running*, with its own mutable state.
+
+## Quick Mental Model
+
+```
+Dockerfile  ──build──▶  Image (read-only, on disk)  ──run──▶  Container (live, writable)
+```
+
+- Change the `Dockerfile` → rebuild the **image**
+- Want another isolated copy running → start another **container** from the same image
+- Delete a container → the image stays; you can spin up a fresh one anytime

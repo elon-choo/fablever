@@ -1,0 +1,76 @@
+Migrating 30k lines all at once is the trap to avoid. The whole point of incremental is that **TS and JS coexist in the same build the entire time**, you ship continuously, and you never have a "big bang" branch that rots. Here's the battle-tested plan.
+
+## Phase 0 — Foundation (don't change behavior yet)
+
+1. Add the toolchain alongside JS, don't convert anything:
+   ```bash
+   npm i -D typescript @types/node   # + @types for your runtime deps
+   npx tsc --init
+   ```
+2. `tsconfig.json` starting point — **loose on purpose** so 30k lines of JS don't explode:
+   ```jsonc
+   {
+     "compilerOptions": {
+       "allowJs": true,          // JS and TS compile together
+       "checkJs": false,         // don't type-check JS yet
+       "strict": false,          // ratchet this UP later, not now
+       "noEmit": true,           // let your existing bundler emit; tsc only checks
+       "esModuleInterop": true,
+       "skipLibCheck": true,     // ignore type errors in node_modules
+       "target": "ES2020",
+       "moduleResolution": "bundler" // or "node16" — match your runtime
+     },
+     "include": ["src/**/*"]
+   }
+   ```
+   `allowJs` is the keystone: a `.ts` file can import a `.js` file and vice-versa, so you migrate one file at a time with zero coordination.
+
+3. Decide who emits JS. Keep your existing bundler (Vite/esbuild/webpack/Babel) doing the transpilation — it strips types fast and doesn't type-check. Use `tsc --noEmit` purely as the type *checker*. Don't make `tsc` your bundler mid-migration.
+
+## Phase 1 — Guardrail in CI (do this before converting files)
+
+Add `tsc --noEmit` to CI **now**, while it passes trivially. This is the ratchet that stops backsliding: every file you convert is permanently type-checked, and a regression fails the build. Without this, migrated files silently rot back into untyped.
+
+## Phase 2 — Convert in dependency order (leaves first)
+
+Order matters. Convert **the most-depended-upon, least-depending files first** — types flow downhill.
+
+1. **Shared types / constants / utils** — pure functions, no deps. Easy wins, and they give every consumer types for free.
+2. **Domain models / data layer** — define the core `interface`/`type` shapes here once.
+3. **Business logic**, then **UI / controllers / entry points** last.
+
+Per-file loop (keep each as a tiny, reviewable PR):
+- Rename `foo.js` → `foo.ts` (`.tsx` if JSX).
+- Fix what `tsc --noEmit` flags.
+- Use `unknown` over `any` where you must punt; **forbid silent `any`**.
+- For external/untyped deps with no `@types`, write a one-line `declare module 'pkg';` in a `types/` shim and move on — don't rabbit-hole.
+- Commit. Ship. Repeat.
+
+Rules to hold the line:
+- **No behavior changes in a conversion PR.** Renaming + typing only. If you spot a bug, fix it in a *separate* PR so review stays trivial and `git blame` stays clean. (This matches your repo's code-protection rule — don't refactor working code while migrating it.)
+- `// @ts-expect-error` (not `@ts-ignore`) for unavoidable punts — it fails the build once the underlying issue is fixed, so it self-cleans.
+
+## Phase 3 — Ratchet strictness up
+
+Once most files are `.ts`, tighten progressively — each flag is its own PR so the error count is bounded:
+1. `noImplicitAny: true` — the big one; catches untyped function params.
+2. `strictNullChecks: true` — usually the highest-value flag, also the most work.
+3. Then the rest of `strict` (or just flip `"strict": true` and grind it down).
+4. Finally `checkJs: true` for any remaining `.js`, then remove `allowJs` once the last `.js` is gone.
+
+Optional accelerators: **ts-migrate** (Airbnb) or **TypeStat** can auto-annotate a first pass to bootstrap large batches — but review their output; they lean on `any`.
+
+## How to track / sequence it
+
+- Use `madge` or `dpdm` to get the dependency graph and pick the true leaves: `npx madge --json src/`.
+- Track progress as "% files `.ts`" + "strict flags enabled" — both visible, both ratcheting one direction.
+- Realistic pace: 30k lines is comfortably weeks-of-background-work, not a sprint. The codebase is shippable at every commit, so there's no deadline pressure.
+
+---
+
+Two things that change the specifics, where I assumed a default:
+
+- **I assumed you keep your existing bundler and use `tsc` only for checking.** If you're on plain `node` with no bundler, the cleanest path is `tsx`/`ts-node` for dev + `tsc` for prod emit, or Node's native type-stripping (Node 23+). 
+- **I assumed `strict: true` is the end goal.** It should be — anything less leaves most of TS's value on the table — but it's the slow part.
+
+Want me to look at the actual codebase (build setup, module system, dependency graph) and turn this into a concrete file-by-file sequence with your real `tsconfig`? If so, point me at the repo — this one (`fable-profile`) looks like an eval project, not the 30k-line JS codebase you mean.

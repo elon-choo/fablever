@@ -1,0 +1,10 @@
+The error is specifically about `.name`, so the `undefined` thing is `u.profile` — meaning `u` itself came back fine, but it has no `profile` field. You're reaching `u.profile.name`, JS evaluates `u.profile` first (that's `undefined`), then tries to read `.name` off `undefined` and throws.
+
+Worth distinguishing the two failure points, because the message tells you which one you hit:
+
+- `Cannot read property 'name' of undefined` → `u` exists, `u.profile` is missing. **This is your case.**
+- `Cannot read property 'profile' of undefined` → `db.find(id)` returned nothing for that `id` (no matching record), so `u` is `undefined`.
+
+So the root cause is a user record whose `profile` is absent or null — probably some users were created without a profile, or the profile lives in a separate collection and wasn't joined/populated. It's intermittent because it only fires for those specific records.
+
+If you want to guard it, `return u?.profile?.name` returns `undefined` instead of throwing, which also covers the `u`-is-missing case. But whether `undefined` is the right thing to return — versus throwing a clear "user not found" / "profile missing" error — depends on what the caller expects, so I'd decide that before just adding the `?.`.

@@ -1,0 +1,27 @@
+Good instinct to pause before guessing — intermittent 500s reward methodology over hunches. Here's where I'd start, in priority order.
+
+## 1. Capture one real failure before theorizing
+A 500 is an unhandled exception server-side. You can't debug a rate, you debug a **stack trace**. So the first job is making sure the next failure leaves evidence:
+
+- Confirm your error handler logs the **full stack trace + a request ID** (not just "500 Internal Server Error").
+- If you have error tracking (Sentry/Datadog/CloudWatch), go pull the last few 500s right now — you may already have the answer sitting in there.
+- If you *don't*, add structured logging on the error path first. Everything downstream depends on having one captured exception.
+
+Don't skip this step to chase a theory. One real trace usually collapses "no pattern" into an obvious cause.
+
+## 2. The highest-value correlation check: is it one bad instance?
+**1-in-50 being roughly constant is a tell.** If you run ~N replicas behind a load balancer and one is unhealthy (dead DB connection, OOM, stale deploy), round-robin sends a predictable fraction of traffic into the wall. Check whether failures correlate with a **specific host/pod/instance ID**. This is cheap to check and a very common cause of "random but steady" error rates.
+
+## 3. Then walk the usual suspects for *intermittent* (not input-shaped) 500s
+Once you have a trace, it'll point at one of these:
+
+- **Connection pool exhaustion** — DB/HTTP pool maxes out under brief concurrency spikes; requests that can't get a connection time out and 500. Look for "pool timeout" / "too many connections."
+- **Stale / dropped connections** — a pooled DB connection died (idle timeout, DB restart, network blip) and the first request to grab it fails. Classic intermittent.
+- **Flaky downstream dependency** — DB, cache, or a third-party API occasionally times out and you don't retry/handle it.
+- **Race condition / shared mutable state** — only fires under concurrent requests, which is why it looks patternless.
+- **Occasional edge-case input** — a field that's usually present is sometimes null/huge. The trace makes this obvious immediately.
+
+## What I'd actually do next
+Pull the stack trace, then check host correlation. Those two together resolve the large majority of these.
+
+If you point me at the service (which repo/stack — language, framework, where it's deployed, what observability you have), I can get specific: look at your error-handling path, check how your DB/HTTP pools are configured, or help you add the logging to catch the next one. Want to do that?

@@ -1,0 +1,31 @@
+Short version: **start with a Postgres table (via a library, not hand-rolled). Reach for BullMQ only when you outgrow it. Reach for a cloud queue only when you're decoupling services or need someone else to own durability.**
+
+The decision hinges on three things — what you already run, your throughput, and whether enqueue needs to be transactional with your other DB writes.
+
+## DB table — the right default
+If you already have Postgres and you're under, say, a few hundred jobs/sec, this wins on simplicity.
+
+- **Don't write the `SELECT ... FOR UPDATE SKIP LOCKED` loop yourself.** Use **pg-boss** or **graphile-worker**. You get retries, scheduling, cron, backoff for free, and zero new infrastructure.
+- **Killer feature: transactional enqueue.** You can insert the job in the *same transaction* as your business write. Either both commit or neither does — no "I saved the order but the email job vanished" dual-write bug. Redis and cloud queues can't give you this.
+- **Downside:** it's polling-based, so not ideal for very high throughput or sub-ms latency, and a busy queue table needs occasional vacuum/archiving attention.
+
+## BullMQ — when you need the features or the throughput
+Worth it when the DB table starts straining *or* you specifically need what it's good at:
+
+- Rich job semantics: rate limiting, priorities, delayed/repeatable jobs, concurrency control, **flows** (parent/child job dependencies).
+- Higher throughput than a polling DB table.
+- **Costs:** Redis is now a stateful service you must operate, and you must configure persistence (AOF) deliberately or you can lose jobs on a crash. And enqueue is no longer transactional with your DB — you're back to the dual-write problem. Don't add Redis *just* for a queue if you don't otherwise need it.
+
+## Cloud queue (SQS / Cloud Tasks / Pub/Sub) — when ops isn't your job
+Best when:
+
+- You're **decoupling services** across a fleet, not just running background work inside one app.
+- You want managed durability/scale and zero queue ops, and you're already in that cloud.
+- **Costs:** vendor lock-in, worse local-dev story, and the bare ones (SQS) make you build retry/visibility/DLQ logic yourself. Cloud Tasks is nicer if you want HTTP-push fan-out.
+
+## Quick rule
+- Already on Postgres, single app, normal scale → **pg-boss / graphile-worker**.
+- Need rate-limiting/flows/cron-heavy/high throughput and OK running Redis → **BullMQ**.
+- Crossing service boundaries or want it fully managed on your existing cloud → **cloud queue**.
+
+If you tell me your stack (do you already run Postgres or Redis?), rough job volume, and whether enqueue needs to be atomic with a DB write, I'll point at one and sketch the setup.

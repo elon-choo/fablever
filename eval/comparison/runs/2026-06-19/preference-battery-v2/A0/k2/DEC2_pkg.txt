@@ -1,0 +1,27 @@
+For a fresh monorepo, use **pnpm**. It's the strongest default in 2026.
+
+## Why pnpm wins for monorepos
+
+- **Built-in workspaces** that actually scale — `pnpm-workspace.yaml` + `workspace:*` protocol for linking internal packages is clean and explicit.
+- **Content-addressable store** — packages are hard-linked from a global store, so disk usage and install times stay low even with dozens of packages. This gap widens as the repo grows.
+- **Strict by default** — no phantom dependencies. A package can only import what it actually declares, which prevents the "works on my machine because some sibling hoisted it" class of bugs. This is the single biggest correctness advantage in a monorepo.
+- **`pnpm --filter`** for running tasks against specific packages and their dependents is excellent.
+
+## The honest trade-offs
+
+- **npm workspaces** have matured and are fine if you want zero extra tooling and a "comes with Node" story. But task orchestration is weak — you'll bolt on Turborepo or Nx anyway, and the non-strict hoisting invites phantom-dependency bugs.
+- **Yarn** — only consider **Yarn Berry (v4, PnP)** for genuinely new repos; Yarn Classic (v1) is EOL, don't start there. Berry's PnP is powerful but has real ecosystem-compatibility friction (some tools still choke on PnP). Most teams who reach for Yarn end up in `nodeLinker: node-modules` mode, at which point pnpm is simply better.
+
+## Recommendation
+
+```
+pnpm  +  Turborepo (or Nx if you need heavier task graphs / code-gen / polyglot)
+```
+
+pnpm for dependency management and linking; a task runner on top for caching and orchestration. That's the mainstream high-leverage default right now.
+
+**Pick npm instead only if** the team strongly prefers zero non-default tooling and the repo is small. **Pick Yarn Berry only if** someone on the team already knows PnP well and wants its zero-install / strictness story.
+
+One caveat worth a sentence: whichever you choose, commit the lockfile and pin the package manager via the `packageManager` field in `package.json` (Corepack) so everyone gets identical installs.
+
+Want me to scaffold a starter — `pnpm-workspace.yaml`, root `package.json`, and a Turborepo `turbo.json`?

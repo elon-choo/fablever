@@ -1,0 +1,11 @@
+No problem — I won't block on those. Here's the **default I'd run with** if you don't want to spec it out, plus where to adjust:
+
+- **Assume "seconds-stale is fine" → TTL-based cache-aside with Redis.** It's the simplest design that works and needs zero write-path changes. Set TTLs of 30–60s on your hottest read queries, add TTL jitter + a per-key lock for stampede protection, and ship one query behind a flag first. This covers the large majority of "reads hammering the DB" cases.
+- **Only upgrade to write-through / delete-on-write** for specific data that genuinely can't tolerate staleness (balances, inventory, permissions). Do that per-key, not globally.
+
+But seriously — **do Step 0 first.** Run `pg_stat_statements` (or your DB's equivalent) and look at the top queries by total time. More often than not the real culprit is a missing index, an N+1, or no connection pooling — and a read replica frequently beats an app cache because it needs no invalidation logic at all. Caching is the right answer often, but it's worth 30 minutes to confirm you're not adding an invalidation-bug surface to paper over a missing index.
+
+Whenever you want the tailored version, just tell me:
+1. **The stack** (DB + app runtime) — so I give real client code and index/invalidation hooks instead of generics.
+2. **Staleness tolerance** — fresh-required vs seconds-OK vs minutes-OK.
+3. Even better: paste your **top 5 queries** from `pg_stat_statements` and I'll tell you which ones to cache, which to index, and which to leave alone.

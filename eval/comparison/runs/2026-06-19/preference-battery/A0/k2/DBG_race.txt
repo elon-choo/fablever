@@ -1,0 +1,58 @@
+A test that's green alone but red under parallel load is almost always an **isolation problem**: it's sharing something with its neighbors that doesn't collide when it runs by itself. Your job is to find the shared resource and the interleaving that breaks it. Here's how I'd hunt it down.
+
+## 1. Confirm it's parallelism, not just order
+First, separate the two hypotheses — *concurrent contention* vs. *order-dependent state left behind*.
+
+```
+# Same parallelism, but does order alone matter? Run serially in suite order:
+<runner> --runInBand            # jest
+pytest -p no:xdist              # pytest
+go test -p 1 ./...             # go
+
+# Then crank parallelism up to force contention:
+jest --maxWorkers=4
+pytest -n 8
+go test -race -count=1 ./...
+```
+
+- Fails serially in-suite but passes alone → **leftover state / ordering** (a prior test mutates a shared resource).
+- Passes serially but fails only when workers > 1 → **true concurrency contention** (race on a shared resource at the same instant).
+
+## 2. Find the smallest failing pair
+You rarely need the whole suite. Bisect down to a culprit + victim pair.
+
+- Many runners can shard or randomize: `jest --shard`, `pytest-xdist`, `go test -shuffle=on`. Note the seed/order when it fails so you can replay it.
+- Manually bisect: run the victim with one half of the suite, then the other half. Keep halving until you have a 2-test repro. That pair tells you almost everything.
+
+## 3. Pin down the shared resource
+Integration tests fail in parallel because they collide on something real. Usual suspects, roughly in order of frequency:
+
+| Shared resource | Telltale sign | Fix |
+|---|---|---|
+| **Database rows/tables** | Unique-constraint violations, unexpected row counts, "0 rows" | Per-worker schema/DB, or transaction-rollback-per-test, namespaced fixture data |
+| **Fixed ports / sockets** | `EADDRINUSE`, connection refused | Bind to port 0, get the assigned port per worker |
+| **Temp files / fixed paths** | "file exists", truncated/garbled reads | Per-test temp dir (`mktemp`, `tmp_path`) |
+| **Global/singleton in-process state** | Only flakes with in-process workers, not subprocess | Reset between tests; avoid module-level mutable state |
+| **Time/clock & "now"** | Off-by-a-bit timestamps, ordering asserts | Inject a clock; freeze time |
+| **Env vars / cwd** | One worker's `chdir`/`setenv` bleeds over | Never mutate process-global env in a test |
+| **External service / shared cache (Redis)** | Cross-talk between unrelated tests | Per-worker key prefix / logical DB index |
+| **Test-double registries, faked network** | Stale mock answers | Per-test isolation, no global mock state |
+
+The discriminator from step 1 matters here: if `--runInBand` also fails, suspect **leftover state**; if only multi-worker fails, suspect a **shared external resource** (DB/port/Redis) or a same-instant race.
+
+## 4. Make the failure loud
+Flakes hide behind low repro rates. Stack the deck:
+
+- **Loop until it breaks**: `go test -count=200 -race`, or `for i in $(seq 100); do <runner> || break; done`. A test that fails 1/500 in CI can fail 1/20 locally with enough reps.
+- **Enable the race detector** if your language has one (`-race`, ThreadSanitizer). For DB-level races, turn on query logging and diff the interleaving between a passing and failing run.
+- **Log identity**: print the worker id, the DB/schema name, the temp path, and any "unique" fixture id each test actually used. Two tests printing the same value is your smoking gun.
+- **Add timing jitter**: a tiny random sleep before the suspect's setup often widens the race window and makes an intermittent failure reliable.
+
+## 5. Confirm the root cause before fixing
+Once you have a 2-test repro and a suspected resource, prove it: give that test its **own** copy of the resource (own DB schema, own temp dir, own port) and the failure should vanish. If it does, you've found it. If it doesn't, you isolated the wrong resource — go back to step 2 with the next suspect.
+
+---
+
+**The general principle:** the test isn't flaky — it's *honest about a hidden dependency*. Don't "fix" it with retries or a forced serial marker (that hides the bug and slows the suite). Find the shared mutable thing and give each test its own, or reset it deterministically between tests.
+
+If you tell me your stack (runner + what the integration test touches — DB? HTTP server? files?), I can give you the exact isolation pattern and the commands to reproduce it.

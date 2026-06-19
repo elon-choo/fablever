@@ -1,0 +1,24 @@
+Before I plan anything, I hit a mismatch worth flagging: **this directory isn't a React app.**
+
+`/Users/elon/work/fable-profile` is the **`fablever`** project — a Claude Code behavioral layer (output style + hooks + MCP + orchestration recipes), pure Node, `commonjs`, and `"dependencies": {}` (zero deps). There's no React, no JSX/TSX, no bundler. The only hits for "react" are eval test-prompt fixtures (`eval/comparison/prompts/*.json`), not source code.
+
+So I don't want to hand you a generic i18n plan pinned to a codebase that doesn't exist here — it'd be fiction. A useful i18n plan depends heavily on specifics I can only get from the *real* app: the framework (Next.js App Router vs. Pages vs. CRA vs. Vite), whether rendering is SSR/SSG/CSR, how routing works, and how many hardcoded strings already exist.
+
+A couple of quick questions so I can ground this properly:
+
+1. **Where does the actual React app live?** A different repo/path on this machine? Point me at it and I'll read the real setup before proposing anything.
+2. **What's the stack?** Especially Next.js vs. Vite/CRA — it changes the recommended library and the routing/locale-detection strategy a lot.
+3. **Which 3 languages**, and do any need RTL (Arabic/Hebrew) or complex pluralization? That affects layout and the ICU-message decision.
+
+If you tell me the path, I'll inspect it and come back with a concrete, staged plan (library choice, string-extraction approach, locale routing, translation workflow, and a rollout order). 
+
+In the meantime, here's the **framework-agnostic shape** such a plan almost always takes, so you know what's coming:
+
+- **Library** — `react-i18next` (most flexible) or `next-intl` (if Next.js App Router). Both support ICU-style plurals/interpolation.
+- **Extraction** — audit and pull hardcoded strings into namespaced JSON catalogs (`en`, +2), keyed by feature, not by page.
+- **Locale strategy** — detection (URL path `/de/...` > cookie > `Accept-Language`), a default/fallback locale, and persistence.
+- **Formatting** — route dates/numbers/currency through `Intl.*`, not the message catalogs.
+- **Workflow** — `en` as source of truth, a script to detect missing/orphaned keys in CI, and a handoff format for translators.
+- **Rollout** — wire the provider → migrate one high-traffic flow end-to-end as a template → fan out → add the CI key-coverage gate.
+
+Where's the app?

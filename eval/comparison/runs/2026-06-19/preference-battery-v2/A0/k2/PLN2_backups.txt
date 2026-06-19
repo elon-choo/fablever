@@ -1,0 +1,47 @@
+You didn't pick options — that's fine, I'll go with sensible defaults and you can correct any that don't fit. 
+
+**Assumptions I'm running with** (tell me if wrong): cover *both* Aurora and Supabase; tier the recovery target — near-zero/PITR for Aurora (it's your revenue/user data) and daily for Supabase ads; and aim for **off-account, immutable** backups as the end state, rolled out in phases so you're protected within the hour rather than the week.
+
+The single most important principle up front: **a backup you have never restored is not a backup.** Most "we had backups" disasters are actually "we had backup *files* that didn't restore." The plan below treats restore-testing as a first-class deliverable, not an afterthought.
+
+---
+
+## Phase 0 — Stop the bleeding (today, ~15 min)
+
+1. **Aurora: take a manual snapshot now.**
+   ```bash
+   aws rds create-db-cluster-snapshot \
+     --db-cluster-identifier <your-cluster-id> \
+     --db-cluster-snapshot-identifier manual-$(date +%Y%m%d)-prebackup-plan
+   ```
+2. **Aurora: confirm automated backups are actually on and bump retention.** Aurora keeps continuous backups + point-in-time recovery *only within the retention window* — if it's at 1 day, you have almost nothing. Set it to 14–35 days:
+   ```bash
+   aws rds modify-db-cluster \
+     --db-cluster-identifier <your-cluster-id> \
+     --backup-retention-period 35 --apply-immediately
+   ```
+   (This is the likely root cause of "no backups" on Aurora — the feature exists but retention is minimal.)
+3. **Supabase: check your plan tier in the dashboard.** Free = *zero* backups (this is probably your real gap). Pro = daily backups, 7-day retention. If you're on Free and this DB matters, that's the emergency.
+
+## Phase 1 — Automated, managed backups (this week)
+
+4. **Aurora → AWS Backup plan.** Move off ad-hoc snapshots to a managed backup plan: daily snapshots, 35-day retention, with **cross-region copy** built in. AWS Backup centralizes this and gives you job-success tracking.
+5. **Supabase → your own logical dump on a schedule.** Even on Supabase Pro, don't let your only copy live inside Supabase. Run `pg_dump` against the connection string from a scheduled job (GitHub Action / Lambda / cron) and push to **S3 with Object Lock** (write-once-read-many). This also gives you a portable, vendor-independent restore path.
+   - If the ads data is critical, add the **Supabase PITR add-on** for continuous recovery on their side.
+
+## Phase 2 — Real disaster-recovery posture (next)
+
+6. **Cross-account + immutability.** Copy AWS Backup recovery points into a *separate AWS account's* vault with **Vault Lock** enabled. This is what protects you against the failure modes in-region snapshots don't: a compromised/leaked admin credential, ransomware, or `terraform destroy` fat-fingered against prod. Same-account snapshots can be deleted by whoever can delete the database.
+7. **First restore drill.** Restore the latest Aurora snapshot into a throwaway instance, run row counts + a few business-logic sanity checks against known values, then tear it down. Do the same `pg_restore` for the Supabase dump into a scratch Postgres. **Document the wall-clock time** — that's your real RTO.
+
+## Phase 3 — Make it durable (ongoing)
+
+8. **Alerting on backup failure.** AWS Backup → EventBridge → SNS/Slack: alert if any backup job fails *or* if no successful job in 26 hours. Silent backup failure is how you end up here again.
+9. **Automated monthly restore test** + a quarterly DR game-day where someone other than you runs the runbook cold.
+10. **Write the runbook**: RPO/RTO targets, exact restore steps for each DB, who to call. One page.
+
+---
+
+**Net:** after Phase 0 you're no longer naked (minutes). After Phase 1 you have automated daily + cross-region copies (this week). Phases 2–3 are what turn "we have backups" into "we have *tested, tamper-proof* recovery."
+
+To turn this into concrete commands/IaC I need: the **Aurora cluster ID + region**, your **Supabase plan tier**, and whether you already have a **second AWS account** for backup isolation (or want one). Want me to draft the AWS Backup plan (Terraform or CLI) and the Supabase `pg_dump`→S3 job as a starting point?

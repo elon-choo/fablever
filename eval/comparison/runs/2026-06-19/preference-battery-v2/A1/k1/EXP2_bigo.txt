@@ -1,0 +1,50 @@
+Big-O describes how an algorithm's cost grows as its input grows. You ignore constants and small terms and keep only the dominant factor, because what matters at scale is the *shape* of the growth, not the exact number of operations. "Cost" is usually time (number of steps) but can also be memory.
+
+Here's each common class with a situation you'd actually hit.
+
+**O(1) — constant.** The work doesn't depend on input size. Looking up a key in a hash map or dictionary, or grabbing `array[5]`. A million-element dict and a ten-element dict take the same time to read one key.
+
+```python
+user = users_by_id[user_id]   # same speed no matter how many users
+```
+
+**O(log n) — logarithmic.** Each step throws away half the remaining data. Binary search in a sorted list; most database index lookups (B-trees). Doubling the data adds just one extra step — searching 1 million sorted items takes ~20 comparisons, 1 billion takes ~30. This is why indexed queries stay fast as a table grows.
+
+**O(n) — linear.** You touch each item once. Summing a list, finding the max, a single `for` loop over your data, or filtering an array. Ten times the data, ten times the time.
+
+```python
+total = sum(order.amount for order in orders)   # one pass
+```
+
+**O(n log n) — linearithmic.** The realistic floor for general-purpose sorting. Python's `sorted()`, JavaScript's `Array.sort()`, merge sort, quicksort. When you call sort on a big list, this is what you're paying. It's only a bit worse than linear, so it's considered cheap.
+
+**O(n²) — quadratic.** Nested loops over the same data — for each item, you scan all the others. This is the one that quietly kills you. The classic trap: checking for duplicates by comparing every pair.
+
+```python
+# O(n²) — slow: 10,000 items = 100,000,000 comparisons
+for a in items:
+    for b in items:
+        if a is not b and a == b: ...
+```
+
+It runs fine on 100 items in testing and freezes on 50,000 in production. The fix is almost always to trade time for memory with a hash set:
+
+```python
+# O(n) — one pass using a set
+seen = set()
+for x in items:
+    if x in seen: ...   # 'in' on a set is O(1)
+    seen.add(x)
+```
+
+That swap — nested loop to set/dict lookup — is the single most common real-world Big-O optimization.
+
+**O(2ⁿ) and O(n!) — exponential / factorial.** Trying every combination. Naive recursive Fibonacci, brute-forcing every subset, or generating all permutations of a route. These are unusable beyond tiny inputs (n=40 is already billions of steps). If you see this, you need a smarter algorithm (caching, dynamic programming) or an approximation.
+
+Two things people get wrong:
+
+Big-O is about *growth*, not absolute speed. An O(n) algorithm with heavy per-item work can lose to an O(n²) one on small inputs. Big-O tells you who wins as the input gets large, which is the case you can't easily test for.
+
+Watch for hidden costs. `if x in my_list` is O(n) because it scans the list — put that inside a loop and you've silently built O(n²). The same check on a set or dict is O(1). A lot of accidental slowness is a linear operation hiding inside another loop.
+
+The practical takeaway: a nested loop over the same big dataset is your cue to reach for a hash map, and an indexed/sorted lookup is what keeps things fast as data grows.

@@ -1,0 +1,32 @@
+The fastest way is `docker system prune`, but the exact command depends on how aggressive you want to be. Here are the practical options:
+
+**Clean up unused images + build cache + stopped containers + networks (keeps volumes):**
+```bash
+docker system prune -a
+```
+The `-a` removes *all* unused images, not just dangling ones. Without `-a` it only deletes dangling (untagged) images.
+
+**Include volumes too — this is the one that frees the most space, but it's the dangerous one:**
+```bash
+docker system prune -a --volumes
+```
+
+A word of caution before you run that last one: `--volumes` deletes every volume not currently attached to a running container. That includes database data, named volumes for stopped containers, anything not actively mounted. If you have a stopped Postgres/MySQL container or a project you'll spin back up later, its data goes too. It is not recoverable.
+
+If you want more control, do it in two targeted steps and look before you leap:
+
+```bash
+# See what's using space first
+docker system df
+
+# Remove only unused images
+docker image prune -a
+
+# List volumes, then remove unused ones (review the list first)
+docker volume ls
+docker volume prune        # add -a on newer Docker to include named volumes
+```
+
+All prune commands prompt for confirmation before deleting; add `-f` to skip the prompt only once you're sure.
+
+My recommendation: run `docker system df` first to see where the space actually is, then `docker system prune -a` for a safe sweep. Only add `--volumes` once you've confirmed with `docker volume ls` that nothing in there matters to you.

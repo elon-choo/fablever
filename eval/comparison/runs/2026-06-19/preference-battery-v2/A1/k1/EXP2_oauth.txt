@@ -1,0 +1,46 @@
+The OAuth2 authorization code flow lets a third‑party app get access to a user's resources without ever seeing their password. It's the standard flow for web apps with a backend, and (with PKCE) for mobile and single‑page apps.
+
+## The players
+
+- **Resource Owner** — the user who owns the data.
+- **Client** — the app that wants access (e.g. "Print my photos").
+- **Authorization Server** — issues tokens after authenticating the user (e.g. Google's login/consent).
+- **Resource Server** — the API holding the data (e.g. the photos API).
+
+## The flow, step by step
+
+1. **Client redirects the user to the authorization server.** The app sends the browser to an `/authorize` URL with query parameters:
+   - `response_type=code` (this is what selects the authorization-code flow)
+   - `client_id` — identifies the app
+   - `redirect_uri` — where to send the user back
+   - `scope` — what access is being requested (e.g. `read:photos`)
+   - `state` — a random value the client generates and stores, used to prevent CSRF
+
+2. **User authenticates and consents.** On the authorization server's own pages, the user logs in and approves the requested scopes. The client never touches these credentials.
+
+3. **Authorization server redirects back with a code.** It sends the browser to the `redirect_uri` with `?code=<authorization_code>&state=<same_state>`. The client must verify the returned `state` matches what it sent. This code is short‑lived (seconds to a couple minutes) and single‑use.
+
+4. **Client exchanges the code for tokens — back channel.** The client's *backend* makes a direct server‑to‑server POST to the `/token` endpoint with:
+   - `grant_type=authorization_code`
+   - `code` — the code just received
+   - `redirect_uri` — must match step 1
+   - `client_id` and `client_secret` — the secret authenticates the app
+
+5. **Authorization server returns tokens.** A JSON response with an `access_token` (used to call the API), usually a `refresh_token`, plus `token_type` and `expires_in`.
+
+6. **Client calls the resource server.** It sends the access token in the `Authorization: Bearer <token>` header. When the access token expires, the client uses the refresh token to get a new one without involving the user again.
+
+## Why the two-step (code, then exchange)?
+
+The key design point: the access token is never exposed to the browser or URL. The browser only ever carries the **authorization code**, which is useless without the client secret held server‑side. This splits a vulnerable *front channel* (redirects through the user's browser, where values can leak via history, logs, or referrers) from a secure *back channel* (direct HTTPS between client and server).
+
+## PKCE — for clients that can't keep a secret
+
+Mobile apps and SPAs can't safely store a `client_secret`. **PKCE** (Proof Key for Code Exchange, RFC 7636) replaces it:
+
+- Before step 1, the client generates a random `code_verifier` and sends its hash as `code_challenge`.
+- In step 4, it sends the original `code_verifier`. The server hashes it and checks it matches.
+
+This proves the same client that started the flow is the one redeeming the code, so a stolen code alone is worthless. PKCE is now recommended for **all** client types, not just public ones.
+
+The two things people most often get wrong: validating `state` (skip it and you're open to CSRF), and treating the authorization code as if it were the token (it's just a one-time claim ticket that must be exchanged server-side).

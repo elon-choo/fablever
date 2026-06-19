@@ -1,0 +1,33 @@
+For a small app: **use your database.** Don't add Redis just for sessions.
+
+## Why
+
+The deciding question isn't "which is faster" — it's "is another piece of infrastructure worth it?" For a small app, almost always no.
+
+**Database sessions**
+- You already run it — nothing new to deploy, secure, monitor, or back up.
+- Durable by default: sessions survive restarts and deploys.
+- Session load is trivial at small scale. A few hundred (even a few thousand) session lookups per minute is nothing for Postgres/MySQL with an index on the session ID.
+- One chore: clean up expired rows. A nightly `DELETE WHERE expires_at < now()` or a Postgres partial index handles it.
+
+**Redis sessions** are great, but the reasons to pick them mostly don't apply yet:
+- Automatic TTL expiry (no cleanup job) — nice, but a one-line cron replaces it.
+- Offloads traffic from your primary DB — you don't have that traffic.
+- Faster reads — real, but you're not latency-bound on session lookups at this size.
+
+The cost is a whole extra service to run, pay for, and keep alive. If Redis goes down, everyone's logged out. That's a poor trade when the DB option is basically free.
+
+## The option worth considering instead
+
+**Stateless signed cookies** (e.g. a signed/encrypted session cookie, or a JWT). No server-side storage at all — the session lives in the cookie, signed so it can't be tampered with. Best when sessions are small and you rarely need to forcibly revoke them. The tradeoff: instant server-side logout/revocation is harder, since there's no central store to delete from. Most frameworks (Rails, Django, Express/`express-session`, Laravel) support this out of the box.
+
+## Rule of thumb
+
+| Situation | Pick |
+|---|---|
+| Small app, already have a DB | **Database** |
+| Sessions tiny, revocation not critical | Signed cookies |
+| You *already* run Redis, or need caching/rate-limiting/pub-sub anyway | Redis (reuse it) |
+| High session churn, multi-server, session latency actually measured as a problem | Redis |
+
+Start with the database. Move sessions to Redis the day you add Redis for *another* reason, or the day profiling shows session writes are actually hurting — not before. Adding it preemptively is complexity you'll pay for now against a problem you don't have yet.

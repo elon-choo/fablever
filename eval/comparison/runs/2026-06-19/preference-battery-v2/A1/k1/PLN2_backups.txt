@@ -1,0 +1,23 @@
+No problem — I'll go with the highest-stakes assumption and give you a concrete plan, since the production Aurora PostgreSQL is the one where "no backups" is an actual emergency. Adjust if you meant a different store; the shape changes per database.
+
+## Aurora PostgreSQL (production) — do this first
+
+The good news: RDS/Aurora has native backup machinery, so this is *configuration*, not building infrastructure. Priority order:
+
+1. **Turn on automated backups today.** Set the backup retention window (start at 7 days, go to 14–35 for revenue data). On Aurora this is continuous + restorable to any second in the window (PITR). This is the single highest-leverage step and takes minutes.
+2. **Take a manual snapshot right now** as a floor — before any config change — so you have at least one known-good restore point that won't expire with the retention window.
+3. **Set a recovery target.** Decide how much data loss is tolerable (RPO) and how fast you must be back (RTO). That decides retention length and whether you also need cross-region snapshot copies for disaster recovery.
+4. **Add a logical dump as a second layer.** A daily `pg_dump` to object storage (S3, lifecycle-expired) protects against the case RDS snapshots don't: accidental schema/data corruption you want to restore *selectively*, and portability off the provider.
+5. **Test a restore.** A backup you haven't restored from is a hypothesis. Restore the latest snapshot into a throwaway instance and confirm row counts / a known record. Untested backups are the most common way "we have backups" turns out false during an incident.
+
+## If it's Supabase (ads)
+
+Check the plan tier — daily backups and PITR are tier-gated. If PITR isn't available on your tier, schedule a `pg_dump` against the Supabase Postgres connection string to external storage on a cron.
+
+## If it's local on this Mac (sqlite `index.db` / neo4j)
+
+These need a file-level job, not a cloud snapshot: a cron that copies the sqlite file (use `sqlite3 .backup` or `VACUUM INTO`, not a raw `cp` of a live DB) or runs `neo4j-admin dump`, writing to a backed-up location off the machine. Note this Mac's launchd/TCC constraint means the job needs to run somewhere with file access (the docbroker path or an FDA-registered runner).
+
+---
+
+Two things I can't verify from here and you'd need to confirm: the actual current backup state of each database (I have no credentials/tools wired in this session to query them), and your RPO/RTO targets. Tell me which database it really is and roughly how much data loss you can tolerate, and I'll turn the relevant section into exact commands or console steps.

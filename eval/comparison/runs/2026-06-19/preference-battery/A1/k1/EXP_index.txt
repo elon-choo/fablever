@@ -1,0 +1,31 @@
+A database index is a separate data structure the database maintains alongside a table to speed up lookups. Without one, finding rows matching a condition means scanning every row (a "full table scan"); an index lets the database jump straight to the matching rows, the way a book's index lets you find a topic without reading every page.
+
+## How it works
+
+Most indexes are B-trees — a sorted, balanced tree keyed on one or more columns. Because the keys are kept in sorted order, the database can do equality lookups (`WHERE email = ...`), range scans (`WHERE created_at > ...`), and ordered reads (`ORDER BY`) by walking the tree in roughly logarithmic time instead of linear. Each index entry points back to the actual row. Other index types exist for specific needs — hash (equality only), GIN/GiST (full-text, arrays, JSON, geospatial) — but B-tree is the default and covers most cases.
+
+## When to add one
+
+Add an index when reads on a predictable column are the bottleneck:
+
+- **Columns in `WHERE` clauses** that filter to a small fraction of the table.
+- **Join columns** — foreign keys especially. The "many" side of a join is a frequent culprit for slow queries.
+- **Columns in `ORDER BY` / `GROUP BY`**, so the database can return sorted results without an extra sort step.
+- **Uniqueness constraints** — a unique index both enforces the rule and speeds the lookup.
+- **Composite indexes** when you consistently filter on several columns together. Column order matters: `(a, b)` helps queries filtering on `a` alone or `a` and `b`, but not `b` alone.
+
+## When to hold off
+
+Indexes are not free, so don't add them reflexively:
+
+- **Every write pays a tax.** Each `INSERT`, `UPDATE`, or `DELETE` must also update every affected index. A table with many indexes has slower writes.
+- **They consume storage** and memory.
+- **Low-selectivity columns rarely benefit.** Indexing a boolean or a status field with two values usually isn't worth it — the database may decide a full scan is cheaper than reading the index plus chasing pointers for half the table.
+- **Small tables** don't need them; scanning a few hundred rows is already fast.
+- **Redundant indexes** waste resources — if you have `(a, b)`, a separate index on `a` alone is often unnecessary.
+
+## How to decide in practice
+
+Don't guess — measure. Run your slow query through `EXPLAIN ANALYZE` (Postgres/MySQL) and look for sequential scans on large tables where you expected a quick lookup. Add the index, re-run, and confirm the plan switched to an index scan and the time dropped. Index based on your actual query patterns, since an index only helps queries that filter, join, or sort on its leading columns.
+
+The short version: index the columns you frequently search, join, or sort on in large tables; skip indexes on small tables, low-variety columns, and write-heavy tables where the read benefit doesn't justify the write cost.

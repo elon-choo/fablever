@@ -1,0 +1,52 @@
+What makes an API RESTful isn't using HTTP verbs and JSON over `/users/123` — that's the popular checklist, and by the original definition it's mostly beside the point. REST is an architectural style Roy Fielding defined in his 2000 dissertation as a set of *constraints*. An API is RESTful to the degree it satisfies them, and the one almost everyone skips is the one Fielding considered non-negotiable.
+
+## The actual constraints
+
+**1. Client–server separation.** The client (UI concerns) and server (data/storage concerns) evolve independently, talking only over a uniform interface. Nearly everyone does this.
+
+**2. Statelessness.** Every request carries everything the server needs to process it. The server keeps no client session state between requests. This is why REST scales well — any server can handle any request — and why putting login state in server-side sessions is, strictly, a violation. (Auth tokens sent on each request are fine; they make the request self-contained.)
+
+**3. Cacheability.** Responses must declare themselves cacheable or not (via headers like `Cache-Control`, `ETag`). The protocol, not just the app, participates in caching.
+
+**4. Uniform interface.** This is the heart of REST, and it has four sub-parts:
+- **Identification of resources** — URIs name *resources* (a user, an order), not actions. `/users/123`, not `/getUser?id=123`.
+- **Manipulation through representations** — you don't act on the resource directly; you exchange representations of it (the JSON you GET is a representation of state, which you can modify and PUT back).
+- **Self-descriptive messages** — each message contains enough info to process it: the method's meaning, the media type (`Content-Type`), caching directives. A server reading the request shouldn't need out-of-band knowledge.
+- **HATEOAS** (Hypermedia as the Engine of Application State) — responses include links telling the client what it can do next. The client navigates the API by following links the server provides, the same way you navigate a website by clicking links rather than typing URLs you memorized.
+
+**5. Layered system.** A client can't tell whether it's talking to the origin server or an intermediary (proxy, gateway, CDN). This lets you insert load balancers and caches transparently.
+
+**6. Code-on-demand** (optional) — the server can ship executable code to the client (e.g. JavaScript). The only optional constraint.
+
+## The part everyone skips, and why it matters
+
+The constraint that separates "REST" the buzzword from REST the architecture is **HATEOAS**. Fielding was explicit and somewhat irritated about this: if your API documentation tells clients how to construct URIs to specific resources, it's not REST — it's RPC dressed in HTTP verbs.
+
+In a truly RESTful API, the client knows one entry URI. Everything else — what actions are available, where to go next — comes from hypermedia links in responses:
+
+```json
+{
+  "id": 123,
+  "status": "pending",
+  "_links": {
+    "self":   { "href": "/orders/123" },
+    "cancel": { "href": "/orders/123/cancel", "method": "POST" },
+    "pay":    { "href": "/orders/123/payment", "method": "POST" }
+  }
+}
+```
+
+The client doesn't hardcode "to cancel, POST to `/orders/{id}/cancel`." It looks for a `cancel` link. If the order can't be cancelled, the server omits the link, and the server can later move the endpoint without breaking clients. That decoupling — the client driven by server-supplied state transitions — is the entire point of the name: it's where "state transfer" comes from.
+
+## The honest practical answer
+
+Almost no popular "REST API" (GitHub, Stripe, Twitter) is fully RESTful by this definition — they're typically stuck at what Leonard Richardson's **maturity model** calls Level 2: resources + proper HTTP verbs + status codes, but no hypermedia (Level 3). And that's usually a defensible engineering choice — full HATEOAS adds real complexity for clients that are written against fixed, documented contracts anyway.
+
+So in practice, when people say "RESTful" they almost always mean:
+- Resource-oriented URIs (nouns, not verbs)
+- HTTP methods used by their semantics (GET safe & idempotent, PUT/DELETE idempotent, POST not)
+- Meaningful status codes (`200/201/404/409/422`…)
+- Statelessness
+- JSON representations
+
+That's a perfectly useful convention — just know it's "Level 2 / HTTP-based API," not what Fielding meant. The thing that *actually* makes an API RESTful in the strict sense is the uniform interface, and specifically hypermedia driving application state. The thing that makes it RESTful in the everyday sense is consistent resource modeling and correct use of HTTP semantics.

@@ -1,0 +1,44 @@
+The fastest path is `docker system prune`, but be deliberate about volumes — pruning them deletes data that isn't easy to get back.
+
+## The one-shot command
+
+```bash
+docker system prune -a --volumes
+```
+
+This removes, in one go: all stopped containers, all unused networks, **all** images not used by a running container (`-a`), the build cache, and all unused volumes (`--volumes`). It prompts for confirmation before deleting.
+
+⚠️ **The `--volumes` flag is the dangerous part.** A volume is "unused" if no container currently references it — which includes the database volume for a stack you've merely stopped (`docker compose down`). Running this can wipe your Postgres/MySQL data. Only use `--volumes` if you're sure nothing you care about lives in a stopped stack.
+
+## Safer, more granular approach
+
+Run these separately so you can see what each reclaims:
+
+```bash
+docker image prune -a      # remove all images not used by a container
+docker container prune     # remove stopped containers
+docker volume prune        # remove unused volumes — review the list first
+docker builder prune       # clear build cache (often the biggest hog)
+```
+
+Each prompts before acting. Add `-f` to skip the prompt only once you trust the output.
+
+## Check first, then decide
+
+```bash
+docker system df           # summary: images / containers / volumes / cache sizes
+docker system df -v        # per-item breakdown — see exactly what's big
+docker volume ls           # list volumes before pruning any
+```
+
+`docker system df` tells you where the space actually went. Frequently it's the **build cache**, not images — in which case `docker builder prune` alone frees most of it without touching any image or volume.
+
+A middle-ground command that skips images entirely but clears everything else dangling:
+
+```bash
+docker system prune        # no -a, no --volumes: only dangling images + stopped containers + cache
+```
+
+My recommendation: run `docker system df` first to see the breakdown, then prune the specific category that's large. Reach for `--volumes` only after `docker volume ls` confirms nothing important is there.
+
+Want me to run `docker system df` so we can see what's actually taking up the space on this machine?

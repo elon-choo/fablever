@@ -1,0 +1,35 @@
+Database normalization is the process of structuring tables so that each fact lives in exactly one place. You do it by progressively eliminating different kinds of redundancy, and the "normal forms" are just named checkpoints along that path.
+
+## The normal forms that matter in practice
+
+**First normal form (1NF):** every column holds a single atomic value — no comma-separated lists, no repeating groups like `phone1, phone2, phone3`. A row's columns are scalar, and each row is identifiable.
+
+**Second normal form (2NF):** no non-key column depends on only *part* of a composite key. If your primary key is `(order_id, product_id)` and you're storing `product_name` in that table, that's a 2NF violation — `product_name` depends on `product_id` alone, so it belongs in a `products` table.
+
+**Third normal form (3NF):** no non-key column depends on another non-key column. The classic example: an `orders` table holding `customer_id`, `customer_city`, and `customer_zip`. City and zip depend on the customer, not the order — they should live with the customer. The mnemonic is "every non-key column depends on the key, the whole key, and nothing but the key."
+
+**Boyce-Codd (BCNF)** is a stricter 3NF that closes some edge cases with overlapping candidate keys. For most application schemas, getting to 3NF/BCNF is the practical target. Fourth and fifth normal forms address multi-valued and join dependencies and rarely come up in day-to-day design.
+
+## Why normalize at all
+
+The payoff is integrity and avoiding *update anomalies*. If a customer's city is stored in 4,000 order rows and they move, you have to update 4,000 rows and any one you miss creates a contradiction. Store it once and there's nothing to get out of sync. Writes are cheap and unambiguous, the schema documents real relationships, and you can't represent inconsistent states. The cost is that answering a question often requires joining several tables.
+
+## When you'd deliberately denormalize
+
+Denormalization means reintroducing redundancy on purpose — and the key word is *deliberately*, after you have a normalized model and a measured reason. Common cases:
+
+- **Read-heavy workloads where joins are the bottleneck.** If a query joins six tables on every page load and profiling shows the joins dominate, collapsing some of that into a wider table or a precomputed view trades write complexity for read speed. This is the most common and most legitimate reason.
+
+- **Precomputed aggregates.** Storing `order_count` or `total_spent` on a `customers` row instead of recomputing `COUNT`/`SUM` over millions of order rows each time. You accept that the counter must be maintained on every write.
+
+- **Reporting, analytics, and data warehouses.** Star and snowflake schemas are intentionally denormalized — fact tables with wide dimension tables — because analytical queries scan and aggregate rather than update, so the anomaly risk that normalization protects against barely applies.
+
+- **Caching expensive derived values** (a computed score, a rendered summary) when recomputation is costlier than storage and staleness is acceptable.
+
+- **Immutable historical snapshots.** An invoice should capture the price and address *as they were at purchase time*. Copying those values onto the invoice isn't a normalization failure — the value genuinely belongs to the invoice, not the current product or customer record.
+
+## The tradeoff to keep straight
+
+Every denormalization moves the burden from read time to write time and hands you a new obligation: keep the duplicated copies consistent, usually via application logic, triggers, or scheduled refresh jobs. That synchronization is exactly the work normalization was designed to eliminate, so each duplicated field is a small standing liability.
+
+The sound default is to normalize to 3NF first, then denormalize only where a real, measured performance problem justifies it — never preemptively because you assume joins will be slow. The exception is the snapshot case above, which is a correctness requirement rather than an optimization. One nuance worth noting: a well-indexed join on a normalized schema is often fast enough that the denormalization you were tempted by buys nothing, so measure before you trade away integrity.

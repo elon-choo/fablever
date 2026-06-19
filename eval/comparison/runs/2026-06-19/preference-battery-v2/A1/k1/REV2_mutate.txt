@@ -1,0 +1,20 @@
+The bug: this mutates shared state in place. `arr.push(x)` modifies the array every other holder of that reference can see, so the change leaks out the moment you call it — there's no isolation between "the copy I'm building" and "the state everyone else reads."
+
+The `return arr` makes it worse by looking safe. It returns the *same* reference, not a new array, so:
+
+```js
+const next = addItem(state, x);
+next === state; // true
+```
+
+Any code that detects change by reference equality — React `useState`/`memo`, Redux reducers, `useEffect` deps, manual `prev !== next` checks — will see no change and skip the update, even though the data did change. You get silent stale renders, and they're hard to trace back here because the function *looks* like it returns a fresh result.
+
+If this is meant to update shared state, return a new array and don't touch the input:
+
+```js
+function addItem(arr, x) { return [...arr, x]; }
+```
+
+That gives callers a new reference (equality checks fire correctly) and leaves the shared `arr` untouched until they choose to assign the result back.
+
+Two caveats on scope: if the codebase is *deliberately* mutation-based (e.g. a plain mutable store, or it's a hot path where copying a large array matters), then in-place push is a legitimate choice — but then `return arr` is pointless and probably misleading, so drop it and let callers mutate explicitly. The immutable version is the right default for anything reference-tracked; pick based on which model the surrounding state actually follows.

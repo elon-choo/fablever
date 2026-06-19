@@ -1,0 +1,28 @@
+For a small app, **use the database** — don't add Redis.
+
+## Why
+
+The default should be the database you already have. Reach for Redis only when you hit a concrete reason to, and a small app usually won't.
+
+**Database sessions win for a small app because:**
+- **One less moving part.** Redis is another service to deploy, monitor, secure, back up, and pay for. For a small app that operational cost outweighs the benefit.
+- **Sessions survive restarts** for free. A plain Redis instance loses everything on restart unless you configure persistence (RDB/AOF).
+- **Transactional consistency.** Session state lives next to your user/auth data, so you can reason about it in one place.
+- **Simplicity of querying.** "Show all active sessions for this user," forced logout, auditing — trivial SQL, awkward in Redis.
+
+**The usual argument for Redis is speed and TTL**, but at small scale a session lookup is a single indexed primary-key read — a few hundred microseconds. You won't notice the difference until you're at meaningful traffic.
+
+## When to switch to Redis later
+
+Move sessions to Redis when you actually hit one of these:
+- Session reads become a measurable hot path (thousands/sec) and show up in DB load.
+- You scale to multiple app servers and want a fast shared store with automatic TTL eviction.
+- You're already running Redis for caching/queues anyway — then colocating sessions there is reasonable.
+
+## Even simpler option to consider
+
+If your sessions are small and you don't need server-side revocation, **stateless signed cookies / JWTs** skip the storage question entirely. The tradeoff: you can't easily invalidate a session before it expires. If instant logout/revocation matters, stick with DB-backed sessions.
+
+**Bottom line:** Start with the database. Add Redis when traffic — not speculation — tells you to.
+
+Want me to sketch a session table schema or a specific implementation (e.g., Express + connect-pg, Django, Rails) for your stack?

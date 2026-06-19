@@ -1,0 +1,33 @@
+A hydration mismatch means the HTML React generated on the server doesn't match what it generates on the client during the first render. React renders the server HTML, then on the client it re-renders and compares — if the trees differ, you get the warning (and React throws away the server HTML for that subtree and re-renders it).
+
+The usual culprits:
+
+**1. Non-deterministic values that differ between server and client**
+- `Date.now()`, `new Date()`, `Math.random()`, `crypto.randomUUID()` rendered into markup
+- Locale/timezone-dependent formatting (`toLocaleString()`, `Intl.*`) — server timezone ≠ browser timezone
+- These produce different output on each render by definition.
+
+**2. Reading browser-only APIs during render**
+- `window`, `localStorage`, `navigator`, `document`, `matchMedia` — undefined on the server, so the server renders one branch and the client another.
+
+**3. Markup that's only correct after mount**
+- Reading `localStorage`/cookies for theme, auth state, feature flags and rendering different UI based on it.
+
+**4. Invalid HTML nesting**
+- `<div>` inside `<p>`, `<p>` inside `<p>`, a `<div>` inside a `<table>` without `<tbody>`, etc. The browser "fixes" the DOM on parse, so it no longer matches React's tree.
+
+**5. Third-party scripts / browser extensions mutating the DOM**
+- Extensions (Grammarly, dark-mode injectors) add attributes like `data-gr-*` to `<body>`. Common but not your code.
+
+**Typical fixes**
+- Gate client-only rendering behind a mounted flag:
+  ```jsx
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null; // or a stable placeholder
+  ```
+- For genuinely client-only components, use `next/dynamic` with `{ ssr: false }`.
+- For one known-unavoidable difference on a single element, `suppressHydrationWarning` (e.g. a timestamp) — use sparingly.
+- Make formatting deterministic: pass a fixed timezone/locale, or format on the client only.
+
+If you paste the warning text (React usually prints the specific element/text that differed) or point me at the component, I can pin down which of these it is.

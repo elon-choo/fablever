@@ -1,0 +1,42 @@
+Good news: this is one of those bugs where a single observation splits the whole problem in half. Start there.
+
+## Step 1 — Two requests, or one request processed twice?
+
+Open DevTools → **Network** tab, reproduce the double submit, and count the outgoing requests.
+
+- **Two requests leave the browser** → it's a **client-side** problem (duplicate handlers, double-click, native+JS submit). Most common.
+- **One request leaves, but the server acts twice** → it's a **server/infra** problem (retry at a proxy/load balancer, non-idempotent handler, message reprocessed).
+
+This one check tells you which half of the list below to read. Don't skip it.
+
+## Step 2 — If it's two requests (client side)
+
+Look at the **timestamps** of the two requests:
+
+- **Milliseconds apart** → a double *trigger*: double-click on the button, Enter + click, or touch+click on mobile.
+- **Identical payloads, fired together** → the handler is **bound more than once**. Classic causes: a listener re-attached on every re-render/hot-reload, or both an `onClick` on the button *and* an `onSubmit` on the form firing, or an AJAX handler that forgot `e.preventDefault()` so the XHR *and* the native form post both go.
+
+How to confirm:
+- Chrome DevTools → select the form/button → **Event Listeners** panel (or `getEventListeners($0)` in the console) to see if a handler is attached twice.
+- Add a log with a counter at the very top of your submit handler: `console.trace('submit', ++count)` — the stack trace shows you *who* called it, and whether it's called once or twice.
+- React specifically: dev-mode **StrictMode** double-invokes some functions on purpose (only in dev — ignore it in prod), and missing/duplicate effect cleanup can leave listeners stacked.
+
+## Step 3 — If it's one request (server side)
+
+Check **server logs** and again look at the time delta:
+
+- **Seconds apart, same payload** → a **retry**: client timeout retrying, a load balancer/reverse proxy (nginx, ELB) retrying on a slow upstream, a fetch/axios retry interceptor, or a queue redelivering a message.
+- **Truly simultaneous** → the handler itself isn't idempotent and something fans out.
+
+Add a **unique submission token** (a UUID generated when the form renders) to the payload and log it. Two log lines with the *same* token = one logical submission delivered twice → it's a transport/retry issue. Two *different* tokens = the user/client genuinely submitted twice → back to Step 2.
+
+## The fix usually lands in one of these
+
+- **Disable the button on first submit** (re-enable on response/error) — kills double-click.
+- **`e.preventDefault()`** in the handler if you're submitting via JS.
+- **Bind the handler exactly once** (check re-render/cleanup logic).
+- **Idempotency key**: have the server dedupe on that submission token so a retry is safe regardless of cause — this is the robust backstop, and worth doing even after you find the trigger.
+
+If you can share the form's code (framework, the submit handler, and a Network-tab screenshot of the two requests), I can pinpoint it rather than generalize.
+
+What's the stack — plain HTML, React, something else?

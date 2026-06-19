@@ -1,0 +1,17 @@
+The fastest way in is to split the problem at one fork before you theorize about causes: **does the browser send one HTTP request or two?** Open the Network tab, reproduce the double submit, and look.
+
+**If you see two requests**, it's client-side. Add a `console.trace()` and a timestamp at the very top of your submit handler, then compare the two stack traces:
+- *Same stack, milliseconds apart* → the handler is bound twice. Usual culprits: a component that mounts twice (React StrictMode in dev, or a re-render that re-attaches a listener without cleanup), a script included twice, or hot-reload leftovers. Search for where you `addEventListener('submit'` or attach `onClick` and confirm it runs once.
+- *Different stacks* → two paths are firing for one user action. Classic case: a button `onClick` that submits via JS **and** the form's native `submit` both fire because `preventDefault()` is missing. Or Enter-key submit plus a click both landing.
+
+**If you see one request** from the browser but two on the server, it's the network/transport layer: a retry interceptor (axios/fetch retry, React Query retry), a service worker replaying, or a proxy/load balancer retrying on a slow response.
+
+To make "sometimes" reproducible, stamp each submit *attempt* with a unique idempotency token (a UUID generated once per form-open, or per click) and log it client and server side:
+- Two requests, **same token** → the click/handler fired once but the request went out twice (double-bound handler or transport retry).
+- Two requests, **different tokens** → genuinely two separate invocations (double-click, click+submit, Enter+click).
+
+That token comparison alone usually names the cause within one reproduction.
+
+Two things worth doing regardless of what you find, because they're the actual fix for most of these: disable the submit button on first submit (`button.disabled = true`) so impatient double-clicks can't queue a second request, and give the server an idempotency key so a duplicate is dropped even if the client misbehaves. The button-disable handles the human double-click; the idempotency key handles the transport retry.
+
+If you point me at the form's code and where it submits, I can tell you which of these it actually is rather than the menu.

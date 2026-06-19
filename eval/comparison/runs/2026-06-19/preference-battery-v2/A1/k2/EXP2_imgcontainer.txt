@@ -1,0 +1,29 @@
+A Docker **image** is a static, read-only template; a **container** is a running (or stopped) instance created from that image. The relationship is the same as a class versus an object, or an executable file versus a running process.
+
+## Image
+
+An image is a packaged, immutable bundle containing everything needed to run an application: the application code, runtime, system libraries, dependencies, and default configuration. Key properties:
+
+- **Read-only and layered.** It's built from a stack of layers (typically one per instruction in a `Dockerfile`). Layers are cached and shared between images, so common base layers aren't duplicated on disk.
+- **Built once, reused many times.** You create it with `docker build`, store it in a registry (like Docker Hub) with `docker push`, and retrieve it with `docker pull`.
+- **Identified** by a name/tag (`nginx:1.27`) or a content digest (`sha256:...`).
+
+## Container
+
+A container is a runnable instance of an image — the image brought to life as an isolated process on the host. Key properties:
+
+- **Adds a writable layer.** When you start a container, Docker stacks a thin writable layer on top of the image's read-only layers. Any file the process creates or modifies lives there, leaving the image untouched.
+- **Has runtime state.** It has its own process namespace, network interface, and lifecycle (created → running → stopped → removed). You manage it with `docker run`, `docker stop`, `docker rm`.
+- **Ephemeral by default.** When you remove a container, its writable layer is discarded unless you persisted data through a volume or bind mount.
+- **Many from one.** You can launch multiple independent containers from the same image; each gets its own writable layer and runs in isolation.
+
+## The core distinction
+
+| | Image | Container |
+|---|---|---|
+| State | Static, read-only | Running/runnable, has a writable layer |
+| Lifecycle | Built and stored | Created, started, stopped, removed |
+| Multiplicity | One definition | Many instances from one image |
+| Analogy | Class / blueprint | Object / running instance |
+
+In short: `docker build` produces an image; `docker run` turns that image into a container. The image defines *what* runs; the container is the actual *running* thing, plus whatever changes it makes during its life.

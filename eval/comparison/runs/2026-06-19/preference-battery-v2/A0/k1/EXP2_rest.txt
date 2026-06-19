@@ -1,0 +1,70 @@
+Good question — and the word "actually" is doing a lot of work, because most APIs people call "RESTful" aren't, by the original definition.
+
+## The short version
+
+REST is an **architectural style** defined by Roy Fielding in his 2000 PhD dissertation. An API is RESTful if it satisfies a specific set of **constraints** — not if it merely uses HTTP verbs and returns JSON from nice-looking URLs. That common interpretation is more accurately called an "HTTP API" or "JSON-RPC-ish" API.
+
+## The constraints that actually define REST
+
+REST is the sum of these. Drop one and it's not REST.
+
+1. **Client–server** — Separation of concerns. UI/client is decoupled from data storage/server, so each evolves independently.
+
+2. **Statelessness** — Every request contains everything needed to process it. The server stores no client session state between requests. (Auth tokens go in each request; the server doesn't "remember" you're mid-flow.)
+
+3. **Cacheability** — Responses must explicitly say whether they're cacheable. This is why HTTP caching semantics (`Cache-Control`, `ETag`) matter.
+
+4. **Layered system** — A client can't tell whether it's talking to the origin server or an intermediary (proxy, load balancer, gateway). Enables scaling and security layers transparently.
+
+5. **Uniform interface** — *This is the big one*, and it has four sub-parts:
+   - **Identification of resources** — resources are named via URIs (`/users/42`).
+   - **Manipulation through representations** — you act on a *representation* (e.g. a JSON document) of the resource, not the resource directly.
+   - **Self-descriptive messages** — each message carries enough info to process it (method, media type, etc.).
+   - **HATEOAS** (Hypermedia As The Engine Of Application State) — the one almost everyone skips. ⬇️
+
+6. **Code-on-demand** *(optional)* — server can ship executable code to the client (e.g. JavaScript). The only optional constraint.
+
+## The part everyone ignores: HATEOAS
+
+This is what *actually* separates a "RESTful" API from a plain HTTP API. The idea: **the client navigates the application purely by following hyperlinks the server provides in responses**, the same way you browse a website without knowing URLs in advance.
+
+A truly RESTful response is self-describing about *what you can do next*:
+
+```json
+{
+  "id": 42,
+  "status": "pending",
+  "total": 99.50,
+  "_links": {
+    "self":   { "href": "/orders/42" },
+    "cancel": { "href": "/orders/42/cancel", "method": "POST" },
+    "pay":    { "href": "/orders/42/payment", "method": "POST" }
+  }
+}
+```
+
+The client shouldn't hard-code `/orders/42/cancel`. It discovers it from the response. This means the server can change its URI structure without breaking clients — the whole point of the constraint.
+
+## So why do "REST APIs" everywhere violate this?
+
+Because Fielding-pure REST is **hard and often not worth it** for typical machine-to-machine APIs:
+
+- Clients are written by developers reading docs, not by generic hypermedia agents, so HATEOAS's discoverability buys little.
+- Tight coupling to known URIs is acceptable when you control both ends.
+
+Fielding himself complained about this — there's a [well-known 2008 blog post](https://roy.gbiv.com/untangle/2008/rest-apis-must-be-hypertext-driven) where he says an API isn't REST unless it's hypertext-driven.
+
+## Practical bottom line
+
+There's a maturity spectrum (the **Richardson Maturity Model**) that captures how "RESTful" an API really is:
+
+| Level | What it has |
+|-------|-------------|
+| 0 | HTTP as a tunnel (one endpoint, POST everything) — "the swamp of POX" |
+| 1 | Resources (distinct URIs per thing) |
+| 2 | HTTP verbs + status codes used correctly (GET/POST/PUT/DELETE, 200/404/201) |
+| 3 | Hypermedia controls (HATEOAS) — *true REST* |
+
+**Most "REST APIs" in the wild are Level 2.** That's usually a perfectly reasonable engineering choice — just know that "RESTful" as the industry uses it ≠ "RESTful" as Fielding defined it. Calling a Level 2 API "RESTful" is a convenient lie everyone has agreed to.
+
+Want me to go deeper on any of these — e.g. how statelessness interacts with auth, or what a real-world HATEOAS format like HAL or JSON:API looks like?

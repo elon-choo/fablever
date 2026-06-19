@@ -1,0 +1,30 @@
+Solid as a sketch, but a few things I'd fix before this goes near production. In rough priority order:
+
+**1. No error handling (the big one).** If `getUser` rejects — DB hiccup, bad connection — this is where it bites you depending on Express version:
+- **Express 4:** a rejected promise in an `async` handler is *not* caught. It won't reach your error middleware; the request just hangs until the socket times out.
+- **Express 5:** rejections are auto-forwarded to error middleware, so you're okay there.
+
+Either upgrade or wrap:
+```js
+app.get('/u/:id', async (req, res, next) => {
+  try {
+    const u = await getUser(req.params.id);
+    if (!u) return res.status(404).json({ error: 'not found' });
+    res.json(publicUser(u));
+  } catch (e) { next(e); }
+});
+```
+
+**2. Missing 404.** If the user doesn't exist, `getUser` likely returns `null`/`undefined`, and `res.json(null)` sends `200 OK` with body `null`. Callers can't distinguish "no such user" from a real result.
+
+**3. IDOR / authorization.** `/u/:id` hands back any user by id with no authn/authz check. Anyone can walk ids and read other people's records. Add an auth check — and confirm the requester is allowed to see *that* id.
+
+**4. Overexposed fields.** `res.json(u)` serializes the whole row — likely including `password_hash`, `email`, tokens, internal flags. Whitelist what you return (`publicUser()` above), don't blacklist.
+
+**5. Input validation.** `req.params.id` goes straight into `getUser`. Validate/cast it (e.g. integer or UUID shape) before the query — both to fail fast and to reduce injection surface depending on your data layer.
+
+**6. Enumeration.** If ids are sequential integers, this endpoint is a scraping target. UUIDs + rate limiting help.
+
+The shape (`async`/`await`, `res.json`) is fine — it's the unhappy paths and access control that are missing. #1, #3, and #4 are the ones I wouldn't ship without.
+
+Want me to adapt the snippet to your actual `getUser` signature / auth setup?

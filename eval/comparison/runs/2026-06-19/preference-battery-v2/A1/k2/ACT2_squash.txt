@@ -1,0 +1,21 @@
+The quickest way is an interactive rebase:
+
+```bash
+git rebase -i HEAD~3
+```
+
+This opens an editor listing your last 3 commits (oldest at top). Leave the first one as `pick`, and change `pick` to `squash` (or just `s`) on the other two:
+
+```
+pick   abc1234 First commit message
+squash def5678 Second commit message
+squash ghi9012 Third commit message
+```
+
+Save and close. Git then opens a second editor to combine the commit messages — edit it into one final message, save, and you're done.
+
+A couple of notes:
+- **If you've already pushed** these commits, you'll need to force-push afterward: `git push --force-with-lease`. Only do this on a branch no one else is building on.
+- **Faster alternative** if you just want one new message and don't care about the originals: `git reset --soft HEAD~3 && git commit`. This rewinds the three commits but keeps all their changes staged, then lets you write a single fresh commit.
+
+Both leave your working tree untouched — only commit history changes.

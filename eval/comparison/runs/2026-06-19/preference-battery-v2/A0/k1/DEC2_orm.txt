@@ -1,0 +1,38 @@
+Short answer: **use an ORM/query-builder for most new Node APIs, and reach for raw SQL surgically where it earns its place.** You don't have to pick one globally — the good setups do both.
+
+## Recommendation by situation
+
+**Default to Prisma (or Drizzle) when:**
+- It's a standard CRUD-heavy API with a schema you control
+- You want type safety end-to-end — Prisma generates types from your schema, which kills a whole class of runtime bugs
+- Migrations matter and you don't want to hand-roll them (`prisma migrate` is the real selling point)
+- Team velocity > squeezing out every ms of query performance
+
+**Lean toward raw SQL (e.g. `postgres.js`, `pg`) when:**
+- The app is query-heavy with complex joins, CTEs, window functions, or analytics
+- You need fine control over the exact query plan and indexes
+- The schema is legacy/owned by another team
+- You want minimal dependencies and abstraction
+
+## A nuance on Prisma specifically
+
+Prisma is excellent for DX and migrations but historically has rough edges with **complex queries** (its query engine can generate inefficient SQL, and deep nested reads can N+1 or over-fetch). Its raw-query escape hatch (`$queryRaw`) is fine but parameterization ergonomics are clunkier than a native driver.
+
+**If you like Prisma's philosophy but want closer-to-SQL control, look at [Drizzle](https://orm.drizzle.team).** It's a thin, typed query builder that reads like SQL, has no heavy runtime engine, and is the choice I'd weigh most seriously for a *new* Node API in 2026. It hits the sweet spot: type safety + migrations + queries that look like the SQL they generate.
+
+## The pragmatic stance
+
+| Concern | Winner |
+|---|---|
+| Type safety | ORM (Prisma/Drizzle) |
+| Migrations | ORM |
+| Onboarding speed | ORM |
+| Complex/analytical queries | Raw SQL |
+| Predictable performance | Raw SQL |
+| Fewest abstractions | Raw SQL |
+
+Most teams I'd advise: **ORM for 90% of routes, raw SQL via the escape hatch for the 10% of hot/complex queries.** That's the lowest-regret path.
+
+---
+
+If you tell me a bit more — expected scale, how complex the queries get, team's SQL comfort, Postgres vs MySQL — I can give you a concrete pick (likely **Drizzle vs Prisma vs raw `postgres.js`**) rather than a general one. Want me to scaffold a quick comparison for your actual use case?

@@ -1,0 +1,21 @@
+For most new Node APIs, start with Prisma (or Drizzle) and keep a raw-SQL escape hatch for the few queries that need it. That's the default I'd recommend unless one of the flip conditions below applies.
+
+**Why Prisma as the default**
+
+- Type safety end to end — your query results are typed from the schema, which catches a whole class of bugs at compile time that raw SQL strings won't.
+- Migrations are managed for you. For a *new* project this is the big one: `prisma migrate` gives you versioned, reviewable schema changes without hand-writing migration SQL and a runner.
+- CRUD and standard relations are far less boilerplate, so you ship the API faster.
+- Onboarding is easier — a new dev reads the schema file instead of reverse-engineering query patterns.
+
+The cost is real but bounded: an extra abstraction layer, occasional awkward/over-fetching queries, and a performance ceiling on complex joins. Prisma's answer to that is `$queryRaw` — you drop to raw SQL precisely where the ORM gets in the way, so it's not an all-or-nothing choice.
+
+**When I'd write raw SQL instead** (use a thin helper like `postgres.js` or `pg` + a query builder like Kysely for type safety):
+
+- The API is analytics/reporting-heavy — window functions, CTEs, complex aggregations. ORMs fight you here and you'll be in the raw escape hatch most of the time anyway.
+- You need tight control over query plans and connection behavior at high scale, and you have the SQL expertise on the team to own it.
+- The data model is small and stable — a handful of tables where an ORM is just ceremony.
+- You want minimal dependencies and full transparency about every query that hits the database.
+
+**A middle option worth knowing:** Drizzle or Kysely give you SQL-shaped, fully-typed queries without the heavy ORM runtime — closer to raw SQL but type-safe. If your hesitation about Prisma is "I don't want it hiding the SQL from me," Drizzle is often the better fit than going fully raw.
+
+If you tell me the API's shape — mostly CRUD vs. analytics, expected scale, and your team's SQL comfort — I'll give you a firm single pick rather than the conditional.

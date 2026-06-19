@@ -1,0 +1,60 @@
+Heap snapshot diffing is the technique that actually finds it. Everything else just confirms a leak exists. Here's the workflow I'd use, in order.
+
+## 1. Confirm it's a heap leak (not RSS/native)
+
+Log memory periodically so you know *which* number is growing:
+
+```js
+setInterval(() => {
+  const m = process.memoryUsage();
+  console.log(JSON.stringify({
+    rss: m.rss, heapUsed: m.heapUsed, heapTotal: m.heapTotal, external: m.external
+  }));
+}, 30_000);
+```
+
+- **`heapUsed` climbing** → JS object leak. Heap snapshots will find it (steps below).
+- **`rss`/`external` climbing but `heapUsed` flat** → native leak (Buffers, C++ addons, DB driver). Snapshots won't show it well — see step 4.
+
+## 2. Take heap snapshots and diff them
+
+This is the money technique. Take 2–3 snapshots spaced over time while the leak grows, then diff.
+
+**Easiest, no code change** — send a signal to a running process:
+```bash
+node --heapsnapshot-signal=SIGUSR2 your-app.js
+# then, spaced ~20-30 min apart as memory grows:
+kill -USR2 <pid>   # writes Heap.<date>.heapsnapshot to cwd each time
+```
+
+**Or programmatically** (e.g. behind an admin endpoint):
+```js
+require('v8').writeHeapSnapshot();
+```
+
+Load the `.heapsnapshot` files into **Chrome DevTools → Memory tab** (or `chrome://inspect`). Select the later snapshot, switch the dropdown to **"Comparison"** against an earlier one, and sort by **Delta** (`# New` − `# Deleted`). The constructor with a steadily growing positive delta is your leak. Click it → check **Retainers** to see what's holding the objects alive — that names the culprit.
+
+> Take the *first* snapshot after warmup (caches, connection pools settle), or you'll chase false positives.
+
+## 3. The usual suspects (check these against what Retainers shows)
+
+- Module-scope `Map`/`Set`/array/object used as a cache that's never evicted → use `LRUCache` or a `WeakMap`.
+- `EventEmitter` listeners added per-request/connection and never removed (you'll often see the `MaxListenersExceededWarning`).
+- Timers (`setInterval`) or unresolved promises capturing big closures.
+- Closures holding request/response objects (common in middleware).
+- Globals accumulating (logging buffers, metrics arrays).
+
+## 4. If it's native/RSS (not heapUsed)
+
+```bash
+node --max-old-space-size=256 your-app.js   # force OOM sooner to reproduce faster
+```
+Look at Buffer allocations, streams without backpressure, and native addons (e.g. some `sharp`/grpc/db driver versions). `process.memoryUsage().arrayBuffers` isolates Buffer/ArrayBuffer growth.
+
+## Quick start
+
+If you want the fastest path: add the `--heapsnapshot-signal=SIGUSR2` flag, let it run an hour, `kill -USR2` two or three times, and diff in DevTools. That almost always pinpoints it.
+
+---
+
+If you tell me roughly what the app does (HTTP server? worker? what libraries — Express, a DB driver, websockets?) I can point at the most likely suspect and the exact instrumentation to add. I can also look at the actual code if it's in this repo — is it?

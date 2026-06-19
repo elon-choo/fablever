@@ -1,0 +1,26 @@
+It's almost certainly not POST itself — it's that your POST is a **"non-simple" request that triggers a CORS preflight**, and your server isn't answering the preflight. Your GET is a "simple" request, so the browser skips the preflight and it sails through.
+
+Here's the mechanism:
+
+A request is "simple" (no preflight) only if it meets *all* of these:
+- Method is GET, HEAD, or POST
+- No custom headers (only CORS-safelisted ones like `Accept`, `Content-Language`)
+- `Content-Type` is one of `application/x-www-form-urlencoded`, `multipart/form-data`, or `text/plain`
+
+Your POST almost certainly sends `Content-Type: application/json` and/or a custom header (e.g. `Authorization`). That disqualifies it from "simple," so before the real POST the browser fires an `OPTIONS` preflight asking "am I allowed to do this?" If the server doesn't reply to that `OPTIONS` with the right headers, the browser blocks the POST — and you never even see the POST hit your handler.
+
+So the real split is **preflighted vs. not**, not POST vs. GET. (A POST with a form-encoded body would sail through just like your GET; a GET with a custom header would get blocked just like your POST.)
+
+To confirm: open the Network tab and look for an `OPTIONS` request right before your POST. If it's there and failing/missing CORS headers, that's your culprit.
+
+The fix is server-side — make sure it responds to the `OPTIONS` preflight with:
+
+```
+Access-Control-Allow-Origin: <your origin>      (not * if you send credentials)
+Access-Control-Allow-Methods: POST, GET, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+```
+
+and returns `2xx` for the `OPTIONS` request. Most frameworks have a CORS middleware (e.g. `cors` for Express, `flask-cors`, `django-cors-headers`) that handles this once configured.
+
+If you tell me your server stack, I can give you the exact config.

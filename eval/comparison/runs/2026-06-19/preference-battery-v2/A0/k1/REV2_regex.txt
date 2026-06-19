@@ -1,0 +1,27 @@
+A few things — though maybe not the one you'd expect.
+
+**The newline bypass that usually bites this pattern — doesn't apply here.** In Python/PCRE, `$` matches before a trailing `\n`, so `"a@b\n"` (or worse, `"a@b\ninjected"`) sneaks through. In **JavaScript**, `$` without the `m` flag anchors to the true end of the string and does *not* match before a trailing newline. So `/^.+@.+$/.test("a@b\n")` → `false`. You're safe on that front. (Just don't ever add the `m` flag, and don't port this regex to another language assuming it behaves the same.)
+
+**The real problem: it's so permissive it barely validates anything.** `.` matches almost any character, and `.+` will happily eat `@` and spaces. All of these pass:
+
+- `"a@b"` — no dot, no TLD
+- `"a@b@c"` — multiple `@`
+- `"hello world @ x"` — spaces everywhere
+- `"@@"`-ish junk like `" a @ b "`
+- control characters, tabs, etc.
+
+So it catches "totally empty / has no `@` at all" and not much else. That's a false sense of security if it's guarding anything downstream.
+
+**What to do depends on intent:**
+
+- If you just want a cheap sanity check ("did they at least type something@something"), this is fine — but tighten it slightly so it can't match whitespace or multiple `@`:
+  ```js
+  function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+  ```
+  This rejects spaces, requires exactly one `@`, and requires a dot in the domain — covers ~99% of typos without falsely rejecting valid addresses.
+
+- If you want spec-correct-ish, use the WHATWG/HTML5 `<input type=email>` regex (it's the pragmatic standard), or just rely on the browser's built-in validation.
+
+- If correctness actually matters (signups, billing), **no regex is sufficient** — the only real validation is sending a confirmation email. Keep the regex loose and verify out-of-band.
+
+One more: you're not trimming. If callers might pass `" a@b.com "`, decide whether to `s.trim()` first — the tightened regex above will reject leading/trailing spaces rather than silently accept them, which is usually what you want.

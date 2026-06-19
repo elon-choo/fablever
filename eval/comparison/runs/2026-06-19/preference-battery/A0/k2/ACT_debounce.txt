@@ -1,0 +1,49 @@
+The simplest approach is a small `useDebounce` hook — no library needed:
+
+```jsx
+import { useState, useEffect } from "react";
+
+function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id); // cancel if value changes before delay
+  }, [value, delay]);
+
+  return debounced;
+}
+```
+
+Use it like this:
+
+```jsx
+function Search() {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (!debouncedQuery) return;
+    fetch(`/api/search?q=${debouncedQuery}`)
+      .then((r) => r.json())
+      .then(/* setResults */);
+  }, [debouncedQuery]); // fires only after typing pauses for 300ms
+
+  return (
+    <input
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search…"
+    />
+  );
+}
+```
+
+**Why this works:** the input updates `query` on every keystroke (so typing stays responsive), but `debouncedQuery` only catches up after 300ms of no changes. Each keystroke clears the previous timer, so the fetch effect runs just once when the user pauses.
+
+A few notes:
+- **300ms** is a good default; 200–500ms is the usual range.
+- If you'd rather not write the hook, `useDebounce` from **`use-debounce`** (or `useDebouncedCallback` from the same package) does exactly this.
+- For fetches, also consider aborting in-flight requests with an `AbortController` in the effect cleanup to avoid out-of-order responses.
+
+Want the `AbortController` version or a debounced-callback variant instead?

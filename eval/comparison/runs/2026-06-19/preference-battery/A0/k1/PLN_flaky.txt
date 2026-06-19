@@ -1,0 +1,37 @@
+Good instinct to fix it rather than retry-loop around it. Here's the approach I'd take, roughly in order:
+
+## 1. Confirm it's actually flaky (not a real intermittent bug)
+Reproduce locally by running it in a loop:
+```bash
+# run N times, stop on first failure
+for i in {1..100}; do <test-cmd> || { echo "FAILED on run $i"; break; }; done
+```
+If it never fails locally but fails in CI, the environment difference *is* the clue (parallelism, slower machine, clean DB, different timezone/locale).
+
+## 2. Identify which class of flake it is
+Most flakes fall into a handful of buckets, and the fix differs sharply by bucket:
+
+| Symptom | Likely cause | Fix direction |
+|---|---|---|
+| Passes alone, fails in suite | **Shared/leaked state** (DB rows, globals, temp files, env) | Isolate setup/teardown; don't depend on order |
+| Fails under load / slower in CI | **Timing/race** — fixed `sleep`, async not awaited | Wait on a *condition*, not a duration |
+| Fails at certain times/dates | **Clock/timezone**, `now()`, TTL boundaries | Inject/freeze the clock |
+| Different every run | **Ordering assumptions** (map/set iteration, unsorted query) | Sort before asserting; seed RNG |
+| Fails on retry-heavy services | **Network/external dependency** | Mock it, or make the test hermetic |
+
+## 3. Get signal, don't guess
+- Run the CI test **with its siblings**, in the **same order** CI uses (many runners randomize — note the seed).
+- Add the seed/order to failure output if it isn't already.
+- If it's rare, that loop in step 1 with the CI-like flags running 100–1000× usually surfaces it.
+
+## 4. Fix the root cause, resist the bandaid
+A `sleep(500)` or a retry wrapper hides the flake; it doesn't fix it and it slows the suite. Prefer: await the real condition, freeze the clock, isolate the state, seed the randomness.
+
+## 5. Verify the fix
+Run the same loop that reproduced it (1000× green), ideally in the CI environment, before trusting it.
+
+---
+
+If you point me at the test (file + the CI failure log/error), I can do this concretely — reproduce it, classify the flake, and propose the actual fix. The failure message and "passes alone vs. fails in suite" are the two highest-value pieces of info to share.
+
+What's the test, and what does the failure look like?

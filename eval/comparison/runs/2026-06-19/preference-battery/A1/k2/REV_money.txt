@@ -1,0 +1,9 @@
+The function logic is fine — `reduce` with a `0` seed handles the empty-array case correctly (returns `0`, no throw). The problems are in the data it trusts, not the control flow:
+
+1. **Floating-point money.** The name `priceFloat` says these are floats, and summing floats accumulates rounding error — `0.1 + 0.2` is `0.30000000000000004`. For monetary totals this is the real bug: store and sum integer minor units (cents) instead, or use a decimal library, then format at the end.
+
+2. **No guard on the field.** If any item is missing `priceFloat` (or it's `null`/`undefined`), the running sum becomes `NaN` and silently poisons the whole total — you get `NaN` back with no error pointing at the bad row. If the value can ever be a string (e.g. `"4.99"` straight from JSON/an API), `+` concatenates instead of adding.
+
+Whether these matter depends on where `items` comes from. If it's already-validated internal data with integer cents, the one-liner is fine as is. If it's external input or actual floats, I'd switch to integer cents and decide explicitly what a missing/invalid price should do (skip, throw, or treat as 0).
+
+Want me to rewrite it for either of those cases?

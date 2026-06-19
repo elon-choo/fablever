@@ -1,0 +1,24 @@
+Run this first — it tells you which failure mode you're in:
+
+```sql
+SELECT state, count(*) FROM pg_stat_activity
+WHERE datname = current_database()
+GROUP BY state;
+```
+
+What the breakdown points to:
+
+1. **Lots of `idle in transaction`** — the usual culprit. Your app opens a transaction and doesn't commit/rollback, so the connection is held but doing nothing. Look for code paths that `BEGIN` (or an ORM that starts a transaction) and then hit an early return, exception, or slow external call before closing it. Check `state_change` timestamps in `pg_stat_activity` to see how long they've been parked.
+
+2. **Lots of `idle`** — connections checked out of the pool and never returned: a leak. Almost always a missing release in an error path — no `finally`/`defer`/`with`/context-manager around the acquire, so an exception skips the return. This is the #1 cause of pool exhaustion under load specifically, because load makes the error paths fire more often.
+
+3. **Lots of `active` and they're slow** — you don't have a pool problem, you have a query problem. A few slow queries (missing index, lock contention) hold connections long enough that arrivals outrun releases. Check `pg_stat_activity` ordered by `now() - query_start` and look at the slow ones.
+
+Two config checks to do in parallel:
+
+- **Pool size × number of app instances vs Postgres `max_connections`.** If the total can exceed the server limit you'll exhaust connections server-side regardless of app behavior. `SHOW max_connections;` and do the multiplication.
+- **Acquire/checkout timeout.** "Pool exhausting" is sometimes really "acquire timeout too short" — requests give up waiting during a normal burst. Worth confirming whether you're actually out of connections or just timing out waiting for one.
+
+Order of attack: run the query above under load. If you see `idle in transaction`, go straight to transaction lifecycle in your code — that's the fastest fix and the most likely cause. The plain `idle` pile points at a leaked acquire; `active`-and-slow points at queries, not the pool.
+
+If you tell me your stack (language, pool library, ORM), I can point at the specific leak patterns for it.

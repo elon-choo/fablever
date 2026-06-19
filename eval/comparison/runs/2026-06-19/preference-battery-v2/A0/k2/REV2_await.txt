@@ -1,0 +1,27 @@
+**Main issue: the requests run one-at-a-time, not concurrently.**
+
+`await` inside the `for` loop pauses the whole loop until each `fetch` resolves before starting the next. For N ids this takes ~sum of all latencies instead of ~max. For independent fetches that's the classic serial-loop anti-pattern.
+
+Fix — fire them all, then await together:
+
+```js
+async function loadAll(ids) {
+  return Promise.all(ids.map(id => fetch(id)));
+}
+```
+
+Other points worth flagging:
+
+- **Error handling.** With `Promise.all`, one rejection rejects the whole call (and the other in-flight requests are abandoned, results discarded). If you want partial success, use `Promise.allSettled`:
+  ```js
+  async function loadAll(ids) {
+    const results = await Promise.allSettled(ids.map(id => fetch(id)));
+    return results.map(r => r.status === 'fulfilled' ? r.value : null);
+  }
+  ```
+- **Unbounded concurrency.** `Promise.all` launches *all* fetches at once. Fine for a handful of ids; for hundreds/thousands you'll want a concurrency limit (e.g. `p-limit` or a small pool) to avoid exhausting sockets / hitting rate limits.
+- **Raw `Response` objects.** `fetch` resolves on HTTP errors too (404/500 don't throw), and you're returning the un-consumed `Response`. If callers expect parsed data, you'd want `res.ok` checks and `res.json()`/`res.text()` — but that depends on intent.
+
+The original code is *correct*; it's just needlessly slow whenever the fetches are independent. The only time the sequential version is right is if each fetch depends on the previous one's side effects, or you're deliberately rate-limiting — which isn't the case here.
+
+One note on your routing rule: this was a quick inline snippet, so I reviewed it directly rather than routing through `adversarial-review`. If you want the full red→blue→purple gate with a recorded verdict (e.g. this is a real diff headed for merge), say the word and I'll run it.

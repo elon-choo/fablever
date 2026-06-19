@@ -1,0 +1,43 @@
+No worries — I'll give you the plan against sensible defaults, prioritized by data criticality. The guiding principle throughout: **a backup you have never restored is not a backup.** The goal isn't "backups exist," it's a *proven* restore path with a known RPO (how much data you can lose) and RTO (how long recovery takes).
+
+## Step 0 — Confirm reality first (today, ~15 min)
+Don't trust "no backups" or "backups exist" — measure it. These are all read-only:
+- **Aurora:** `aws rds describe-db-clusters` → check `BackupRetentionPeriod` (>0?) and `EarliestRestorableTime`. `aws rds describe-db-cluster-snapshots` for manual snapshots.
+- **Supabase:** Dashboard → Database → Backups, or check your plan tier (Free = none, Pro = daily, PITR = paid add-on).
+- Output of step 0 sets the real RPO you're starting from. *(I can run these if you approve the calls.)*
+
+## The plan, by store
+
+**1. Aurora PostgreSQL — crown jewels (revenue/users/UTM). Priority 1.**
+Aurora always has automated backups, so the real gaps are almost always these three:
+- **Raise retention** to 14–35 days (`modify-db-cluster --backup-retention-period 35`, applies online).
+- **Enable PITR confidence** — automated backups already give point-in-time restore; verify `LatestRestorableTime` is current (lag = broken).
+- **Offsite + logical layer:** a nightly `pg_dump` (custom format, `-Fc`) to an S3 bucket in a *different region/account*, lifecycle to Glacier. This protects against the case automated snapshots don't: account compromise, accidental `DROP`, or AWS-side region loss. Cross-region automated snapshot copy is the managed alternative.
+- **The thing everyone skips:** schedule a **quarterly restore drill** — restore the latest snapshot to a throwaway cluster, run a row-count/checksum sanity check, tear it down. Automate it so it's a cron job, not a memory.
+
+**2. Supabase (ads). Priority 2 — most likely the *actual* zero-backup store.**
+- If on Free tier: either upgrade to Pro (daily automated backups) or, cheaper, run a **scheduled `pg_dump` to object storage** (GitHub Action / cron / Supabase Edge cron) — same `-Fc` dump pattern, encrypted, offsite.
+- If you need tight RPO, add the **PITR add-on**.
+- Same restore-drill requirement applies.
+
+**3. Neo4j knowledge graph. Priority 3 (or skip).**
+- It's derived from source code, so DR = re-run `index_project`. If re-indexing is cheap, document that as the recovery procedure and don't bother backing it up. If re-indexing is expensive/slow, schedule `neo4j-admin database dump` to the same offsite bucket.
+
+**4. PostHog** — SaaS, they own backups. No action beyond noting it in the DR doc.
+
+## Make it a guarantee, not a one-off
+1. **Automate** every dump/snapshot (cron/scheduled job, `caffeinate`-wrapped if local per your long-job conventions).
+2. **Monitor freshness** — alert if the newest backup object is older than its RPO. A silent-failing backup job is worse than none (false confidence).
+3. **Restore drills on a schedule** — this is the evidence step; until a restore succeeds, treat the store as *unbacked* in your status reporting.
+4. **One-page DR runbook** — per store: where backups live, exact restore command, owner, last-tested date, measured RPO/RTO.
+
+## What I'd do right now
+Quickest path to "not losing data tonight": kick off a manual `pg_dump -Fc` of Aurora + Supabase to an offsite bucket today (closes the acute exposure in ~30 min), then build the automation + drills on top this week.
+
+---
+
+Two things from me:
+1. **Want me to verify the actual current state** (the step-0 read-only commands)? That replaces my assumptions with facts before we commit to anything.
+2. If you'd rather, I can turn this into a written DR runbook + the actual backup scripts/cron definitions. Just say the word and point me at where the credentials/infra config live.
+
+Which database did you actually mean — or is Supabase the real zero-backup one?

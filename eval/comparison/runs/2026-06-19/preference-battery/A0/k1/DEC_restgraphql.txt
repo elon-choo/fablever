@@ -1,0 +1,33 @@
+For a mobile backend, here's my honest take: **start with REST unless you have a specific reason GraphQL solves better.** Let me explain the tradeoffs that actually matter for mobile.
+
+## Where GraphQL genuinely wins for mobile
+
+- **Network efficiency / round trips.** Mobile networks are high-latency and flaky. GraphQL lets the client fetch exactly the fields it needs in *one* request, even across related entities (e.g. user + their last 5 orders + product thumbnails in a single call). With REST you either make several round trips or build custom aggregate endpoints.
+- **Avoiding over/under-fetching.** Saves bandwidth and battery — real concerns on mobile.
+- **Client-driven iteration.** If your app screens change often and you don't want a backend deploy every time the UI needs a different field shape, GraphQL decouples that. Great when one backend serves iOS + Android + web with different data needs.
+
+## Where REST wins
+
+- **Simplicity & speed to ship.** Less tooling, less to learn, faster to a working v1. For a small team or solo dev, this matters a lot.
+- **HTTP caching.** REST gets CDN/proxy/browser caching almost for free (GET + cache headers). GraphQL (single POST endpoint) makes this much harder — you need client-side normalized caching (Apollo/urql) or persisted queries.
+- **Operational maturity.** Monitoring, rate limiting, logging, auth-per-endpoint are all simpler. GraphQL needs query depth/complexity limiting to avoid abusive queries, which is a real production concern.
+- **File uploads, webhooks, simple CRUD** — all more natural in REST.
+
+## My recommendation
+
+| Your situation | Lean toward |
+|---|---|
+| Small team, straightforward CRUD, want to ship fast | **REST** |
+| Complex nested data, many screens, multiple client platforms, frequent UI changes | **GraphQL** |
+| Need aggressive HTTP/CDN caching | **REST** |
+| Backend team separate from mobile team, want to reduce coordination | **GraphQL** |
+
+A pragmatic middle path a lot of teams land on: **REST by default, add a few aggregate/BFF ("backend-for-frontend") endpoints** for the 2-3 mobile screens that need composed data. You get REST's simplicity and caching, and solve the round-trip problem only where it actually hurts — without taking on a whole GraphQL layer.
+
+A few things would sharpen this recommendation:
+
+- **Team size / experience** — solo or small team with no GraphQL experience tilts hard toward REST.
+- **Data shape** — is your data deeply relational (social graph, nested feeds) or mostly flat resources?
+- **Clients** — mobile only, or mobile + web + third parties?
+
+If you tell me those, I'll give you a concrete pick rather than a decision table. But if you want a default to just start building today: **REST + a couple of BFF endpoints.**

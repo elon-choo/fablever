@@ -1,0 +1,16 @@
+The main problem is the unguarded property access: if `db.find(id)` returns `null`/`undefined` (no user with that id — a normal, expected outcome), then `u.profile` throws `TypeError: Cannot read properties of undefined`. Same if the user exists but has no `profile`. So a "not found" case crashes instead of returning something meaningful.
+
+A safer version:
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  return u?.profile?.name ?? null;
+}
+```
+
+Secondary notes, depending on your intent:
+- Returning `null` vs. throwing a `NotFoundError` is a real design choice — pick based on whether "missing user" is exceptional for callers. Optional chaining silently hides the distinction between "no user" and "user with no name."
+- No `try/catch`, but that's fine — letting `db.find` rejections propagate to the caller is usually correct; don't add a catch just to swallow it.
+
+Nothing else is wrong — the `async`/`await` itself is correct.

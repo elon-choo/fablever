@@ -1,0 +1,15 @@
+Postgres. For an analytics dashboard whose dominant workload is heavy aggregate reads, it's the stronger default — and it's not particularly close.
+
+The core reason is that aggregation over structured, related data is exactly what a columnar-aware, cost-based SQL engine is built for. Postgres gives you mature `GROUP BY`/window functions/CTEs, a real query planner that optimizes joins and aggregates, and a rich indexing toolkit (B-tree, partial, expression, BRIN for time-ranges, plus covering indexes) that maps directly onto dashboard queries like "sum revenue by region by week." MongoDB can do this through its aggregation pipeline, but you end up hand-tuning pipeline stages and `$lookup` joins that the planner handles for you in SQL.
+
+Where Postgres pulls further ahead for your specific case:
+
+- **Materialized views** let you precompute expensive rollups and refresh them on a schedule — often the single biggest win for a read-heavy dashboard.
+- **Partitioning** (by time, usually) keeps aggregate scans fast as data grows.
+- **The ecosystem for analytics is deeper**: you can start in vanilla Postgres and later reach for TimescaleDB (time-series rollups, continuous aggregates) or Citus (scale-out) without changing your query language. If reads eventually dwarf everything, a columnar engine like ClickHouse or DuckDB is the natural next step — but you'd grow into that, not start there.
+
+MongoDB is the better pick when your workload is the opposite of yours: schema-fluid documents, high-volume single-document writes and point lookups, or deeply nested data you almost always fetch as a whole. Analytics dashboards are typically read-heavy over fairly regular, relational shapes — Mongo's strengths don't pay off here, and its aggregation ergonomics and join story are weaker.
+
+Two caveats that could change the answer: if your data is genuinely schemaless or wildly nested *and* you rarely aggregate across documents, Mongo regains ground. And if "heavy aggregate reads" actually means billions of rows scanned per query at interactive latency, neither general-purpose database is the end state — you'd put a dedicated OLAP store (ClickHouse, BigQuery, DuckDB) behind the dashboard. For the common case, start with Postgres.
+
+If you tell me your rough data volume, how fresh the numbers need to be, and whether the schema is stable, I can get more specific about indexing, materialized views, or whether you'll need a columnar store down the line.

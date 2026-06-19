@@ -1,0 +1,35 @@
+Quick review — the route works for the happy path but has a few real problems, roughly in priority order:
+
+**1. Authorization / IDOR (most serious).** `/u/:id` hands back any user by raw id with zero access check. Anyone can enumerate `/u/1`, `/u/2`, … and read other people's records. You need an authz check — is the caller allowed to see this user?
+
+**2. Over-exposure of the user object.** `res.json(u)` serializes the *whole* record — likely password hash, email, tokens, internal flags. Whitelist what goes out:
+```js
+res.json({ id: u.id, name: u.name });
+```
+
+**3. Unhandled rejection.** If `getUser` throws (DB down, bad id), this async handler rejects and — on Express 4 — nothing catches it; the request hangs until timeout. Either wrap it, or upgrade to Express 5 (which forwards rejections to error middleware).
+
+**4. No 404.** If the user doesn't exist, `getUser` likely returns `null`/`undefined`, and `res.json(undefined)` replies **200** with an empty body. Should be 404.
+
+**5. Input validation.** `req.params.id` flows straight into `getUser`. Fine if that's a parameterized query; an injection vector if it's string-built.
+
+A tightened version:
+```js
+app.get('/u/:id', async (req, res, next) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ error: 'bad id' });
+    if (!canView(req.user, req.params.id)) return res.status(403).json({ error: 'forbidden' });
+
+    const u = await getUser(req.params.id);
+    if (!u) return res.status(404).json({ error: 'not found' });
+
+    res.json({ id: u.id, name: u.name });   // explicit allowlist
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+The auth check (#1) and the field allowlist (#2) are the ones I'd treat as blocking; the rest are correctness/robustness.
+
+Want me to adapt this to your actual `getUser` and auth setup?

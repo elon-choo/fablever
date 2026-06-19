@@ -1,0 +1,10 @@
+The main problem is using floating-point arithmetic for what the name `priceFloat` says is money. Summing floats accumulates rounding error — `0.1 + 0.2` is `0.30000000000000004`, and over many items those errors compound into a total that's off by a cent or more. For currency you want integer minor units (cents) or a decimal type, then format on display.
+
+Two secondary issues, both depending on how trusted the input is:
+
+- If any item is missing `priceFloat` (or it's a string like `"9.99"`), the result silently becomes `NaN` rather than throwing — no validation at the boundary.
+- If `items` is `null`/`undefined`, this throws a TypeError. Fine if the caller guarantees an array; worth a guard if it's an external boundary.
+
+The empty-array case is fine — `reduce` with a `0` seed returns `0`.
+
+If these are genuinely floats you can't change, the usual fix is to sum in cents: `Math.round(items.reduce((s, i) => s + i.priceFloat * 100, 0))`, then divide for display. Want me to apply a fix, or were you just sanity-checking?

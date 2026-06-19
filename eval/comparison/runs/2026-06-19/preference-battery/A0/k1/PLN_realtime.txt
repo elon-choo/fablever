@@ -1,0 +1,56 @@
+No problem — I'll give you a practical, stack-agnostic plan you can adapt. (Heads-up restated: there's no web app in this directory, so this is a generic blueprint, not something I can wire into the current repo. Point me at the real repo's path and I'll tailor it to your actual framework/backend.)
+
+## Live notifications — the plan
+
+### 1. Pick the transport (the one decision that drives everything)
+
+| Need | Use | Why |
+|------|-----|-----|
+| Live updates **while a tab is open** (toasts, badges, feeds) | **SSE** (Server-Sent Events) | One-way server→client, dead simple, auto-reconnect built in, works over plain HTTP. Best default. |
+| Two-way / chat / presence / typing | **WebSocket** | Full duplex. More infra (sticky sessions or a pub/sub layer). |
+| Notifications when the **tab is closed / app not open** | **Web Push** (Service Worker + Push API + VAPID) | Survives closed tabs; needs user permission. |
+| Critical / out-of-band | **Email or SMS** | Different channel, for things that must reach the user. |
+
+**Recommendation:** Start with **SSE for in-app live** + **Web Push for offline reach**. Skip WebSocket unless you genuinely need client→server streaming. This combo covers ~90% of "live notifications" needs with the least infra.
+
+### 2. Architecture
+
+```
+[event source: DB write / job done / another user action]
+        │
+        ▼
+  emit notification  ──►  persist row (notifications table)
+        │                  id, user_id, type, payload, read_at, created_at
+        ▼
+   pub/sub fan-out  (in-process emitter for 1 server;
+        │            Redis pub/sub or Postgres LISTEN/NOTIFY for many)
+        ├──► SSE stream → open browser tabs (live toast + badge)
+        └──► Web Push → closed-tab devices (via stored push subscriptions)
+```
+
+Two design rules that save pain later:
+- **Persist first, deliver second.** The DB row is the source of truth; SSE/Push are best-effort delivery. On reconnect the client refetches unread from the DB, so nothing is lost if a socket drops.
+- **Fan-out needs pub/sub once you have >1 server process.** Single instance → in-memory EventEmitter is fine. Multiple instances/serverless → Redis pub/sub or Postgres `LISTEN/NOTIFY`.
+
+### 3. Data model (minimum)
+
+- `notifications` — `id, user_id, type, title, body, data(jsonb), read_at, created_at`
+- `push_subscriptions` — `id, user_id, endpoint, keys(p256dh, auth), created_at` (one row per device/browser)
+
+### 4. Phased implementation
+
+1. **Persistence + REST** — table, `GET /notifications?unread=1`, `POST /notifications/:id/read`. Ship a bell icon that polls. Boring but correct; everything builds on this.
+2. **SSE live layer** — `GET /notifications/stream` keeps an open response; server pushes new rows to the user's connected tabs. Client shows toast + increments badge. Add heartbeat + auto-reconnect.
+3. **Web Push** — register a Service Worker, request permission, store the subscription, send via VAPID (e.g. the `web-push` library) when the user has no open SSE connection.
+4. **Polish** — mark-all-read, grouping/debounce (don't fire 50 toasts), preferences (per-type opt-out), and rate limiting.
+
+### 5. Gotchas to plan for upfront
+
+- **Auth on the stream** — SSE/WS connections must carry the session; don't leak another user's events.
+- **Reconnect & missed events** — use SSE's `Last-Event-ID` or refetch unread on reconnect.
+- **Permission UX for Web Push** — never prompt on page load; ask after a meaningful action, or it gets blocked forever.
+- **Serverless caveat** — long-lived SSE/WS connections don't work on most serverless platforms; you'd need a managed realtime service (Pusher/Ably/Supabase Realtime) or a dedicated long-running process.
+
+---
+
+If you tell me **the path to the actual web app** (and roughly its stack — e.g. Next.js, Rails, Django, plain Node), I'll turn this into a concrete plan with the right libraries, exact endpoints, and the serverless-vs-server call made for you. What's the repo?

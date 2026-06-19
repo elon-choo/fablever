@@ -1,0 +1,23 @@
+"Random, after a few minutes" with JWTs is almost always one of two distinct failure shapes. The fastest way to diagnose is to figure out which:
+
+## Is the logout at a *consistent* time after login, or genuinely *random*?
+
+**Consistent (~every X minutes) → your access token `exp` is short and refresh is missing/broken.**
+This is the #1 cause. Access tokens are meant to be short-lived (5–15 min). If you have no refresh-token flow, or the silent refresh is failing, users get kicked out the moment `exp` hits — every time, like clockwork.
+- Decode a live token (jwt.io / `jwt decode`) and look at `exp - iat`. If it's ~5 min, there's your timer.
+- Check whether a refresh endpoint exists and is actually being called before expiry. Common bugs: refresh token not sent (wrong cookie `path`/`SameSite`), refresh 401s silently, or the client only refreshes on page load.
+
+**Genuinely random (no fixed interval) → token validation is failing intermittently, usually a key problem across instances.** Top suspects:
+
+1. **Inconsistent signing secret across server instances.** Load-balanced cluster where each instance has a different `JWT_SECRET` (e.g., generated at boot with `crypto.randomBytes` instead of read from a shared env var/secret manager). A token signed by instance A fails verification on instance B → as requests round-robin, validation randomly fails. This is the classic "random logout in prod, never in dev (single instance)."
+
+2. **Secret regenerated on restart + a crash-looping / autoscaling server.** Same root cause as above but over time instead of across instances. Every restart invalidates all existing tokens. "After a few minutes" = mean time between restarts.
+
+3. **Clock skew between servers.** If `exp`/`nbf`/`iat` are validated against a clock that drifts between machines, tokens issued by one server can look expired/not-yet-valid on another. Add a small `clockTolerance` and sync NTP.
+
+## Fastest checks
+- `echo $JWT_SECRET` (or equivalent) on **every** instance — confirm they're identical and not generated at startup.
+- Log the JWT verification *error reason* on 401 (`TokenExpiredError` vs `JsonWebTokenError`/`invalid signature`). Expired → it's the `exp`/refresh path. Invalid signature → it's the key/instance problem.
+- Check restart frequency / deploy cadence of the auth service.
+
+If you tell me whether the logouts are clockwork-regular or scattered — and whether you run more than one server instance — I can narrow it to one cause. And if you point me at the repo, I'll look at the token TTL, signing setup, and refresh flow directly.

@@ -1,0 +1,54 @@
+Short version: an API is "RESTful" when it follows the architectural constraints Roy Fielding defined in his 2000 dissertation — *not* simply when it speaks HTTP and returns JSON. Most APIs marketed as "REST" are really just "HTTP APIs." Here's the actual substance.
+
+## The constraints that define REST
+
+Fielding's REST is a set of constraints. An API is RESTful to the degree it satisfies them:
+
+**1. Client–server separation**
+The UI/client concerns are separated from data storage/server concerns. They evolve independently.
+
+**2. Statelessness**
+Every request carries everything the server needs to process it. The server stores no client session state between requests. This is the constraint people most often *do* respect, because it's what makes horizontal scaling and load balancing easy.
+
+**3. Cacheability**
+Responses must explicitly say whether they're cacheable (e.g., via `Cache-Control`, `ETag`). Caching is a first-class part of the design, not an afterthought.
+
+**4. Uniform interface**
+This is the heart of REST, and it has four sub-parts:
+- **Resource identification** — things are modeled as *resources* with stable identifiers (URIs). `/users/42`, not `/getUser?id=42`.
+- **Manipulation through representations** — you act on a resource by exchanging a representation of it (JSON, XML), plus enough metadata to modify or delete it.
+- **Self-descriptive messages** — each message contains enough info to be understood in isolation (method semantics, media type, status codes).
+- **HATEOAS** (Hypermedia As The Engine Of Application State) — responses include links describing what you can do next. The client navigates the API by following links the server provides, rather than hard-coding URL templates.
+
+**5. Layered system**
+A client can't tell whether it's talking to the origin server or an intermediary (proxy, gateway, CDN). This enables load balancers, caches, and security layers transparently.
+
+**6. Code-on-demand** (optional)
+The server can ship executable code (e.g., JavaScript) to extend the client. The only optional constraint.
+
+## What people get wrong
+
+The honest punchline: **almost no "REST API" is fully RESTful, because almost none implement HATEOAS.** Leonard Richardson's *Maturity Model* captures the gradient:
+
+- **Level 0** — one endpoint, HTTP as a tunnel (e.g., SOAP-style POST to `/api`).
+- **Level 1** — multiple resource URIs, but still misusing methods.
+- **Level 2** — proper resources + correct HTTP verbs + status codes. **This is where the vast majority of "REST APIs" actually live**, and it's genuinely useful.
+- **Level 3** — Level 2 + hypermedia controls (HATEOAS). Fielding's view: only this counts as REST.
+
+Fielding said it bluntly in 2008: *"If the engine of application state is not being driven by hypertext, then it cannot be RESTful."*
+
+## A useful mental checklist
+
+An API leans genuinely RESTful when:
+- It models **nouns (resources)**, not verbs/actions, in its URIs.
+- It uses **HTTP methods for their defined semantics** — GET (safe, idempotent), PUT/DELETE (idempotent), POST (neither), PATCH (partial update).
+- It uses **status codes meaningfully** (201 Created, 404, 409, 422…), not 200-with-an-error-body.
+- It is **stateless** — no server-side session coupling.
+- Representations are **self-descriptive** (correct media types).
+- Ideally, responses include **hypermedia links** for available transitions.
+
+## The pragmatic take
+
+"RESTful" in industry usage almost always means **Richardson Level 2**: resource-oriented URLs, correct verbs, proper status codes, statelessness, JSON. That's a perfectly reasonable and valuable design target — just know that it's *REST-ish*, and that the purist definition (Level 3, hypermedia-driven) is what the term technically means.
+
+If someone asks "is my API RESTful?", the real questions are: *Are you modeling resources rather than RPC actions? Are your methods and status codes honest? Is it stateless and cacheable?* Hit those and you've captured ~90% of the practical value — the part that actually makes an API predictable and scalable.

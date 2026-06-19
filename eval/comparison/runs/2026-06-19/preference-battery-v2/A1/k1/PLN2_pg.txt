@@ -1,0 +1,30 @@
+You dismissed the questions, so I'll give you the recommended default path and flag the two forks that would change it. This assumes the common case: you can take a short maintenance window and you'll use managed Postgres (RDS, Cloud SQL, Supabase, or Neon). If either of those is false, the cutover step changes — I'll note where.
+
+## The plan
+
+**1. Stand up Postgres first, empty.** Provision the managed instance, lock down network access, and get a connection string into your secrets manager / env. Don't point anything at it yet. Pick a Postgres version and pin it.
+
+**2. Port the schema.** Two routes depending on your setup:
+- If you use a framework with migrations (Django, Rails, Laravel) or a code-first ORM (Prisma, SQLAlchemy, TypeORM): switch the DB provider/dialect in config and **regenerate the schema by running your migrations against the empty Postgres** — don't hand-translate. Then diff the result against what you expected.
+- If you're on raw SQL / `better-sqlite3`: use **`pgloader`**, which converts SQLite schema *and* data in one pass and handles most type mapping automatically.
+
+**3. Fix the SQLite-isms — this is where the real bugs hide.** SQLite is permissive in ways Postgres is not:
+- **Type affinity:** SQLite stores whatever you give it; Postgres is strict. Booleans saved as `0/1`, dates/timestamps saved as TEXT, and numbers in text columns will all fail to load or compare wrong. This is the #1 source of migration breakage.
+- **Sequences:** `AUTOINCREMENT` becomes `SERIAL`/`IDENTITY`. After a bulk data load you **must reset each sequence** (`setval`) to `max(id)+1`, or your first insert throws a duplicate-key error in production.
+- **Upserts:** SQLite's `INSERT OR REPLACE` / `INSERT OR IGNORE` must become Postgres `ON CONFLICT ... DO UPDATE/NOTHING`.
+- **Dates:** `datetime()`, `strftime()`, `julianday()` have no Postgres equivalent — rewrite to `now()`, `to_char`, intervals.
+- **Concurrency:** SQLite serializes all writes, which silently masks race conditions. Postgres runs writes concurrently, so any read-modify-write your code does without a transaction or lock can now interleave. Audit those paths.
+- **Foreign keys** are often off by default in SQLite — turning them on in Postgres can surface orphaned rows that were always there.
+
+**4. Migrate the data.** For the simple case (`pgloader sqlite:///prod.db postgresql://...`) this is one command. For larger data, load with indexes/constraints dropped, then build them after — far faster. Then reset sequences (step 3).
+
+**5. Verify before cutover, with checks that can fail.** Compare row counts per table between the two databases. Spot-check the type-affinity columns (booleans, dates) actually came across as real types. Run your app's test suite pointed at Postgres. Run the app against a *copy* of prod Postgres and click through the critical flows.
+
+**6. Cut over (maintenance window path).** Put the app in maintenance mode → stop writes → do a final `pgloader` of any data that changed since your test load (or just re-run the whole load if data is small) → reset sequences → flip the connection string → restart → smoke-test the critical paths → lift maintenance. Keep the SQLite file untouched as your rollback for a few days.
+
+## The two forks that change this
+
+- **If you can't take a maintenance window** (24/7, high-traffic): step 6 becomes dual-write or logical replication with a staged cutover, which is substantially more work and the part most worth getting a second set of eyes on. Tell me the traffic shape and I'll lay that out.
+- **If you're self-hosting Postgres** instead of managed: add backups (`pg_dump` cron or WAL archiving), connection pooling (PgBouncer), and basic tuning (`shared_buffers`, `work_mem`) to the plan before step 6.
+
+If you tell me your stack and which fork you're in, I'll turn the relevant steps into concrete commands and a checklist for your specific case.

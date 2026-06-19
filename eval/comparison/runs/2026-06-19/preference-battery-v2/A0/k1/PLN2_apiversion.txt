@@ -1,0 +1,72 @@
+Here's a battle-tested plan for evolving a public API without breaking the clients already depending on it. The core principle: **most changes shouldn't require a new version at all** — reserve versioning for the rare breaking change, and make breaking changes opt-in.
+
+## 1. First, classify the change
+
+Before versioning anything, decide what kind of change you're making:
+
+**Non-breaking (additive) — no version bump needed:**
+- Adding a new endpoint
+- Adding an *optional* request field
+- Adding a new field to a response
+- Adding a new optional value to an existing enum *only if clients are documented to tolerate unknowns*
+
+**Breaking — needs a versioning strategy:**
+- Removing or renaming a field/endpoint/parameter
+- Changing a field's type or semantics
+- Making an optional field required
+- Changing default behavior, error codes, or auth
+- Tightening validation that previously passed
+
+The golden rule: **clients must ignore fields they don't recognize** ("tolerant reader"). Document this expectation explicitly so additive changes stay non-breaking.
+
+## 2. Choose where the version lives
+
+| Strategy | Example | Notes |
+|---|---|---|
+| **URI path** (recommended for public REST) | `/v1/orders`, `/v2/orders` | Most visible, cacheable, trivial to route. Industry default (Stripe-style date versions are a variant). |
+| **Header** | `Accept: application/vnd.api.v2+json` | Cleaner URLs, but invisible and easy for clients to get wrong. |
+| **Query param** | `?version=2` | Simple but pollutes caching and analytics. |
+
+For a public API, **major version in the URI path** is the pragmatic default. Use **semantic versioning** conceptually: only `vN` (major) appears in the URL; minor/patch changes are additive and don't change the path.
+
+A strong alternative used by Stripe/GitHub: **date-based versions** (`2024-01-01`) pinned per-account or per-request header, with a server-side "version transformation" layer that translates old shapes to new. Powerful but heavier to build — only worth it at scale.
+
+## 3. Run versions side-by-side
+
+- Keep `v1` fully operational when you ship `v2`. Never hard-cut.
+- Internally, try to keep **one implementation** and adapt at the edges (request/response transformers per version) rather than forking your whole codebase — forked codebases rot and drift in behavior.
+- Default unversioned requests to the *oldest supported* version (or reject them), never to "latest" — silently advancing clients is itself a breaking change.
+
+## 4. Deprecate gracefully (this is the part people skip)
+
+1. **Announce** in changelog + email + docs the moment a version is deprecated.
+2. **Signal in-band**: return `Deprecation: true` and `Sunset: <date>` HTTP headers ([RFC 8594](https://www.rfc-editor.org/rfc/rfc8594)) on every response from the old version.
+3. **Give a long window** — 6–12 months for a public API is typical.
+4. **Monitor adoption**: track request volume per version so you know who's still on the old one before you pull it.
+5. **Brownout tests** (optional): briefly disable the old version for short windows near sunset to surface stragglers.
+
+## 5. Supporting practices
+
+- **Contract-first + tests**: lock your schema (OpenAPI/JSON Schema, or protobuf for gRPC) and run **contract/compatibility tests in CI** that fail the build on a breaking change to a published version. This is what actually prevents accidental breakage.
+- **Consumer-driven contract tests** (e.g. Pact) if you have known major consumers.
+- **Changelog + migration guide** per version — a v1→v2 diff with concrete before/after examples.
+- **Feature flags** for risky rollouts within a version.
+
+## Recommended default
+
+For most public REST APIs:
+
+1. URI path major versioning (`/v1`), additive changes never bump it.
+2. Tolerant-reader contract documented for clients.
+3. OpenAPI spec + CI breaking-change linter (e.g. `oasdiff`, Optic, or Spectral) as the safety net.
+4. `Deprecation`/`Sunset` headers + a 6–12 month deprecation policy.
+5. Per-version usage metrics before any sunset.
+
+---
+
+A couple of things would let me make this concrete rather than general:
+
+- **What's the API style** — REST, GraphQL, or gRPC? (GraphQL favors continuous evolution with field-level `@deprecated` and *no* URL versioning; gRPC/protobuf has its own field-number compatibility rules.)
+- **Is there a codebase here** you want me to look at and propose a specific implementation for? This dir (`/private/tmp`) isn't a repo, so I answered generically.
+
+Want me to turn this into a written migration plan for your specific stack, or scaffold the versioning routing/transformer layer?

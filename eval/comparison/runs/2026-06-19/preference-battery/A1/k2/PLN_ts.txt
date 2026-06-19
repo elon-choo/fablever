@@ -1,0 +1,36 @@
+Here's a concrete, low-risk path for a 30k-line incremental migration. The core principle: **keep the app shipping at every step** — never a big-bang rewrite, never a branch that diverges for weeks.
+
+## Phase 0 — Make JS and TS coexist (1–2 days, zero file renames)
+Get the toolchain compiling a mixed codebase before you touch a single file.
+
+- Add TypeScript and `tsconfig.json` with `allowJs: true`, `checkJs: false`, `strict: false`, `noEmit: true` (let your existing bundler — esbuild/swc/Vite/Babel — keep doing the actual transpiling; use `tsc` only as a type checker).
+- Wire `tsc --noEmit` into CI as a *non-blocking* job first so you see the baseline error count without breaking the build.
+- Confirm the app still builds and tests still pass. Nothing has changed behaviorally yet — this is the safety net.
+
+## Phase 1 — Pick the migration order (leaf-first)
+Migrate **dependencies before dependents**. Types flow upward, so converting a leaf utility module gives every caller real types for free; doing it top-down means you constantly re-edit files as their imports gain types.
+
+- Start with shared `utils/`, `constants`, `types`, pure helpers — the files with the most inbound imports and the fewest outbound ones.
+- Do entry points and framework glue (routes, components, controllers) last.
+- Leave third-party gaps to `@types/*` packages, or a single `types/vendor.d.ts` for libs without types.
+
+## Phase 2 — Convert file by file
+For each file: rename `.js` → `.ts` (`.jsx` → `.tsx`), fix what `tsc` flags, commit. Keep PRs small (a few files each) so review stays sane and `git blame` survives.
+
+- Don't chase perfect types. `any`/`unknown` is a legitimate checkpoint — a typed boundary you'll tighten later beats blocking the migration. Mark deliberate gaps with `// TODO(ts): tighten` so they're greppable, not `@ts-ignore` silently.
+- **Stepping stone for files you can't rename yet:** add `// @ts-check` + JSDoc type annotations to high-traffic `.js` files. You get type checking without the rename, useful when a file is risky or under active feature work.
+- Avoid behavior changes inside a migration commit. If you spot a bug, fix it in a *separate* commit so a regression is bisectable to either the rename or the fix, never both.
+
+## Phase 3 — Ratchet strictness so it can't regress
+Once most files are `.ts`, turn the screws gradually rather than flipping `strict: true` and drowning in errors.
+
+- Enable flags one at a time, fixing fallout per flag: `noImplicitAny` → `strictNullChecks` (the big one, do it alone) → `strictFunctionTypes` → the rest → finally `strict: true`.
+- Flip the CI `tsc --noEmit` job to **blocking** so no new untyped code lands.
+- To prevent backsliding while the tail of `.js` files remains, a simple count-based ratchet works: fail CI if the number of `.js` files or `tsc` errors goes *up*.
+
+## Tooling note
+For 30k lines, manual rename + `tsc` is usually the right call — full control, clean history. `ts-migrate` (Airbnb) can bulk-rename and insert `any` suggestions to bootstrap Phase 2 faster, but it produces noisy diffs you'll spend time cleaning, so it pays off mainly if the codebase is fairly uniform. I'd start manual and reach for it only if the pace feels too slow.
+
+A realistic shape: Phase 0 in days, then Phases 1–2 running continuously alongside normal feature work over weeks, with Phase 3 strictness ratcheting only after ~80% is converted.
+
+If you point me at the repo I can tailor this — check the existing build setup, find the actual leaf modules by import count, and draft the `tsconfig.json` against your real structure. Want me to do that?

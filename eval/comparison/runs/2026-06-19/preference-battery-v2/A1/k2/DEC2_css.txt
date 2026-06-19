@@ -1,0 +1,15 @@
+For a small team starting a new React app, go with **Tailwind**. It's the better default for your situation, and the reasoning is mostly about team coordination rather than raw capability.
+
+The deciding factor is that CSS Modules don't solve the hard part of CSS at small scale: naming things, deciding where a style lives, and keeping spacing/color/typography consistent across people. Each developer still invents class names and writes rules in separate `.scss`/`.css` files, so you drift toward slightly different button paddings and ad-hoc color values unless you build and enforce a design-token layer yourself. Tailwind ships that constraint system in the box — a fixed spacing scale, a color palette, and styles that live right next to the markup — which is exactly the kind of guardrail a small team benefits from without anyone having to police it.
+
+Practical points that back this up:
+- **Velocity**: no context-switching between component and stylesheet, no naming overhead. Fast for the early build-everything phase.
+- **Refactoring safety**: deleting a component deletes its styles. CSS Modules tend to accumulate orphaned classes that nobody dares remove.
+- **No dead CSS**: Tailwind purges unused classes at build time, so the shipped CSS stays small automatically.
+- **Hiring/onboarding**: it's close to the current industry default, so new people are likely to already know it.
+
+Where Tailwind is genuinely worse, so you know the trade-off: the markup gets visually noisy with long className strings, and heavily dynamic/computed styling (values from JS, complex state-driven theming) is more awkward than with CSS-in-JS or plain CSS. The standard answers are extracting repeated patterns into components (not `@apply`) and using `clsx`/`tailwind-merge` for conditional classes.
+
+Pick CSS Modules instead only if the team already has strong CSS habits and dislikes utility classes, or the app is styling-light enough that any approach works. And it isn't strictly either/or — Tailwind plus an occasional `.module.css` file for a genuinely complex component is a common, healthy combination.
+
+One thing worth deciding up front, if it matters to you: do you want a prebuilt component library on top (shadcn/ui, which is Tailwind-based), or are you building components from scratch? That choice affects how much the verbose-markup downside actually bites.

@@ -1,0 +1,51 @@
+The cleanest way is to use the promise-based version of `fs` that ships with Node — no wrapping needed.
+
+## Option 1: `fs/promises` (preferred, Node 14+)
+
+```js
+import { readFile } from 'node:fs/promises';
+
+const data = await readFile('file.txt', 'utf8');
+```
+
+Or with CommonJS:
+
+```js
+const { readFile } = require('node:fs/promises');
+
+async function load() {
+  const data = await readFile('file.txt', 'utf8');
+  return data;
+}
+```
+
+This is the idiomatic choice — Node maintains a fully promisified `fs` API, so you don't have to wrap anything yourself.
+
+## Option 2: `util.promisify` (if you're stuck with the callback `fs`)
+
+```js
+import { readFile } from 'node:fs';
+import { promisify } from 'node:util';
+
+const readFileAsync = promisify(readFile);
+
+const data = await readFileAsync('file.txt', 'utf8');
+```
+
+`promisify` works on any function following Node's `(err, result)` callback convention, so it's the general tool when no promise version exists.
+
+## A couple of notes
+
+- **`await` must live inside an `async` function** (or at the top level of an ES module, where top-level `await` is allowed).
+- **Wrap in `try/catch`** to handle errors — a rejected promise is how the old `err` argument surfaces:
+
+  ```js
+  try {
+    const data = await readFile('file.txt', 'utf8');
+  } catch (err) {
+    console.error('read failed:', err);
+  }
+  ```
+- Pass the encoding (`'utf8'`) to get a string back; omit it and you get a `Buffer`.
+
+For your case, **Option 1 is the way to go** unless something forces you to keep the callback-style import.

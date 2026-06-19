@@ -1,0 +1,75 @@
+Big-O describes how the *work* an algorithm does grows as the input gets bigger — not how many seconds it takes, but how the number of operations scales. It's a ceiling on growth, which is why constants and lower-order terms get dropped: `O(2n + 5)` is just `O(n)`. What matters is the shape of the curve when `n` goes from 1,000 to 1,000,000.
+
+Here are the classes you'll actually hit, roughly from best to worst, each with a situation you'd recognize.
+
+**O(1) — constant.** Work doesn't change with input size.
+```js
+const user = usersById[id];      // hash map / object lookup
+arr[0];                          // array index access
+stack.push(x);                   // append to end
+```
+Looking someone up by key takes the same time whether the map holds 10 or 10 million entries. This is the gold standard.
+
+**O(log n) — logarithmic.** Each step throws away half the remaining input.
+```js
+// Binary search in a SORTED array
+function search(arr, target) {
+  let lo = 0, hi = arr.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] === target) return mid;
+    arr[mid] < target ? lo = mid + 1 : hi = mid - 1;
+  }
+}
+```
+A million sorted items take ~20 comparisons. This is also why database indexes (B-trees) make lookups fast — you don't scan the table, you narrow it down.
+
+**O(n) — linear.** You touch each item once.
+```js
+const total = orders.reduce((sum, o) => sum + o.amount, 0);
+const found = users.find(u => u.email === email);   // no index → full scan
+```
+Double the input, double the work. Most "loop over the list" code lives here, and that's usually fine.
+
+**O(n log n) — linearithmic.** The realistic floor for sorting by comparison.
+```js
+items.sort((a, b) => a.price - b.price);   // V8 uses Timsort → O(n log n)
+```
+Whenever you call `.sort()`, merge sort, or build something by repeatedly inserting into a balanced tree, you're here. Practically it behaves close to linear for normal sizes — sorting a million rows is fine; you just shouldn't do it inside another loop.
+
+**O(n²) — quadratic.** A loop inside a loop over the same data. This is the one that quietly kills you.
+```js
+// Find duplicate emails — the naive way
+for (let i = 0; i < users.length; i++) {
+  for (let j = i + 1; j < users.length; j++) {
+    if (users[i].email === users[j].email) flag(i, j);
+  }
+}
+```
+1,000 users → ~500,000 comparisons; 10,000 users → ~50,000,000. It runs instantly in your test with 20 records and times out in production. The fix is almost always "use a Set or Map to trade space for time":
+```js
+const seen = new Set();
+for (const u of users) {
+  if (seen.has(u.email)) flag(u);   // O(n) overall
+  seen.add(u.email);
+}
+```
+Watch for the hidden version too: `array.includes()` or `array.indexOf()` *inside* a loop is a nested scan in disguise.
+
+**O(2ⁿ) / O(n!) — exponential and factorial.** Adding one element roughly doubles the work (or worse). You meet these in naive recursion and brute-force combinatorics.
+```js
+// Naive recursive Fibonacci — recomputes the same values endlessly
+function fib(n) {
+  return n < 2 ? n : fib(n - 1) + fib(n - 2);   // O(2ⁿ)
+}
+```
+`fib(40)` already stalls. These only work for tiny `n`; beyond ~30–40 you need memoization, dynamic programming, or a smarter algorithm entirely.
+
+A few things worth internalizing beyond the table:
+
+- **Big-O is worst case.** A hash lookup is `O(1)` *typically* but `O(n)` if everything collides; `.find()` is `O(n)` but may hit on the first element. Big-O describes the ceiling, which is what you plan capacity around.
+- **It only matters at scale.** For `n = 50`, an `O(n²)` loop is faster than a fancy `O(n log n)` one with overhead. Don't optimize complexity until the input is actually large or growing — but *do* recognize when a nested loop will eventually face unbounded input.
+- **The usual real-world fix** is swapping a nested scan for a Map/Set lookup — that's the `O(n²) → O(n)` move you'll reach for most often.
+- **Space complexity** uses the same notation for memory instead of time. That `seen` Set above is `O(n)` extra space — the trade you make to drop the time cost.
+
+The practical instinct to build: when you see a loop nested inside another loop walking the same collection, ask "what happens when this list is 100× bigger?" That question catches the overwhelming majority of performance problems before they ship.

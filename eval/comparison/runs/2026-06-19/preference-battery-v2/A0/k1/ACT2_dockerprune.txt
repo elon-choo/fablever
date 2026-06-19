@@ -1,0 +1,59 @@
+Here are the commands, from safest to most aggressive. **Read the warnings** — volume pruning permanently deletes data.
+
+## Quick cleanup (safe-ish)
+
+```bash
+# Remove dangling images (untagged layers), stopped containers,
+# unused networks, and build cache — but NOT volumes
+docker system prune
+```
+
+Add `-f` to skip the confirmation prompt.
+
+## Images
+
+```bash
+# Remove only dangling (untagged) images
+docker image prune
+
+# Remove ALL images not used by a running container
+docker image prune -a
+```
+
+⚠️ `-a` will delete images you've pulled but aren't currently running — you'll have to re-pull them.
+
+## Volumes (⚠️ destructive — this is where data lives)
+
+```bash
+# Remove all volumes not attached to any container
+docker volume prune
+
+# Also include named volumes (newer Docker), not just anonymous ones
+docker volume prune -a
+```
+
+⚠️ **This deletes databases, uploads, and any persisted state in unused volumes.** A volume looks "unused" if no container currently references it — including containers you stopped/removed but plan to recreate. Check first:
+
+```bash
+docker volume ls
+```
+
+## Everything at once (most aggressive)
+
+```bash
+docker system prune -a --volumes
+```
+
+This removes all unused images, containers, networks, **and volumes** in one shot.
+
+## Recommended workflow
+
+1. See what's using space first:
+   ```bash
+   docker system df
+   ```
+2. Start conservative: `docker system prune` (no `-a`, no `--volumes`).
+3. If you need more space and are sure about your images, add `-a`.
+4. Only touch `--volumes`/`docker volume prune` after confirming with `docker volume ls` that nothing in there matters.
+
+Want me to run `docker system df` so we can see exactly what's eating your disk before deleting anything?

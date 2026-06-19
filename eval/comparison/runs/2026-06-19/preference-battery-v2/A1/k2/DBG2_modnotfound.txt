@@ -1,0 +1,18 @@
+Short answer: the deploy environment isn't resolving the module the same way your machine does — almost always because of one of these four, in rough order of likelihood.
+
+**1. The dependency isn't actually declared (or is in the wrong section).** It works locally because it's sitting in your `node_modules`/virtualenv from some earlier install, but the deploy does a clean install from your manifest and the package isn't there. Common variants:
+- Node: it's in `devDependencies` but the deploy runs `npm ci --omit=dev` / `NODE_ENV=production`, so dev deps are skipped.
+- It's installed globally on your machine but never added to `package.json` / `requirements.txt`.
+- Your lockfile is stale or wasn't committed, so the deploy resolves a different tree.
+
+**2. Filesystem case sensitivity.** This is the #1 cause of "works on my Mac, breaks in CI." macOS (and Windows) are case-insensitive; Linux build/deploy hosts are case-sensitive. So `import './MyUtils'` resolves locally even if the file is `myutils.js`, but fails on Linux. Check that every import's casing exactly matches the real filename.
+
+**3. The module is a build artifact or path alias that isn't set up in the deploy build.** TypeScript `paths`, webpack/vite aliases, or a generated file that exists locally but isn't produced (or isn't configured) in the production build step.
+
+**4. Platform-specific install.** Native modules (e.g. `esbuild`, `sharp`, anything with compiled binaries) installed for macOS won't run on the Linux deploy target. A clean install on the target platform fixes this — copying `node_modules` does not.
+
+Fastest way to pin it down: look at the **exact module name** in the error.
+- If it's a third-party package → cause #1 (grep your manifest/lockfile for it).
+- If it's a relative path (`./...`) → cause #2 or #3 (check casing and your build config).
+
+If you paste the actual error line and tell me the stack (Node/Python/etc.) and deploy target, I can tell you which one it is.

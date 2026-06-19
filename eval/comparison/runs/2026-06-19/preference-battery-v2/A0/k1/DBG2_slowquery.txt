@@ -1,0 +1,29 @@
+2M rows is small — that's the key insight. A properly indexed query over 2M rows should still be single-digit milliseconds. So "it got slow at 2M" almost always means **something is scanning the whole table** instead of using an index. Here's the order I'd look:
+
+## 1. Confirm it's the DB (not app/serialization)
+Time the query in isolation vs. the endpoint. If the raw SQL is fast but the endpoint is slow, your problem is N+1 queries, serialization, or response size — not the table. Check your APM/logs for query count per request first; this is a 30-second check that saves you from optimizing the wrong layer.
+
+## 2. EXPLAIN ANALYZE the suspect query
+This is the single highest-value step. Run it and look for:
+- **`Seq Scan`** on the big table → missing or unused index (most likely culprit)
+- **Rows estimated vs. actual** wildly off → stale statistics (`ANALYZE` the table)
+- **`Sort` / `Hash` spilling to disk** → `work_mem` too low, or you're sorting a huge set
+- A nested loop running millions of times → bad join plan
+
+## 3. The usual suspects, in likelihood order
+
+| Cause | Tell | Fix |
+|---|---|---|
+| Missing index | `Seq Scan`, filter/join on unindexed column | Add index on the WHERE/JOIN/ORDER BY columns |
+| N+1 queries | Many identical queries per request | Eager-load / batch / JOIN |
+| `OFFSET` pagination | Slow only on deep pages | Keyset (seek) pagination |
+| `SELECT *` + fat rows | Big payload, TOAST columns | Select only needed columns |
+| `ORDER BY` without supporting index | `Sort` node in plan | Composite index matching sort |
+| Stale stats after growth | Estimates off by 100x+ | `ANALYZE table` |
+
+## What I'd actually do first
+1. Look at the endpoint's query count and total DB time in your logs/APM.
+2. `EXPLAIN ANALYZE` the slowest query.
+3. If you see a `Seq Scan` on the 2M-row table — that's your answer 80% of the time.
+
+If you paste the endpoint's query (and the table's indexes, or `EXPLAIN ANALYZE` output), I'll pinpoint it. What's the database — Postgres, MySQL, something else?

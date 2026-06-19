@@ -1,0 +1,17 @@
+Start by making the error observable — right now "no pattern" almost always means the pattern is real but you're not capturing the dimension it lives in. Intermittent 500s at a stable rate (~2%) are rarely random; they're a specific cause firing under specific conditions you can't see yet. So step one isn't to guess the cause, it's to catch one failure with its full context.
+
+Concretely, the first move:
+
+1. **Log the actual exception, not the 500.** A 500 is the symptom. You need the stack trace, the exception type, and the request that triggered it. If your error handler swallows the exception into a generic 500, fix that first — attach a request ID, log the full trace plus the input (method, path, params, headers, user/tenant if relevant). Capture even a handful of real failures and the "no pattern" usually collapses into an obvious one.
+
+Once you can see the failing requests, check where patterns hide that look like randomness:
+
+- **One sick instance.** If you run N replicas behind a load balancer, a single bad pod gives you a fixed failure fraction with no request-level pattern — every request is fine except the ~1/N that round-robin to the bad one. "1 in 50" is suspiciously stable; check whether the 500s correlate with a specific host/pod/container. This is the single most common cause of "steady rate, no pattern."
+- **Resource exhaustion under concurrency.** DB connection pool maxing out, file descriptors, thread pool saturation. Intermittent because it only fails when concurrent load briefly exceeds a limit. Look at pool metrics and whether errors cluster in time even if not in request shape.
+- **A flaky downstream.** A third-party API, DB, or cache that times out occasionally. The trace will point straight at it.
+- **Rare input.** A null/oversized/oddly-encoded field that only ~2% of traffic carries. The captured request payload tells you immediately.
+- **Shared mutable state / race condition.** Failures that only happen under interleaving — these show up as the same line failing nonsensically across unrelated requests.
+
+The fastest disambiguator after you have traces: group the failures by **host**, by **time**, and by **exception type**. Whichever dimension clusters tells you the category.
+
+If you share your stack (language/framework, single instance vs. multiple, what's downstream) and one real stack trace, I can point you at the specific cause rather than the categories.

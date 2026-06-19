@@ -1,0 +1,55 @@
+Good problem to get right — third-party webhooks are *at-least-once and best-effort*, which means duplicates, out-of-order arrival, and silently-missed events are all normal. A reliable consumer is built around those three facts. Here's the plan.
+
+## Core principle: split *receipt* from *processing*
+
+The single most important decision is to **persist fast and ack fast, then process asynchronously.** Don't do real work inside the HTTP handler.
+
+```
+provider → [HTTP endpoint] → verify + dedupe + store raw → 200 OK
+                                          ↓
+                              [queue] → [worker] → business logic
+                                          ↓ (on failure)
+                                    retry w/ backoff → dead-letter
+```
+
+## The receive endpoint (must be fast and dumb)
+
+1. **Verify authenticity** — check the HMAC signature header against the raw body with the shared secret. Reject anything that fails. Also check the timestamp header and reject if too old (replay protection).
+2. **Read the raw bytes before parsing** — signature is over the exact body; framework JSON-parsing can alter it.
+3. **Persist the raw event** to a durable `webhook_inbox` table/log *before* doing anything else — store `(provider_event_id, payload, signature, received_at, status='pending')`.
+4. **Return 2xx immediately** after the row is committed. Now the provider stops retrying and you own the event.
+5. Keep it cheap: enforce a payload size limit, a tight timeout, and don't call downstream services here.
+
+## Four reliability properties to engineer in
+
+- **Idempotency (handle duplicates):** dedupe on the provider's event ID with a unique constraint. At-least-once delivery *guarantees* you'll see repeats — make processing safe to run twice (upserts, not blind inserts).
+- **Ordering (don't trust arrival order):** events can arrive out of order. Use the event's own timestamp/version/sequence, not receipt time. For state-changing events, a robust pattern is the **thin webhook**: treat the webhook as "something changed for entity X," then re-fetch the current state from the provider's API rather than trusting the payload body.
+- **Your own retries + dead-letter:** the worker retries with exponential backoff on transient failures; after N attempts, move the event to a dead-letter queue/table and alert — never let one poison event block the pipeline.
+- **Reconciliation (catch what you missed):** webhooks *will* be silently dropped (their outage, your downtime, network). Run a periodic job that polls the provider's API (or consumes their event-replay/list endpoint) to backfill anything missing. This is the safety net that turns "best-effort" into "eventually correct."
+
+## Observability & ops
+
+- Log every event with its ID and status transitions; make the inbox queryable.
+- Metrics + alerts on: signature failures, processing lag, retry rate, dead-letter depth.
+- A **replay tool** — reprocess from the stored raw payloads — which the inbox gives you for free.
+- Confirm the provider's specifics: which status codes trigger their retries, their retry schedule/timeout, and whether they offer signature rotation or an event-list/replay API.
+
+## Suggested build order
+
+1. Endpoint with signature verification + raw persistence + fast 2xx.
+2. Worker that processes from the inbox with idempotent handlers.
+3. Retry + dead-letter + alerting.
+4. Reconciliation/backfill job.
+5. Replay tooling + dashboards.
+
+Steps 1–2 make it *correct*; 3–4 make it *reliable*; 5 makes it *operable*.
+
+---
+
+A few specifics would let me turn this into concrete code or a tighter design:
+
+- **Which provider?** (Stripe, GitHub, Shopify, Twilio, etc. — their signature scheme, retry policy, and whether they offer a replay/list API change the details.)
+- **Your stack** — language/framework, and what's available for the queue (SQS, a DB-backed queue, Redis, Kafka…).
+- **Volume & latency** — events/sec and how fresh the processed state must be (drives whether a DB-as-queue is fine or you need real infra).
+
+Want me to draft the endpoint + inbox schema for a specific provider/stack?

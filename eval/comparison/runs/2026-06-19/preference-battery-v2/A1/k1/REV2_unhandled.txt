@@ -1,0 +1,22 @@
+Solid as a happy-path sketch, but it has a few real problems — the two that matter most are the missing error handling and the lack of any authorization.
+
+**Unhandled rejection.** If `getUser` throws (DB down, bad id), the async handler's rejected promise isn't caught. On Express 4 that doesn't reach your error middleware — the request hangs until it times out, and the rejection can take down the process. Either wrap the body in `try/catch` and `next(err)`, or use an async wrapper:
+
+```js
+const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+app.get('/u/:id', wrap(async (req, res) => {
+  const u = await getUser(req.params.id);
+  if (!u) return res.status(404).json({ error: 'not found' });
+  res.json(publicView(u));
+}));
+```
+
+(Express 5 forwards async rejections automatically, so this is only a hard bug on 4.)
+
+**No 404.** When the user doesn't exist, `getUser` almost certainly returns `null`/`undefined` and you reply `200` with body `null`. Callers can't distinguish "no such user" from a real result.
+
+**No authz / IDOR + over-exposure.** `/u/:id` hands back any user by id with no auth check and no field filtering — `res.json(u)` serializes the whole record. If that row has a password hash, email, tokens, or internal flags, you're leaking them, and anyone can enumerate ids to scrape the table. Add an access check and return an explicit whitelist of fields rather than the raw object.
+
+Minor: `req.params.id` flows straight into `getUser` unvalidated — fine if your data layer parameterizes and the id is numeric/UUID, worth a quick shape check otherwise.
+
+For a throwaway internal endpoint the happy path is fine; for anything user-facing I'd fix the rejection handling and the authorization/field-exposure before shipping.

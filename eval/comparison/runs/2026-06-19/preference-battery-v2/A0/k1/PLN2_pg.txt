@@ -1,0 +1,52 @@
+No problem — I'll give you the plan against the most common defaults and flag where it forks. Assumed baseline: **a short maintenance window is OK, managed Postgres (RDS/Aurora/Supabase/Neon), small-to-medium data.** If any of those are wrong — especially "zero-downtime" — say so and I'll swap in the harder path (logical replication / dual-write + CDC).
+
+## The plan
+
+### Phase 0 — Provision & baseline (no app changes yet)
+- Stand up the managed Postgres instance + a separate staging instance. Lock down via VPC/security group, enable automated backups + PITR.
+- Pin a Postgres version (16/17). Decide connection pooling now — SQLite has no connection limit, Postgres does. Put **PgBouncer** (or RDS Proxy / Supabase pooler) in front from day one.
+- Capture a baseline: row counts per table, `sqlite3 db .schema`, and a list of every raw SQL string in the codebase.
+
+### Phase 1 — Schema translation (the real work)
+SQLite is permissive; Postgres is strict. The landmines:
+- **Dynamic typing → strict types.** SQLite stores anything in any column. Audit for columns holding mixed types; Postgres will reject them.
+- **`INTEGER PRIMARY KEY AUTOINCREMENT`** → `BIGINT GENERATED ALWAYS AS IDENTITY` (or `bigserial`).
+- **Booleans** stored as 0/1 → real `boolean`.
+- **Datetimes** stored as TEXT/INTEGER → `timestamptz` (and standardize on UTC).
+- **No native `TRUE`/`FALSE`, `ILIKE`, strict `GROUP BY`, different quoting** (`"` is an identifier in PG, not a string).
+- Foreign keys are off by default in SQLite — expect orphaned rows that PG's FK constraints will reject on load. Clean them first.
+
+Generate the PG schema from your ORM's migration tooling if you have one (Phase 2); otherwise translate by hand and review.
+
+### Phase 2 — App / data-access layer
+- **If ORM:** point it at Postgres, regenerate migrations against PG, fix any DB-specific calls. Usually the lighter path.
+- **If raw SQL / mix:** grep every query and fix SQLite-isms (`||` concat is fine, but watch `strftime`, `LIMIT ... OFFSET` quirks, upsert syntax `INSERT OR REPLACE` → `INSERT ... ON CONFLICT`, missing `RETURNING`, autocommit/transaction differences).
+- Run the **full test suite against a Postgres instance**, not SQLite. This is where most bugs surface. Make Postgres the test DB permanently.
+
+### Phase 3 — Data migration tooling
+- Use **[pgloader](https://github.com/dimitri/pgloader)** — purpose-built for SQLite→Postgres, handles type casts and sequence resetting. Iterate on its cast rules in staging until a load is clean.
+- After load: **reset all sequences** to `max(id)+1`, then **verify**: row counts per table match, spot-check FK integrity, run `ANALYZE`.
+
+### Phase 4 — Cutover (maintenance-window path)
+1. Announce window. Put app in maintenance mode (stop writes).
+2. Final pgloader run from the now-static SQLite file.
+3. Verify row counts + sequences + a smoke query.
+4. Flip the connection string / env, run a read+write smoke test against PG.
+5. Lift maintenance mode. **Keep the SQLite file** as your rollback for the retention window.
+
+> Zero-downtime variant: skip the window — backfill into PG, then either logical replication or app-level dual-write, reconcile, and cut reads over once lag is zero. ~3× the effort; only worth it if a few minutes down is truly unacceptable.
+
+### Phase 5 — Post-cutover
+- Watch slow-query logs (`pg_stat_statements`), connection saturation, and pool behavior under real load for 24–48h.
+- Add indexes Postgres needs that SQLite didn't (its query planner forgave a lot).
+- Set up monitoring/alerting + confirm backups/PITR actually restore (test it once).
+
+## Biggest risks to watch
+- **Connection exhaustion** — the #1 surprise when leaving SQLite. Pooler is non-negotiable.
+- **Type coercion failures** on load — caught in staging if you rehearse the full pgloader run there first.
+- **Case-sensitivity & quoting** differences breaking raw SQL silently.
+- **Sequences not reset** → duplicate-key errors on the first inserts after cutover.
+
+The single most important step: **rehearse the entire Phase 3+4 against a copy in staging end-to-end before touching prod.** Do it twice.
+
+Want me to dig into your actual codebase (point me at the repo path) so I can turn this into concrete steps — schema diff, query audit, and a real pgloader config?

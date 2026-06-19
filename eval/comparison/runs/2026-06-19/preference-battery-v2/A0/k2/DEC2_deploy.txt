@@ -1,0 +1,32 @@
+For a side project, default to a platform like Render/Fly/Railway. The whole point of a side project is that your time is the scarce resource, and a VPS spends that time on undifferentiated sysadmin work. Pick the VPS only when you have a specific reason to.
+
+## Go with a platform (Render / Fly / Railway) when...
+- You want `git push` → deployed, with TLS, builds, and rollbacks handled for you.
+- Your app is a web service + database + maybe a background worker — the common case.
+- You'd rather not think about OS patching, firewall rules, log rotation, or reverse-proxy config.
+- Traffic is low/spiky — most have generous free or cheap tiers, and scale-to-zero options.
+
+Rough cost: $0 to ~$7–15/mo for a small always-on service + managed Postgres.
+
+**Quick take on the three:**
+- **Render** — most "just works," closest to Heroku. Easiest if you want to stop thinking.
+- **Railway** — nicest DX, great for wiring up a DB + service quickly. Usage-based pricing.
+- **Fly** — best if you want containers near users (edge), real VMs, or fine-grained control. Slightly more rope to manage.
+
+## Go with a plain VPS (Hetzner / DigitalOcean / etc.) when...
+- **Cost at scale matters** — a $5–6/mo Hetzner box has *far* more CPU/RAM than equivalent PaaS pricing. If you're running several services, this is the big lever.
+- **Learning is a goal** — you actually *want* to understand Linux, nginx, systemd, Docker.
+- You need long-running processes, odd ports, custom system packages, GPUs, or anything that fights a PaaS's opinionated model.
+- You want everything (app + DB + cron + cache) on one box you fully control.
+
+The cost is ongoing maintenance: you own security updates, backups, and uptime.
+
+## My recommendation
+Start on **Render or Railway**. Ship the project, see if anyone uses it. If it grows enough that the platform bill annoys you, *or* you find yourself wanting more control, move to a **Hetzner VPS** — by then you'll know exactly what you need, and the migration is straightforward (especially if you've containerized).
+
+A couple of things that change this calculus:
+- **Got a Dockerfile already?** Both paths are easy; lean platform.
+- **Static site or frontend + serverless functions?** Skip both — use Vercel/Netlify/Cloudflare Pages.
+- **Want to host several side projects over time?** One Hetzner VPS with Docker Compose (or Coolify/Dokku for a PaaS-like layer) becomes cheaper and more pleasant than N platform accounts.
+
+If you tell me the stack (language/framework, do you need a database, expected traffic), I can give you a concrete setup.

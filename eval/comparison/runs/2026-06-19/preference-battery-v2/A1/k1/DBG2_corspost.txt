@@ -1,0 +1,16 @@
+Almost certainly because your POST is triggering a **CORS preflight** and your GET isn't — the block isn't really about the method, it's about preflight.
+
+Here's the mechanic. The browser skips preflight for what it calls a "simple request": method `GET`/`HEAD`/`POST`, only safelisted headers, and a `Content-Type` of exactly `application/x-www-form-urlencoded`, `multipart/form-data`, or `text/plain`. Your GET fits that, so the browser just sends it and only needs `Access-Control-Allow-Origin` on the response.
+
+Your POST almost certainly breaks one of those conditions — the usual culprit is `Content-Type: application/json`, or a custom header like `Authorization`/`X-*`. That makes it "non-simple," so before the real POST the browser fires an `OPTIONS` preflight asking permission. If the server doesn't answer that OPTIONS with the right headers, the POST never goes out and you see a CORS error.
+
+So the fix is on the server: make it respond to the `OPTIONS` request (status 200/204) with at least:
+
+- `Access-Control-Allow-Origin: <your origin>` (or `*` if no credentials)
+- `Access-Control-Allow-Methods: POST, GET, OPTIONS`
+- `Access-Control-Allow-Headers: Content-Type, Authorization` — whatever headers your request actually sends
+- `Access-Control-Allow-Credentials: true` only if you send cookies/credentials (and then you cannot use `*` for the origin)
+
+Two quick ways to confirm this is what's happening: open the Network tab and look for an `OPTIONS` request right before your POST (if it's there and failing/red, that's the preflight), and check the console message — preflight failures say something like "Response to preflight request doesn't pass access control check" rather than a plain missing-header error.
+
+If you tell me what server/framework you're on and what `Content-Type` and headers the POST sends, I can give you the exact handler code.

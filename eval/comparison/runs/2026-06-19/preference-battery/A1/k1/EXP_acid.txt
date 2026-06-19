@@ -1,0 +1,19 @@
+ACID is a set of four guarantees a database makes about how transactions behave, so your data stays correct even when things go wrong (crashes, concurrent users, bugs). The name stands for **Atomicity, Consistency, Isolation, Durability**.
+
+**Atomicity** — a transaction is all-or-nothing. If you transfer money by debiting one account and crediting another, either both happen or neither does. There's no state where the money left one account but never arrived in the other, even if the server dies halfway through.
+
+**Consistency** — a transaction moves the database from one valid state to another, never leaving it broken. Rules you've defined (foreign keys, uniqueness, "balance can't go negative") are enforced; a transaction that would violate them is rejected entirely.
+
+**Isolation** — concurrent transactions don't step on each other. If two people buy the last concert ticket at the same instant, isolation ensures they don't both succeed. Each transaction behaves as if it ran alone, even though many run at once.
+
+**Durability** — once the database says a transaction committed, it's permanent. If the power dies one second later, the data is still there when it comes back. Committed means written to disk, not just held in memory.
+
+**Why you should care:**
+
+The practical payoff is that you can trust the database to protect correctness so your application code doesn't have to. Without ACID you'd be writing defensive logic everywhere to handle half-finished writes, race conditions between users, and data lost on crashes — and you'd get it wrong.
+
+It matters most when wrong data has real cost: money (payments, ledgers, inventory), anything with concurrent writers, and anything where a crash mid-operation would corrupt state. This is why traditional relational databases (PostgreSQL, MySQL/InnoDB, SQLite, Oracle) are the default for financial and transactional systems.
+
+It matters less when you're storing append-only logs, analytics events, or caches where occasional loss or temporary inconsistency is acceptable. That's the trade-off many NoSQL systems make: they relax some ACID guarantees (often favoring "eventual consistency") to get more scale, speed, or availability. That can be the right call — but it's a choice you should make deliberately, knowing what you're giving up.
+
+The short version: ACID is the reason you can run one `transfer` operation and trust the money won't vanish. Reach for it whenever incorrect data would actually hurt.

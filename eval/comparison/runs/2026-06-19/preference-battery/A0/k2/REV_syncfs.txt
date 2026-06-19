@@ -1,0 +1,49 @@
+Reviewing the snippet directly — it's a pasted illustration, not a repo diff, so this is a quick review rather than the full merge-gate pass.
+
+```js
+app.get('/report', (req, res) => { const data = fs.readFileSync('big.json'); res.send(process(data)); });
+```
+
+The issues, worst first:
+
+**1. `readFileSync` blocks the entire event loop (critical).** This is a synchronous read inside a request handler. While it runs, Node serves *no other request* — not just `/report`, every route on the server stalls until the disk read finishes. For a file literally named `big.json`, that stall is significant and gets worse under concurrency. This is the headline problem.
+
+**2. Re-reads (and re-processes) the file on every request.** If `big.json` is static, you're paying full disk I/O + the `process()` cost on each hit for an identical result. Read and process it once at startup, or cache it.
+
+**3. Relative path `'big.json'` resolves against `process.cwd()`, not the module dir.** Start the server from a different directory and the read throws `ENOENT`. Use `path.join(__dirname, 'big.json')`.
+
+**4. No error handling.** `readFileSync` and `process()` can both throw (missing file, bad JSON, etc.). A *sync* throw is caught by Express and turned into a 500 — but the moment you switch to async (which you should), an unhandled rejection is **not** caught by Express 4 and will hang the request or crash the process. So error handling has to come in together with the async fix.
+
+**5. `process` shadows the Node global.** `process` is a built-in global object; naming a function `process` is confusing and a latent footgun. If it's actually meant to be the global, `process(data)` throws "process is not a function." Rename it (e.g. `transform`).
+
+**6. `res.send(...)` content type depends on what `process` returns.** `readFileSync` with no encoding returns a Buffer → if `process` passes a Buffer through, `res.send` labels it `application/octet-stream`. If the payload is JSON, use `res.json(...)` or set the type explicitly.
+
+**Recommended rewrite** — if `big.json` is static, do the work once:
+
+```js
+const path = require('path');
+
+// read + transform once at boot; serve from memory
+const report = transform(fs.readFileSync(path.join(__dirname, 'big.json')));
+
+app.get('/report', (req, res) => {
+  res.json(report); // or res.type(...).send(report) per actual shape
+});
+```
+
+If the file can change at runtime and must be re-read, at least make it non-blocking and handle errors:
+
+```js
+app.get('/report', async (req, res, next) => {
+  try {
+    const data = await fs.promises.readFile(path.join(__dirname, 'big.json'));
+    res.send(transform(data));
+  } catch (err) {
+    next(err); // -> Express error middleware
+  }
+});
+```
+
+For a genuinely large, static file you'd also consider streaming (`res.sendFile` / stream pipe) plus `Cache-Control`/ETag rather than buffering it all into memory per response.
+
+If this is actually a change you're about to merge (not just a snippet), say so and I'll run it through `/adversarial-review` for a recorded verdict and gate score.

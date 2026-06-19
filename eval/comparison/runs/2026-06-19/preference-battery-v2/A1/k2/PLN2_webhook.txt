@@ -1,0 +1,23 @@
+The reliable pattern is: **accept fast, process async, and make everything idempotent.** Treat the third party as at-least-once and possibly out-of-order — design so duplicates and retries are harmless. Here's the plan.
+
+## Ingest endpoint (do the minimum, then ack)
+- **Verify the signature first.** Most providers HMAC-sign the raw body (Stripe `Stripe-Signature`, GitHub `X-Hub-Signature-256`, etc.). Compute over the *raw bytes* before any JSON parsing or your signature won't match. Reject with 401 on mismatch.
+- **Persist the raw event, then return 2xx immediately.** Don't do business logic in the request handler. Write the payload to a durable store/queue and ack within the provider's timeout (often 5–30s). Slow handlers cause the provider to time out and redeliver, multiplying load.
+- **Return the right codes:** 2xx = "got it, stop retrying"; 5xx (or the provider's documented retry code) = "retry later". Never 2xx a payload you failed to store, or you've silently dropped it.
+
+## Idempotency (the part people skip)
+- Dedupe on the provider's **event ID** (e.g. `evt_...`), not your own hash. Unique constraint on that ID; on conflict, ack and no-op. This is what makes redelivery safe.
+- Make the downstream effect idempotent too — upsert by event ID / use the event ID as an idempotency key on any outbound call, so a duplicate that slips past dedupe still can't double-charge or double-send.
+
+## Async processing
+- A worker pulls from the queue/outbox and runs the actual logic, separate from ingest. Decoupling means a processing bug or slow dependency doesn't drop incoming webhooks.
+- **Retries with backoff** for transient failures; after N attempts, move to a **dead-letter queue** so one poison event doesn't block the line. Alert on DLQ depth.
+- If ordering matters (e.g. `created` before `updated`), don't assume arrival order — key by entity and reconcile, or fetch current state from the provider's API on processing rather than trusting payload order.
+
+## Backfill / safety net
+- Keep an endpoint or job to **replay from stored raw events**, and reconcile against the provider's API periodically — webhooks *will* be missed (outages, deploys). The API is your source of truth; webhooks are just the low-latency notification.
+
+## Observability
+- Log every event with its ID, signature result, and processing outcome. Track ingest rate, processing lag, retry count, and DLQ size.
+
+The one decision that shapes the rest: **which provider, and what's your stack/queue** (e.g. Stripe on a Node app with SQS, or GitHub on a Postgres-backed worker). Tell me that and I'll turn this into concrete code — endpoint, signature check, dedupe schema, and worker — rather than a generic sketch.

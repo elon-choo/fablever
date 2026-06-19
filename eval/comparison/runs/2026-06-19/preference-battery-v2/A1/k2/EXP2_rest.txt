@@ -1,0 +1,35 @@
+"RESTful" doesn't mean "JSON over HTTP with nouns in the URL" — that's the popular usage, but it's not what the term actually denotes. REST is a set of architectural *constraints* defined by Roy Fielding in his 2000 dissertation. An API is RESTful to the degree it satisfies them, and the constraint that genuinely separates real REST from "an HTTP API" is the one almost nobody implements.
+
+## The constraints
+
+REST is defined by six constraints. Satisfy them and you get the properties REST was designed for (scalability, evolvability, independent components); violate them and you forfeit those properties, whatever you call the result.
+
+- **Client–server** — separate the UI/consumer from data storage so each evolves independently.
+- **Statelessness** — every request carries everything needed to process it. The server keeps no client session state between requests. This is what lets you put any request on any server behind a load balancer.
+- **Cacheability** — responses must declare themselves cacheable or not, so intermediaries and clients can reuse them safely.
+- **Uniform interface** — the centerpiece (see below).
+- **Layered system** — a client can't tell whether it's talking to the origin server or an intermediary (proxy, gateway, CDN). This enables those layers to exist.
+- **Code on demand** (optional) — the server can ship executable code to the client (e.g. JavaScript).
+
+## The uniform interface is where it actually lives
+
+Most of the "is this REST?" question collapses into this one constraint, which has four sub-parts:
+
+1. **Identification of resources** — things are named by URIs (`/users/42`), and the URI identifies a *resource*, not a file or a procedure.
+2. **Manipulation through representations** — you don't act on the resource directly; you exchange representations of it (a JSON or XML document of the user), and that representation has enough info to modify or delete the resource.
+3. **Self-descriptive messages** — each message carries enough metadata (method, media type, cache headers) to be understood in isolation. `GET`, `PUT`, `DELETE` mean exactly what HTTP says they mean; status codes are used honestly.
+4. **HATEOAS** (Hypermedia As The Engine Of Application State) — **this is the part everyone skips, and it's the real dividing line.** The client should discover what it can do next from *hypermedia links in the responses*, not from out-of-band documentation. A client starts at one entry URL and navigates by following links the server provides, the same way you browse a website without memorizing its URL structure.
+
+## Why this matters in practice
+
+Fielding himself said flatly that an API isn't REST unless it's hypermedia-driven — that hardcoding URI patterns into a client and reading them from docs is exactly what REST is meant to avoid. By that strict standard, the overwhelming majority of APIs marketed as "RESTful" are not: they're **HTTP APIs** — well-structured, resource-oriented, using verbs and status codes correctly, but with the client coupled to URL templates from documentation rather than driven by hypermedia.
+
+This gap is common enough that Leonard Richardson's **Maturity Model** is the usual way to talk about it:
+- **Level 0** — one URL, one verb (typically `POST`), RPC-style (e.g. SOAP).
+- **Level 1** — many resource URLs, still basically one verb.
+- **Level 2** — proper use of HTTP verbs and status codes. *This is where most "REST" APIs actually sit and stop.*
+- **Level 3** — HATEOAS / hypermedia. Only this level is REST in the full sense.
+
+So the honest one-sentence answer: an API is RESTful when it satisfies REST's constraints — statelessness, cacheability, a layered design, and above all a uniform interface whose responses are self-descriptive and *hypermedia-driven*. What people normally mean by "RESTful" is Richardson Level 2: clean, resource-oriented HTTP. That's a perfectly good, useful design — it just isn't the thing the word was coined to describe.
+
+A fair caveat: in everyday industry usage "RESTful" has effectively come to mean Level 2, and pursuing full HATEOAS is often not worth the cost for an API with a single known client. Worth knowing the strict definition so you know what you're trading away — not necessarily worth treating Level 3 as mandatory.

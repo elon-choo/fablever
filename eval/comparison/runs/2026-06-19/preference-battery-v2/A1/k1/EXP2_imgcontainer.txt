@@ -1,0 +1,16 @@
+A Docker **image** is a static template; a **container** is a running instance of that template. The relationship mirrors a class and an object, or a program on disk versus a process executing it.
+
+**Image** — a read-only, layered package containing everything needed to run an application: the filesystem snapshot, dependencies, environment variables, and the default command. It's built from a Dockerfile, identified by a hash (and usually tags like `nginx:1.25`), and stored on disk or in a registry like Docker Hub. Images are immutable — once built, they don't change. One image can be shared, versioned, and pushed/pulled like an artifact.
+
+**Container** — a runnable instance created from an image. When you `docker run` an image, Docker takes the image's read-only layers and adds a thin writable layer on top, then starts the process. The container has its own isolated filesystem view, network, and process space. You can start, stop, restart, and delete it, and any changes made inside (files written, packages installed) live in that writable layer — not in the image.
+
+The key distinctions:
+
+| | Image | Container |
+|---|---|---|
+| State | Immutable, read-only | Mutable, has a writable layer |
+| Lifecycle | Built, stored, distributed | Created, run, stopped, removed |
+| Multiplicity | One image | Many containers from that one image |
+| Analogy | Class / blueprint / program | Object / instance / running process |
+
+A concrete way to see it: `docker pull ubuntu` downloads the *image* once. Running `docker run ubuntu` three times gives you *three independent containers* from that same image — each isolated, each with its own writable layer, none affecting the image or each other. Deleting a container leaves the image untouched; deleting the image doesn't remove containers already running from it.

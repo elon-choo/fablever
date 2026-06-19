@@ -1,0 +1,54 @@
+Here are the two common ways to squash your last 3 commits into one.
+
+## Option 1: Interactive rebase (most control)
+
+```bash
+git rebase -i HEAD~3
+```
+
+This opens an editor listing your 3 commits (oldest at top):
+
+```
+pick a1b2c3d First commit
+pick d4e5f6g Second commit
+pick h7i8j9k Third commit
+```
+
+Change the **2nd and 3rd** lines from `pick` to `squash` (or `s`):
+
+```
+pick   a1b2c3d First commit
+squash d4e5f6g Second commit
+squash h7i8j9k Third commit
+```
+
+Save and close. Git then opens a second editor to combine the commit messages — edit it into one message, save, and you're done.
+
+> Use `fixup` (or `f`) instead of `squash` if you want to **discard** the 2nd/3rd messages and keep only the first.
+
+## Option 2: Soft reset (fastest, fresh message)
+
+If you just want one new commit with a new message:
+
+```bash
+git reset --soft HEAD~3
+git commit -m "Your combined commit message"
+```
+
+`--soft` keeps all your changes staged; it only moves the branch pointer back 3 commits.
+
+## Important caveat
+
+If you've **already pushed** these commits, squashing rewrites history, so you'll need a force push:
+
+```bash
+git push --force-with-lease
+```
+
+`--force-with-lease` is safer than `--force` — it refuses to overwrite if someone else has pushed in the meantime. Avoid this on shared branches others are working from.
+
+---
+
+For a quick one-off, I'd reach for **Option 2**. If you want to preserve/edit the individual messages, use **Option 1**.
+
+Want me to run any of these for you? (Note: `/private/tmp` isn't a git repo, so let me know which directory your work is in.)

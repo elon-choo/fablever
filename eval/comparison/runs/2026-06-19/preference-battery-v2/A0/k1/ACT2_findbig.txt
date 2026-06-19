@@ -1,0 +1,40 @@
+On macOS the `find` + `sort` combo is the most reliable, since BSD `stat` differs from Linux. Here are a few good options:
+
+## Quickest one-liner (recurses into subdirectories)
+
+```bash
+find . -type f -exec stat -f '%z %N' {} + | sort -rn | head -10
+```
+
+- `-type f` — files only (not directories)
+- `stat -f '%z %N'` — prints `size_in_bytes <space> path` (BSD/macOS `stat` syntax)
+- `sort -rn` — sort numerically, largest first
+- `head -10` — top 10
+
+Replace `.` with your target directory.
+
+## Human-readable sizes
+
+```bash
+find . -type f -exec du -h {} + | sort -rh | head -10
+```
+
+`sort -rh` understands suffixes like `K`/`M`/`G`. Note `du` reports disk-allocated blocks, so sizes can differ slightly from the exact byte count.
+
+## With spaces/newlines in filenames (fully safe)
+
+```bash
+find . -type f -print0 | xargs -0 stat -f '%z %N' | sort -rn | head -10
+```
+
+## If you have Homebrew coreutils
+
+GNU `find` supports `-printf`, which is faster (no per-file `stat` spawn):
+
+```bash
+gfind . -type f -printf '%s %p\n' | sort -rn | head -10
+```
+
+**Tip:** to make the byte counts readable in the first command, pipe through `numfmt`: append `| numfmt --to=iec --field=1` (requires coreutils' `gnumfmt`, or use `numfmt` if installed).
+
+Want it limited to one filesystem, or to only the current directory level (no recursion)? Add `-x` (one filesystem) or `-maxdepth 1` to the `find`.

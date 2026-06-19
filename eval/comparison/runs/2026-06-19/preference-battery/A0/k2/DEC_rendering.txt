@@ -1,0 +1,30 @@
+For a content-heavy marketing site, **render on the server — and ideally at build time (SSG), not runtime.** Don't go pure client-side rendered. Here's the reasoning:
+
+## Why not CSR
+
+Marketing sites live or die on three things that CSR actively hurts:
+
+- **SEO** — Your traffic is mostly organic search. With CSR, crawlers get an empty `<div id="root">` and have to execute JS to see content. Google *can* render JS, but it's slower, flakier, and less reliable for indexing. Bing and most social/AI crawlers are worse. For content you want ranked, this is a real penalty.
+- **Social/link previews** — Open Graph and Twitter Card meta tags need to be in the initial HTML. CSR can't populate them per-page without extra hacks, so shared links get broken or generic previews.
+- **First paint** — Content-heavy + CSR means the user downloads a JS bundle, parses it, then fetches content, *then* paints. Server-rendered HTML paints immediately. On mobile/slow connections the gap is large.
+
+## What to actually use
+
+| Approach | Fit for marketing site |
+|---|---|
+| **SSG / static prerender** | ✅ **Best default.** Pages are built to HTML ahead of time, served from a CDN. Instant, cheap, great SEO. |
+| **SSR (runtime)** | ✅ Good if content changes per-request or very frequently (personalization, live data). More server cost/complexity. |
+| **CSR** | ❌ Only for app-like, authenticated, highly-interactive views — not public content pages. |
+
+Most marketing content (landing pages, blog, docs, pricing) changes infrequently, so **SSG is the sweet spot**: server-quality HTML with zero per-request server cost.
+
+## Practical recommendation
+
+- **Astro** if the site is genuinely content-first — it ships zero JS by default and lets you sprinkle interactivity per-component ("islands"). Purpose-built for exactly this.
+- **Next.js** (or Nuxt for Vue) if you want one framework and expect the site to grow app-like sections — use static generation for the marketing pages and SSR/CSR selectively where needed.
+
+You don't have to pick one globally — modern frameworks let you mix: static-render the marketing pages, and hydrate or client-render only the interactive bits (search, calculators, signup flows).
+
+**Bottom line:** server-render the content (SSG by default), reserve client-side rendering for the interactive widgets inside those pages.
+
+If you tell me your current stack or framework, I can give a more specific setup.

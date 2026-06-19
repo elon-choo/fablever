@@ -1,0 +1,21 @@
+The bug: this mutates shared state in place and hands back the *same* reference, so callers can't tell that the state changed underneath them.
+
+Two distinct problems, both rooted in `arr` being shared:
+
+1. **In-place mutation.** `arr.push(x)` modifies the array every other holder of that reference is looking at. Anything reading `arr` concurrently — another module, a render pass, an iterator mid-loop — sees the change with no signal. That's the classic shared-mutable-state footgun.
+
+2. **Deceptive return value.** Returning `arr` makes the function *look* like it produces a new array (functional style), but `addItem(state, x) === state`. Any consumer that relies on reference identity to detect change — React/Redux state, `useMemo`/selector memoization, `===` dirty-checks, undo/redo snapshots — will conclude "nothing changed" and skip updates. This is the more insidious one, because the code reads as if it's safe.
+
+The fix for shared state is to not mutate and to return a fresh reference:
+
+```js
+function addItem(arr, x) { return [...arr, x]; }
+```
+
+New array, new identity, original untouched — which is what change-detection and snapshotting expect.
+
+Two caveats so you can decide deliberately:
+- If callers actually *depend* on the in-place push (they hold `arr` and expect it to grow), switching to the immutable version will silently break them — they'd need to reassign from the return value. Worth a grep of call sites before changing.
+- `[...arr, x]` is O(n) per call. Fine for normal app state; if this is a hot path appending to a large array many times per frame, that's a separate trade-off (consider a dedicated structure rather than reverting to mutation).
+
+I'd treat the immutable version as correct-by-default for anything labeled "shared application state." Want me to check the call sites before you change it?

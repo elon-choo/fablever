@@ -1,0 +1,42 @@
+No problem — I'll give you the plan as a decision path so you can drop into it at whatever point matches your situation. This is the general shape; tell me your stack and read profile and I'll make it concrete.
+
+## Step 0 — Measure before you cache (don't skip this)
+
+Adding a cache blind is how you end up with a low hit rate and stale-data bugs and *still* a hammered DB. First find the hot reads:
+
+- Postgres: enable `pg_stat_statements`, then sort by `calls` and by `total_exec_time`. The queries at the top by `calls` are your caching candidates; the ones at the top by `total_exec_time` with low `calls` are *index/query* problems, not cache problems.
+- Look at the ratio: if 80% of read load is 10–20 distinct queries, caching will work great. If it's a long tail of unique queries, a cache won't save you — fix indexes or add a read replica instead.
+
+This step decides whether the rest of the plan even applies.
+
+## Step 1 — Try the cheaper levers first if they fit
+
+- **Missing index / N+1**: if the hot query does a seq scan or fires once per row in a loop, fixing that is a bigger win than any cache and adds no staleness risk.
+- **Read replica**: if the load is read volume (not repetition) and the app tolerates a small replication lag, route reads to a replica. No invalidation logic to get wrong.
+- **Connection pooling** (PgBouncer): if "hammering" is really connection churn, not query cost.
+
+Reach for a cache when the *same* reads repeat and some staleness is acceptable.
+
+## Step 2 — Pick the cache layer
+
+- **In-process (LRU, e.g. a simple map with TTL)**: lowest latency, zero infra. Good for small, read-mostly data on a single or few app instances. Downside: each instance has its own copy, no shared invalidation.
+- **Shared cache (Redis / Memcached)**: one source of truth across instances, supports explicit invalidation and pub/sub. The default for a multi-instance app. Redis if you want richer ops/eviction; Memcached if you want dead-simple key/value.
+- Start at the layer that matches your deployment. Multi-instance app → Redis.
+
+## Step 3 — Choose the pattern and the invalidation rule
+
+- **Pattern: cache-aside (lazy)** is the safe default — on read, check cache; miss → read DB → populate cache. Writes go straight to the DB.
+- **Invalidation** is the hard part. Two workable options:
+  - **TTL only**: every entry expires after N seconds. Simplest, bounded staleness, no write-path changes. Good when slightly stale data is fine.
+  - **Write-through / explicit bust**: on every write that touches the data, delete (or update) the matching cache key. Correct but you must find *every* write path — miss one and you serve stale data forever. Usually pair this with a TTL as a backstop.
+- Key design: stable, specific keys (`user:123:profile`, `product:456`). Avoid caching whole result sets that change constantly.
+- Guard against **stampede**: when a hot key expires, many requests miss at once and slam the DB. Mitigate with a short lock / single-flight on repopulation, or jittered TTLs.
+
+## Step 4 — Roll out safely
+
+1. Cache **one** hot read first (highest `calls` from Step 0), with TTL-only invalidation.
+2. Instrument hit rate, DB read QPS, and p95 latency before/after. A hit rate below ~70–80% means the keys are too granular or the reads aren't actually repetitive — reconsider.
+3. Only after that one is proven, expand to the next reads and add explicit invalidation where TTL staleness isn't acceptable.
+4. Decide the failure mode explicitly: if the cache is down, do you fall back to the DB (degraded but correct) or fail fast? Fallback-to-DB is almost always the right default.
+
+The two things that make this concrete — **which DB/stack** and **whether your hot reads actually repeat** — are what I asked about. Give me those (or just point me at the repo path) and I'll turn this into specific queries, key schemes, and code for your setup.

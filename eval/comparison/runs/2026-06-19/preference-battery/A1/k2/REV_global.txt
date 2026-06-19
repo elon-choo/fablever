@@ -1,0 +1,23 @@
+The core problem: `currentUser` is module-level mutable state shared across every request the process handles, so it's a request-bleed bug waiting to happen. Node runs one process across many concurrent connections — the moment anything between `setUser` and reading `currentUser` becomes async (a DB call, an `await`, an I/O wait inside `render`), request B's `setUser(req.user)` overwrites the global while request A is still mid-flight. Request A then renders with B's user. That's not just a correctness bug; it's a data-leak/auth bug — one user seeing another's data.
+
+Your snippet happens to be synchronous (`setUser` then immediately `render()` with no `await`), so it works *today*. But it's a landmine: the first person who adds `await` anywhere in that path introduces a silent, intermittent, near-impossible-to-reproduce cross-user leak. Nothing in the code signals that constraint.
+
+The fix is to stop using ambient global state for per-request data. Two options:
+
+1. **Pass it explicitly** — the simplest and clearest. `render(req.user)`, threading the user through to whoever needs it. No shared state, no bleed possible.
+
+2. **`AsyncLocalStorage`** (Node built-in) — if you genuinely want ambient access without threading the argument through many layers. It gives you request-scoped context that survives `await` boundaries without leaking between concurrent requests:
+
+```js
+import { AsyncLocalStorage } from 'node:async_hooks';
+const userStore = new AsyncLocalStorage();
+
+function handler(req, res) {
+  userStore.run(req.user, () => res.send(render()));
+}
+// anywhere downstream: userStore.getStore() === this request's user
+```
+
+For a simple call chain, prefer option 1 — `AsyncLocalStorage` is the right tool only when explicit passing would mean plumbing the argument through many intermediate functions that don't otherwise care about it.
+
+A secondary nit: even single-threaded and synchronous, a module-global like this makes the code harder to test (state persists between tests) and reason about. But the concurrency leak is the one that'll actually bite.

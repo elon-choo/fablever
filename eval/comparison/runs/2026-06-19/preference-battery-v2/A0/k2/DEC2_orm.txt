@@ -1,0 +1,33 @@
+Short answer: **use a query builder or a lightweight ORM as your default, and drop to raw SQL where it actually pays off.** For a brand-new Node API, don't make it all-or-nothing.
+
+## The real trade-off
+
+**ORM (Prisma, Drizzle, TypeORM)**
+- Type safety end-to-end — Prisma generates types from your schema, so query results are typed without hand-maintaining interfaces. This is the single biggest win in TypeScript.
+- Migrations, schema management, and connection pooling handled for you.
+- Fast to build CRUD; less boilerplate; safer against SQL injection by default.
+- Costs: a query DSL to learn, an abstraction that occasionally generates surprising SQL (N+1, over-fetching), and a perf/observability layer between you and the DB.
+
+**Raw SQL (with `pg` / `postgres.js`, or a builder like Kysely)**
+- Full control, best performance, no leaky abstraction — you see exactly what runs.
+- You hand-maintain result types and migrations (or add a tool for each).
+- More surface area for injection mistakes if you're not disciplined with parameterized queries.
+
+## What I'd actually pick
+
+| Situation | Pick |
+|---|---|
+| Standard CRUD API, want velocity + type safety | **Prisma** or **Drizzle** |
+| You love SQL, want types, no heavy runtime | **Kysely** (typed query builder — feels like SQL) |
+| Heavy reporting / complex joins / perf-critical | **Raw SQL** via `postgres.js`, possibly alongside an ORM |
+
+**My default recommendation for a new Node API: Prisma** if you want the most batteries-included path, or **Drizzle** if you want something closer to SQL with a lighter runtime and SQL-like syntax. Either gives you typed queries and migrations out of the box.
+
+The key insight: **this isn't either/or.** Use the ORM for 90% of routine queries, and for the handful of gnarly analytical queries, write raw SQL — every one of these tools has an escape hatch (`prisma.$queryRaw`, Drizzle's `sql` template, etc.). Reaching for raw SQL in those spots is a feature, not a failure.
+
+## Avoid
+
+- **Pure hand-rolled raw SQL with no types** for a whole API — you'll drown in maintaining result interfaces and migration scripts manually.
+- **TypeORM** for greenfield — it works, but Prisma/Drizzle are the healthier modern choices.
+
+If you tell me your DB (Postgres/MySQL/SQLite), team's SQL comfort, and whether the workload is CRUD-heavy or analytics-heavy, I can narrow this to one pick.

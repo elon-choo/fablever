@@ -1,0 +1,22 @@
+For a side project, default to a platform like **Render/Fly/Railway** unless you specifically want to learn server administration. The reason is simple: on a side project your scarcest resource is your own time and motivation, and a PaaS removes almost all the ops work that kills momentum.
+
+Here's the real trade-off:
+
+**Platform (Render / Fly / Railway)**
+- `git push` → deployed. Managed TLS, builds, health checks, rollbacks, logs out of the box.
+- Managed Postgres/Redis add-ons — you don't babysit a database.
+- Downsides: costs climb as you scale, free tiers cold-start (a sleeping app takes a few seconds to wake), and you're inside the platform's constraints.
+- Fly is closer to "VPS with nice tooling" (you get real VMs, can run anything); Render/Railway are more hands-off but more opinionated.
+
+**Plain VPS (Hetzner / DigitalOcean / Linode)**
+- Cheapest by far — a $5–8/mo Hetzner box runs several side projects at once.
+- Full control, no platform limits, no scaling-cost cliffs.
+- Downsides: *you* own OS updates, firewall, reverse proxy (Caddy/nginx), TLS renewal, deploy scripts, backups, monitoring. That's real recurring work, and security patching never stops.
+
+**Pick VPS if** any of these is true: you want to learn Linux/ops, you'll host multiple projects on one box, you have a tight budget, or you have an unusual workload (background workers, GPU, large persistent disk, weird ports).
+
+**Pick a platform if** you mostly want the thing *live* and to spend your time on the project itself — which is the common case for a side project.
+
+A pragmatic middle path: start on a platform to ship fast, and move to a VPS later **only if** the bill or the platform limits actually start to bite. Migrating a containerized app later is cheap; lost momentum early is not.
+
+If you tell me the stack (and whether it needs a database, background jobs, or websockets), I can give you a specific pick and a rough monthly cost.

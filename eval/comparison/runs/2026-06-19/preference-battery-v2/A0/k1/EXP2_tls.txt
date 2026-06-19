@@ -1,0 +1,50 @@
+HTTPS is just HTTP running inside a TLS tunnel. TLS gives you three guarantees — **confidentiality** (nobody can read the traffic), **integrity** (nobody can tamper with it undetected), and **authentication** (you're really talking to the server you think you are). Here's how it actually achieves them.
+
+## The core trick: asymmetric crypto to bootstrap symmetric crypto
+
+Symmetric encryption (AES) is fast but requires both sides to share a secret key. The problem: how do you agree on a secret key over a wire an attacker is watching? You can't just send it.
+
+The whole point of the TLS handshake is to solve this. It uses slow asymmetric cryptography *once* to securely establish a shared symmetric key, then uses fast symmetric encryption for the actual data. You get the best of both.
+
+## The handshake (TLS 1.3 — the modern flow)
+
+1. **ClientHello** — The client sends supported cipher suites, a random nonce, and — importantly — its **Diffie-Hellman key share** (an ephemeral public value). TLS 1.3 guesses the key-exchange group upfront to save a round trip.
+
+2. **ServerHello** — The server picks a cipher suite, sends its own random nonce and its own **DH key share**, plus its **certificate** and a **signature**.
+
+3. **Key derivation** — Both sides now combine their own private DH value with the other's public share. The math of Diffie-Hellman means they independently arrive at the *same* shared secret, but an eavesdropper who saw only the two public shares cannot compute it. From this shared secret, both derive the symmetric session keys (via a KDF, HKDF).
+
+4. **Finished** — Both sides send a MAC over the entire handshake transcript, proving the handshake wasn't tampered with mid-flight.
+
+After this — one round trip in TLS 1.3 — everything is encrypted with the symmetric keys.
+
+## How each guarantee is met
+
+**Confidentiality** comes from the symmetric session keys derived via Diffie-Hellman. The application data is encrypted with an AEAD cipher (e.g., AES-GCM or ChaCha20-Poly1305).
+
+**Integrity** comes from that same AEAD construction. AEAD means *Authenticated Encryption with Associated Data* — every encrypted record carries an authentication tag. Flip a single bit in transit and the tag check fails; the connection is torn down. This also defeats replay and reordering, because record sequence numbers feed into the tag.
+
+**Authentication** is the part people misunderstand most. The DH exchange alone protects against *passive* eavesdroppers but not an active **man-in-the-middle**, who could do a separate DH exchange with each side. This is where **certificates** come in:
+
+- The server's certificate contains its public key and its domain name, and is **signed by a Certificate Authority (CA)**.
+- Your OS/browser ships with a list of trusted CA root certificates.
+- The client verifies a **chain of trust**: server cert → intermediate CA → root CA in the trust store. It checks the signature at each link, the expiry dates, revocation status (OCSP/CRL), and — critically — that the domain name in the cert matches the URL you typed.
+- Then the server **signs the handshake transcript** with the private key corresponding to the cert's public key. Only the legitimate key holder can produce that signature. This binds the certificate identity to *this specific handshake*, proving the server actually possesses the private key — not just a copy of a public certificate.
+
+A MITM can't forge this because they don't have a CA-signed cert for the target domain (and can't get one without proving domain control). That's the whole game: the CA system anchors "this public key belongs to example.com" to identities you've pre-decided to trust.
+
+## Forward secrecy
+
+Because the DH keys are **ephemeral** (generated fresh per connection and thrown away), even if the server's long-term private key is stolen *later*, an attacker who recorded past traffic still can't decrypt it — the session keys were never derivable from the long-term key alone. This is why modern TLS mandates ephemeral key exchange (ECDHE) and dropped the old RSA key-transport mode.
+
+## What TLS does *not* protect
+
+- **Metadata** — the destination IP, and the domain via SNI (the server name is sent in cleartext in the ClientHello unless Encrypted Client Hello / ECH is in use), and traffic timing/volume are all visible.
+- **Endpoint compromise** — TLS secures data *in transit*, not on a hacked server or client.
+- **Trust misplacement** — a compromised or malicious CA can issue a fraudulent cert. Mitigations like Certificate Transparency logs and HSTS/pinning exist for this.
+
+---
+
+**The one-sentence version:** TLS uses certificates and signatures to authenticate the server, an ephemeral Diffie-Hellman exchange to agree on a shared secret no eavesdropper can derive, and an AEAD symmetric cipher keyed from that secret to encrypt and integrity-protect every byte of the actual HTTP traffic.
+
+Want me to go deeper on any piece — the certificate chain validation, the Diffie-Hellman math, or how TLS 1.3 differs from 1.2?

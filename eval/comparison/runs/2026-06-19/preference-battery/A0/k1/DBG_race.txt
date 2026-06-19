@@ -1,0 +1,40 @@
+A parallel-only failure is almost always **test isolation** — your test is sharing something with a test running concurrently. The goal is to find *what* is shared and *who* the other test is. Here's how I'd hunt it.
+
+## 1. Make it fail on demand first
+You can't debug what you can't reproduce. Flakiness under parallelism is usually load- or interleaving-dependent, so:
+- Run the full suite in a loop until it fails, and **capture the seed / worker count / test order** from that run (most runners print or accept these: pytest `-p randomly` seed, Jest `--seed`, Go's default randomized order, JUnit ordering).
+- Re-run with that exact seed + same worker count. If it now fails reliably, you have a reproduction. If not, the trigger is timing, not order (see §5).
+
+## 2. Shrink the blast radius (bisect the culprit)
+You rarely need the *whole* suite — usually one other test corrupts shared state.
+- Cut worker count to 2. Does it still fail? Good, now only 2 things run at once.
+- Bisect *which* co-running test triggers it: run your flaky test alongside the first half of the suite, then the other half, narrowing down. Many runners let you pin a subset to one worker and the suspect to another.
+- When you find the pair, you've found the shared resource — the two tests touch the same thing.
+
+## 3. Read the actual failure, not just "it failed"
+The *actual vs expected* value usually names the leak:
+- Got a row/record that belongs to a different test's fixture? → shared DB/table, fixed IDs, or missing transaction rollback.
+- Got `null`/empty when data should exist? → another test deleted/truncated, or your data wasn't committed in this worker's view.
+- Connection refused / timeout / "address in use"? → port, socket, or connection-pool contention.
+- Wrong config/feature-flag value? → shared global, env var, or singleton mutated by a neighbor.
+
+## 4. The usual suspects (check in this order)
+1. **Shared database** — tests hitting the same schema/tables with hardcoded IDs, or `TRUNCATE`/cleanup that wipes another worker's data. Fix: per-worker schema/database, or wrap each test in a transaction that rolls back.
+2. **Fixed external resources** — same port, temp file path, log file, Redis key, S3 prefix. Fix: randomize per test/worker (ephemeral port `:0`, `tmpdir`, key namespacing by worker ID).
+3. **Process-global mutable state** — singletons, module-level caches, env vars, registered mocks/monkeypatches not torn down. Parallel here usually means *threads in one process* (vs separate processes); confirm which model your runner uses, because thread-level parallelism makes globals lethal.
+4. **Connection-pool exhaustion** — N workers × pool size > DB max connections → intermittent "too many clients."
+5. **Time / order assumptions** — `ORDER BY` missing so row order flips under load, or "latest record" assumptions broken when another test inserts concurrently.
+
+## 5. If it's not state — it's a too-tight timeout
+If you can't find shared state and it only fails under *high* worker counts, the parallel load may just be starving CPU/IO and tripping a timeout that's fine in isolation. That's a real bug too (the timeout is unrealistic), but the fix is different: relax the timeout or reduce contention, not isolate state.
+
+## Quick triage
+```
+1. fail full suite → record seed + worker count
+2. reproduce with that seed
+3. drop to 2 workers; bisect to the one co-running test that triggers it
+4. read actual-vs-expected → identifies the shared resource
+5. isolate that resource per-test/per-worker → re-run the pair 50× to confirm
+```
+
+If you tell me the language/runner (pytest, Jest, Go, JUnit, RSpec…) and paste the assertion failure, I can point at the specific isolation knobs and likely culprit.

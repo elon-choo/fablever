@@ -1,0 +1,20 @@
+Use a monorepo. For three related services, it's the right default, and the cases that justify splitting are specific enough that you'd know if you were in one.
+
+**Why monorepo wins here**
+
+The main cost of separate repos is coordinating changes that span services — and "related" services change together often. With three repos you pay that tax constantly: an API contract change becomes three PRs across three repos, atomic-only-by-convention, with no single commit that captures "this change." In a monorepo it's one PR, one review, one revertible commit, and CI can test the services against each other as they actually integrate.
+
+You also get shared tooling for free: one lint/format/test config, one dependency version policy, shared internal libraries without publishing them to a registry, and trivial cross-service refactors (rename a field everywhere in one atomic change). Three is small enough that the monorepo stays fast and easy to reason about.
+
+**When to choose separate repos instead**
+
+- **Independent release cadence and ownership** — different teams who deploy on their own schedules and rarely touch each other's code. Repo boundaries enforce the org boundary.
+- **Different access/security domains** — one service is open-source or shared with a vendor while others are private, or they have genuinely different permission sets.
+- **Very different tech stacks or build systems** that share nothing, so the "shared tooling" benefit disappears.
+- **You'll outgrow naive monorepo tooling** — at large scale you need Bazel/Nx/Turborepo to keep CI sane. At three services you don't.
+
+**Practical middle ground**
+
+A monorepo does not force shared deployment. Keep each service independently buildable and deployable (separate Dockerfiles/pipelines, path-based CI triggers so a change to service A doesn't rebuild B and C). You get atomic cross-service changes without coupling release schedules — which captures most of the upside of both models.
+
+If you tell me the stack, team structure, and how independently these deploy, I can make this concrete for your situation.

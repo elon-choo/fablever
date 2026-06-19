@@ -1,0 +1,64 @@
+## Database Normalization
+
+Normalization is the process of structuring a relational schema to **eliminate redundancy** and **prevent update anomalies** by decomposing tables so each fact is stored exactly once. You progress through a series of "normal forms," each fixing a specific class of problem.
+
+### The normal forms (the ones that matter in practice)
+
+**1NF — Atomic values.** Every column holds a single value; no repeating groups or arrays-in-a-cell.
+- ❌ `phone_numbers = "555-1234, 555-5678"`
+- ✅ A separate `phones` table with one row per number.
+
+**2NF — No partial dependencies.** (Applies when you have a composite primary key.) Every non-key column must depend on the *whole* key, not just part of it.
+- In `order_items(order_id, product_id, quantity, product_name)`, `product_name` depends only on `product_id` — a partial dependency. Move it to a `products` table.
+
+**3NF — No transitive dependencies.** Non-key columns must depend *only* on the key, not on other non-key columns.
+- In `employees(emp_id, dept_id, dept_name)`, `dept_name` depends on `dept_id`, which depends on `emp_id`. `dept_name` is transitively dependent — split into a `departments` table.
+
+**BCNF — A stricter 3NF.** Every determinant must be a candidate key. Handles edge cases 3NF misses when there are overlapping candidate keys. This is the practical target for most OLTP schemas.
+
+(4NF/5NF exist for multi-valued and join dependencies, but you rarely design for them explicitly.)
+
+### The anomalies normalization prevents
+
+| Anomaly | Example |
+|---|---|
+| **Update** | A customer's address stored in 500 order rows → must update all 500 or risk inconsistency. |
+| **Insertion** | Can't add a product until someone orders it (because product data lives in the orders table). |
+| **Deletion** | Deleting the last order for a product silently erases the product itself. |
+
+The core principle: **one fact, one place.** A normalized schema makes correctness the default — there's no way for two copies of a fact to disagree because there's only one copy.
+
+---
+
+## When to Deliberately Denormalize
+
+Normalization optimizes for **write integrity**; denormalization trades some of that away for **read performance** or operational simplicity. You do it consciously, after you have a measured reason — not preemptively.
+
+**Legitimate triggers:**
+
+1. **Read-heavy workloads with expensive joins.** If a dashboard query joins 8 tables on every page load, storing a pre-joined/flattened copy (or a materialized view) can cut latency dramatically. Analytics/reporting systems (star schemas, data warehouses) are denormalized *by design* — facts and dimensions, wide tables, because they're read-mostly and joins at scale are costly.
+
+2. **Aggregates that are expensive to compute repeatedly.** Storing a `comment_count` on a `posts` row instead of `COUNT(*)`-ing a million comments every render. Classic and almost always worth it for hot counters.
+
+3. **Caching / point-in-time snapshots.** An invoice should store the price *as it was when sold*, not join to a `products.price` that changes later. Here the "redundancy" isn't redundancy at all — it's capturing a value that is semantically frozen. (This one is non-negotiable, not just an optimization.)
+
+4. **Avoiding cross-shard / cross-service joins.** In distributed databases or microservices, data lives in different places and a join may be impossible or catastrophically slow. Duplicating a few fields locally is often the only viable path.
+
+5. **NoSQL / document stores.** Document and wide-column databases embed related data on purpose to keep reads to a single lookup; normalization there fights the grain of the engine.
+
+**The costs you take on:**
+
+- You now own consistency in **application code or triggers** — every write must update all copies, in sync.
+- Higher risk of the very anomalies normalization prevented; stale denormalized data is a common, hard-to-spot bug.
+- More storage, and writes get slower (you're writing the same fact in several places).
+
+---
+
+### Practical guidance
+
+- **Default to normalized (BCNF/3NF).** It's the correct, low-bug baseline, and modern engines handle joins well. Storage is cheap; silent data corruption is not.
+- **Denormalize from evidence, not anticipation.** Profile first — confirm the join or aggregate is actually your bottleneck. Premature denormalization is a frequent source of needless complexity.
+- **Prefer engine-managed denormalization where possible.** A **materialized view**, summary table refreshed by a trigger, or a cache gives you the read win while keeping a single source of truth — so you don't hand-maintain consistency.
+- **Make duplication explicit and documented**, so the next person knows a field is a deliberate copy and where the canonical value lives.
+
+The mental model: **normalize for writes, denormalize for reads, and let a single source of truth survive either way.** OLTP (transactional) systems lean normalized; OLAP (analytical) systems lean denormalized — because they have opposite read/write profiles.

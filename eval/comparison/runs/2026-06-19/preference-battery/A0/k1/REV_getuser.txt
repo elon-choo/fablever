@@ -1,0 +1,32 @@
+Yes, a few things — the main one is real:
+
+**1. Crashes when the user isn't found (the important one).**
+If `db.find(id)` returns `null`/`undefined` (no match), then `u.profile` throws `TypeError: Cannot read properties of undefined`. Same if the row exists but has no `profile`. You reach into `u.profile.name` with zero guarding.
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  return u?.profile?.name ?? null;   // or throw a typed "not found" error
+}
+```
+
+Which fix is right depends on intent — returning `null`/`undefined` for a missing user vs. throwing a meaningful error. Silent `?.` can hide bugs, so if "user must exist" is an invariant, prefer:
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  if (!u) throw new NotFoundError(`user ${id}`);
+  return u.profile?.name ?? null;
+}
+```
+
+**2. No error handling on the await.**
+A rejected `db.find` (connection drop, query error) propagates as an unhandled rejection unless the caller wraps it. That may be fine *if* callers are expected to handle it — just make sure that's a deliberate contract, not an accident.
+
+**Minor / depends on context:**
+- **Name says `getUser`, returns a name string.** Misleading — it's `getUserName`. Small, but it'll bite whoever calls it expecting a user object.
+- **No validation of `id`.** If `id` can be `undefined`/malformed, you may want to fail fast before hitting the DB.
+
+The null-safety on `u` is the one that will actually throw in production. The rest is hardening.
+
+Want me to look at how this is actually called in the codebase to tell you which behavior (return null vs. throw) fits?

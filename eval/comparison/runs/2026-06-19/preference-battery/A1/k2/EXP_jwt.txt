@@ -1,0 +1,38 @@
+## What a JWT is
+
+A JSON Web Token is a signed, self-contained string with three base64url-encoded parts separated by dots: `header.payload.signature`.
+
+- **Header** — the signing algorithm (e.g. `HS256`, `RS256`) and token type.
+- **Payload** — the "claims": who the user is (`sub`), who issued it (`iss`), when it expires (`exp`), plus whatever custom data you add (roles, tenant, etc.).
+- **Signature** — the header and payload signed with a secret (HMAC) or a private key (RSA/ECDSA).
+
+The payload is **encoded, not encrypted** — anyone holding the token can read it. The signature only proves it wasn't tampered with and came from someone holding the key.
+
+## How the auth flow works
+
+1. User logs in with credentials. The server verifies them and issues a signed JWT (typically a short-lived *access token* plus a longer-lived *refresh token*).
+2. The client stores the token and sends it on each request, usually in the `Authorization: Bearer <token>` header.
+3. The server **verifies the signature and checks `exp`** — recomputing the HMAC or checking it against the public key. If valid, it trusts the claims inside and authorizes the request. No database lookup is needed to know who the user is.
+4. When the access token expires, the client exchanges the refresh token for a new one.
+
+The key property: step 3 needs only the signing key, not shared session state. That's what makes JWTs *stateless*.
+
+## What it's good at
+
+- **Stateless verification.** Any server with the key can validate a token, so you don't need a shared session store. This scales cleanly across many instances and is convenient for microservices and serverless.
+- **Cross-service / cross-domain trust.** With asymmetric signing (`RS256`/`ES256`), an auth service holds the private key and every other service verifies with the public key. Good fit for SSO, OAuth2/OIDC, and third-party APIs.
+- **Self-contained claims.** Roles, permissions, and tenant info travel in the token, saving lookups on the hot path.
+- **Mobile/SPA friendly.** Works naturally with bearer-token APIs where cookies are awkward.
+
+## What it's bad at
+
+- **Revocation is hard.** This is the big one. A valid, unexpired token is accepted by definition — you can't easily "log someone out" or kill a stolen token without reintroducing server-side state (a denylist or token-version check), which undercuts the stateless advantage. The usual mitigation is short access-token lifetimes (5–15 min) plus revocable refresh tokens.
+- **No real-time permission changes.** If you demote a user, their existing token keeps its old roles until it expires.
+- **Not for secrets.** The payload is readable by anyone. Never put passwords, PII, or anything sensitive in it.
+- **Size.** A JWT is much larger than a session ID and rides on every request, adding bandwidth and header overhead.
+- **Implementation footguns.** Historically dangerous: the `alg: none` bypass, and `RS256`-verified servers tricked into treating the public key as an HMAC secret (`alg` confusion). Always pin the expected algorithm, validate `exp`/`iss`/`aud`, and keep keys safe.
+- **Storage tradeoffs in browsers.** `localStorage` is exposed to XSS; cookies need CSRF protection. There's no fully clean answer, just different risk profiles.
+
+## Rule of thumb
+
+JWTs shine for **short-lived, stateless access tokens** in distributed systems and APIs that need cross-service trust. If you have a single monolith, a plain server-side session with an opaque cookie is often simpler and gives you instant revocation for free. A common middle ground is the hybrid model — short-lived JWT access tokens backed by stateful, revocable refresh tokens.

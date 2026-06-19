@@ -1,0 +1,21 @@
+To rename a branch both locally and on the remote, here's the sequence. Say you're renaming `old-name` to `new-name`:
+
+```bash
+# 1. Rename locally (use -m; from the branch you're renaming you can omit old-name)
+git branch -m old-name new-name
+
+# 2. Push the new branch and set it as upstream
+git push origin -u new-name
+
+# 3. Delete the old branch on the remote
+git push origin --delete old-name
+```
+
+A few things worth knowing:
+
+- **If you're already on the branch** you want to rename, step 1 can just be `git branch -m new-name`.
+- **Step 2's `-u`** (`--set-upstream`) re-points your local branch at the new remote branch, so future `git push`/`git pull` need no arguments.
+- **Other people's clones** won't update automatically. Each collaborator needs to run `git fetch --prune` and re-point their local branch, e.g. `git branch -m old-name new-name && git fetch && git branch -u origin/new-name`.
+- **If the branch is protected or is the default branch** (e.g. `main`), delete in step 3 may be blocked — change the default branch in your host's settings (GitHub/GitLab) first, then delete the old one.
+
+The old upstream reference can linger locally; `git fetch --prune` cleans up the stale `origin/old-name` tracking reference.

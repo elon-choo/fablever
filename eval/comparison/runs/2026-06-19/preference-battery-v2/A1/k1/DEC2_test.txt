@@ -1,0 +1,14 @@
+**Vitest.** For a new TypeScript project starting today, it's the better default.
+
+The deciding factors:
+
+- **TypeScript and ESM work out of the box.** Vitest runs your test files through the same Vite/esbuild transform pipeline as your app, so there's no `ts-jest`/`babel-jest` config, no `transform` block, no separate `tsconfig` juggling for ESM. Jest still needs a transformer and ESM support remains the rough edge.
+- **Speed.** esbuild-based transforms plus smart watch-mode re-runs make the inner loop noticeably faster, especially on larger suites.
+- **Jest-compatible API.** `describe/it/expect`, mocks, and snapshots mirror Jest closely, so the mental model and most existing examples transfer. Migration in either direction is cheap.
+- **Built-ins.** Coverage (v8 or istanbul), UI mode, in-source testing, and benchmarking ship in the box.
+
+Pick **Jest** instead only if you have a concrete reason: you're in a React Native project (the RN/Metro tooling assumes Jest), you depend on a mature Jest-only plugin, or your team/monorepo is already standardized on it and consistency outweighs the gains.
+
+One practical note: if you use Vite as your build tool, Vitest shares one config file with your app, which is the cleanest setup. If you're not using Vite at all (e.g. a plain `tsc` library or an esbuild/tsup build), Vitest still works fine standalone — it just pulls in Vite as a dev dependency.
+
+For a greenfield TS project with no Jest legacy, go Vitest.

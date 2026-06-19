@@ -1,0 +1,27 @@
+A couple of real problems, in order of how likely they are to bite:
+
+**1. No `return` — execution falls through.** `reject()` doesn't stop the function. After rejecting, the rest of the function keeps running on the input you just declared invalid. You almost certainly want `return reject();` (or an `else`).
+
+**2. `userInput == ''` coerces and over-rejects.** Loose equality converts types before comparing, so all of these are `true`:
+- `0 == ''` → `true`
+- `false == ''` → `true`
+- `[] == ''` → `true`
+
+So a legitimate numeric `0` (or `false`) gets rejected as if it were empty. Use `userInput === ''` to compare strictly.
+
+Two things that are **fine / intentional**, so don't "fix" them by reflex:
+
+- `userInput == null` with loose `==` is the correct idiom — it deliberately catches both `null` and `undefined`. Leave it as `==`.
+- Mixing the two: a common clean form is `if (userInput == null || userInput === '')` — loose for the null check, strict for the empty-string check.
+
+One judgment call depending on intent: whitespace-only input like `'   '` passes through untouched. If that should count as empty, compare against `userInput.trim() === ''` instead.
+
+Minimal version:
+
+```js
+if (userInput == null || String(userInput).trim() === '') {
+  return reject();
+}
+```
+
+(Drop the `String(...).trim()` if `userInput` is always a string and whitespace is allowed — then just `userInput === ''`.)

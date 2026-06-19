@@ -1,0 +1,13 @@
+For a side project, default to a platform like Render or Fly. The scarce resource is your attention, and a platform buys back nearly all the operational time a VPS would consume: git-push deploys, automatic HTTPS, managed Postgres, log streaming, and zero OS patching or firewall babysitting. You get to spend your evenings on the project instead of on the server.
+
+Reach for a plain VPS (Hetzner, DigitalOcean, etc.) only if one of these is actually true for you:
+
+- **You want to learn ops.** Running your own box is the best way to actually understand Linux, nginx/Caddy, systemd, and TLS. If that's a goal, the time cost becomes the point.
+- **You're running several services and want a flat, cheap bill.** A €5–6/mo Hetzner box can host a handful of small apps. Platform pricing is great at zero and creeps up once you have multiple always-on services or a database.
+- **You need something platforms make awkward** — long-running background workers, persistent local disk, cron at the OS level, unusual networking, or a GPU.
+
+The cost picture in practice: platforms are cheapest at tiny scale (often free, modulo cold starts on idle free tiers) and a VPS wins on predictable always-on cost. Neither difference is large enough to matter for a side project's budget — so decide on time and control, not dollars.
+
+My concrete pick: start on Fly or Render, ship the thing, and only graduate to a VPS if you hit a real limitation or you specifically want the sysadmin practice. It's far easier to outgrow a platform and move down to a VPS than to lose momentum fighting infrastructure before your project is even live.
+
+If you tell me the stack (web app? worker? database? expected traffic?), I'll narrow it to a specific provider and tier.

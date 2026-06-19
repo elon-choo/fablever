@@ -1,0 +1,27 @@
+The basic command is:
+
+```bash
+rails db:rollback
+```
+
+That reverts the most recent migration (one step). For more control:
+
+```bash
+rails db:rollback STEP=3        # roll back the last 3 migrations
+rails db:migrate VERSION=20260601120000   # migrate down/up to a specific version
+rails db:migrate:down VERSION=20260619093000   # revert one specific migration by its timestamp
+```
+
+A few things that bite people:
+
+**Find the version number** with `rails db:migrate:status` — it lists each migration as `up`/`down` with its timestamp. The version is the numeric prefix on the migration filename.
+
+**`db:rollback` runs the `down` method.** If your migration used `change` with a reversible operation (`create_table`, `add_column`, etc.), Rails auto-reverses it. But if it used something irreversible (`change_column`, raw `execute` SQL, or data changes), the rollback throws `ActiveRecord::IrreversibleMigration`. In that case you need to either write an explicit `def up` / `def down`, or use `reversible do |dir|` blocks.
+
+**Data is not restored.** Rolling back a migration that dropped a column or table recreates the structure but does not bring back the data that was in it. If the bad migration destroyed data, a rollback alone won't recover it — you need a backup.
+
+**If it's already deployed/shared,** prefer rolling *forward* with a new corrective migration rather than rolling back, since rolling back a migration others have already run causes schema drift. Rollback is best for migrations you haven't pushed yet.
+
+After rolling back, your `schema.rb` (or `structure.sql`) gets rewritten — commit that change too, or the next person's `db:schema:load` will be out of sync.
+
+If you tell me what the bad migration actually did (added a column, changed a type, ran custom SQL), I can give you the exact recovery steps.

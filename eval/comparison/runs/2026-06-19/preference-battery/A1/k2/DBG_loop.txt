@@ -1,0 +1,15 @@
+The decrement is the bug: it's `i--` where it should be `i++`.
+
+You start at `i = 0`, then each iteration does `i--`, so `i` goes to `-1, -2, -3, …`. The condition `i < arr.length` is always true (negative numbers are always less than the length), so it never stops. `arr[i]` is `undefined` for every negative index, so it just logs `undefined` forever.
+
+Fix:
+
+```js
+for (let i = 0; i < arr.length; i++) { console.log(arr[i]); }
+```
+
+If you actually meant to iterate backwards, you'd flip the start and the condition too:
+
+```js
+for (let i = arr.length - 1; i >= 0; i--) { console.log(arr[i]); }
+```

@@ -1,0 +1,32 @@
+**Default to a Postgres-backed queue** (`pg-boss` or `graphile-worker`) if you already run Postgres. That's the right call for the large majority of Node apps, and people reach for Redis/cloud too early. Here's the decision rule:
+
+## Quick rule
+
+- **Already have Postgres, throughput < ~hundreds of jobs/sec, jobs tied to your data** → **DB table** (via pg-boss/graphile-worker, not hand-rolled).
+- **Need high throughput (thousands/sec), rich orchestration** (priorities, rate limiting, flows/dependencies, repeatable jobs), already OK running Redis → **BullMQ**.
+- **Want zero ops, already cloud-native, or decoupling separate services/teams** → **cloud queue** (SQS, Cloud Tasks).
+
+## Why DB-table-first is underrated
+
+The killer feature is **transactional enqueue**. You insert the job in the *same transaction* as the business change:
+
+```sql
+BEGIN;
+  INSERT INTO orders (...);
+  INSERT INTO jobs (type, payload) VALUES ('send_receipt', ...);
+COMMIT;
+```
+
+Either both commit or neither does. With BullMQ or SQS you have a **dual-write problem** — the DB commits, then the enqueue fails (or vice versa), and you need an outbox pattern to fix it. Postgres `SELECT … FOR UPDATE SKIP LOCKED` makes concurrent workers pulling jobs cheap and correct. No new infra, one less thing to operate, backups/observability you already have.
+
+The real ceiling: polling adds a little latency, and it tops out somewhere in the low thousands/sec. Most apps never get near that.
+
+## When to actually pick the others
+
+**BullMQ** — best Node DX of the three. Built-in retries/backoff, delayed & repeatable (cron) jobs, concurrency, priorities, rate limiting, job flows. Cost: you run and persist **Redis** (use AOF, or you can lose jobs), and enqueue is non-transactional with your DB.
+
+**Cloud queue (SQS/Cloud Tasks)** — managed, durable, scales infinitely, good for crossing service boundaries. Cost: vendor lock-in, more latency, and raw queues give you fewer job semantics — SQS is a message bus, so you build scheduling/retry-policy logic yourself (Cloud Tasks is nicer for scheduled HTTP delivery). Best when you're *already* on the cloud and want nothing to operate.
+
+---
+
+The thing that flips the recommendation most is **what infra you already run + throughput**. If you tell me "we're on Postgres, ~50 jobs/sec, mostly emails and webhooks" I'd say pg-boss without hesitation. If it's "100k jobs/sec across 5 services," that's SQS/BullMQ territory. What's your stack and rough volume?

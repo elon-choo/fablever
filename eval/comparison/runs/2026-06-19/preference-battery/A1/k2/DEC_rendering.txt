@@ -1,0 +1,13 @@
+Server-side render it — and for a marketing site specifically, lean toward **static generation (SSG/prerendering)** rather than per-request SSR.
+
+The reasoning, briefly:
+
+**SEO is the deciding factor.** Marketing sites live on search traffic, and CSR ships an empty HTML shell that fills in after JavaScript runs. Crawlers and link-preview bots (Open Graph cards on Slack, iMessage, Twitter) handle that inconsistently. Server-rendered HTML gives them real content and meta tags on the first request.
+
+**Content-heavy means first paint matters.** With CSR the user downloads and executes a JS bundle before seeing anything; on a text- and image-heavy page that's a visibly slower load, especially on mobile/poor connections. Server-rendered HTML paints immediately.
+
+**But you probably don't need full SSR.** Marketing content is the same for every visitor and changes rarely — there's no per-request, per-user data to compute. That's the textbook case for **static generation**: render pages to HTML at build time, serve them from a CDN. You get all the SEO and speed wins of SSR without running a render server on every request. If content updates often, incremental static regeneration (ISR) or a rebuild-on-publish hook covers it.
+
+Practically: **Astro** is purpose-built for this (ships near-zero JS by default, great for content sites), and **Next.js** is the safe default if you want a larger ecosystem or expect to add app-like interactivity later. Both let you sprinkle client-side interactivity (forms, menus) into otherwise static pages, so it isn't an all-or-nothing choice.
+
+Reach for true SSR only if pages are genuinely dynamic per request — personalization, A/B logic that can't run client-side, or content that must be fresh to the second. A marketing site rarely is.

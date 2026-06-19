@@ -1,0 +1,38 @@
+This is the single most common date bug there is, and "some users but not others" is the tell: **it's a timezone problem, and which users are affected correlates with their UTC offset.**
+
+## The mechanism
+
+Somewhere a *date-only* value (like `2026-06-19`, a birthday, a due date, a calendar day) is being stored or parsed as a *timestamp*, which forces it to a specific instant in time — almost always **midnight UTC**. Then it gets rendered in the user's **local** timezone.
+
+- A user in **UTC or ahead of it** (Europe, Asia, Australia: offset ≥ 0) sees midnight UTC as the same calendar day or later → **looks correct**.
+- A user **behind UTC** (the Americas: offset < 0) sees midnight UTC shifted *backward* into the previous day → **one day off.**
+
+`2026-06-19T00:00:00Z` rendered in New York (UTC−4) is `2026-06-18` 8 PM. The date silently rolls back a day. That's why your US users complain and your European users don't.
+
+The classic JavaScript trap:
+
+```js
+new Date("2026-06-19")        // parsed as UTC midnight
+  .toLocaleDateString()       // rendered in local tz → "6/18/2026" west of UTC
+```
+
+(Note: `new Date("2026-06-19")` is UTC, but `new Date("2026/06/19")` or `new Date(2026, 5, 19)` is *local* — that inconsistency causes its own version of this bug.)
+
+## How to confirm it's this
+
+1. Ask an affected vs. unaffected user for their timezone — affected ones will skew to negative offsets (or DST-adjacent). 
+2. Reproduce by changing *your* machine's timezone to `America/Los_Angeles` and reloading.
+3. Look at the raw stored value. If a "date" is stored as a `timestamp`/`datetime`/`Date` object with a `T00:00:00Z`, that's your culprit.
+
+## The fix (pick based on what the value *means*)
+
+**If it's a true calendar date** (birthday, holiday, due date — no time, no timezone): never let it touch a timezone.
+- Store as a `DATE` column or a plain `"YYYY-MM-DD"` string, not a timestamp.
+- Format by slicing the string or using UTC accessors (`getUTCFullYear/Month/Date`), or `toLocaleDateString("en-US", { timeZone: "UTC" })`.
+- Libraries: Temporal `PlainDate`, or `date-fns`/Luxon kept in UTC-or-plain mode.
+
+**If it's a real instant** (when something happened): store a full UTC timestamp *with* time, and consistently render it in a deliberately chosen timezone — the user's, or the business's — not the server's incidental one.
+
+The bug is almost never in the storage *or* the display alone — it's the **boundary** where a zoneless date gets an implicit timezone attached. Make the date's type honest (calendar-date vs. instant) and the off-by-one disappears.
+
+If you point me at the actual code (the parse/store/format path), I can pinpoint exactly where the implicit conversion happens.

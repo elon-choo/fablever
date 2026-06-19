@@ -1,0 +1,55 @@
+# Idempotency in APIs
+
+**Idempotency** means that making the same request multiple times has the same effect as making it once. The *result on the server* (and ideally the response the client sees) is identical whether the request arrives one time or ten times.
+
+## A quick mental model
+
+Think of an elevator call button. Pressing it once or pressing it five times produces the same outcome — the elevator comes once. That button is *idempotent*. A "submit payment" button that charges you each time you click is *not*.
+
+## Idempotency by HTTP method
+
+The HTTP spec already defines expected semantics for standard methods:
+
+| Method | Idempotent? | Why |
+|--------|-------------|-----|
+| `GET` | Yes | Reading data doesn't change it |
+| `PUT` | Yes | "Set resource to *this* state" — repeating sets the same state |
+| `DELETE` | Yes | Deleting an already-deleted thing leaves it deleted |
+| `POST` | **No** (by default) | "Create a new thing" — each call creates another |
+| `PATCH` | Not necessarily | Depends on the operation (`x = 5` is, `x += 1` isn't) |
+
+Note: idempotent ≠ "no side effects." A `DELETE` changes state — but repeating it doesn't change state *further*. Also, idempotent doesn't mean the *response* is byte-identical (a second `DELETE` might return `404` instead of `200`); it means the resulting server state is the same.
+
+## Why it matters
+
+**1. Networks are unreliable.** The classic problem: a client sends "charge $50," the server processes it, but the response is lost on the way back. The client doesn't know if it succeeded. If it retries and the operation isn't idempotent, the customer gets charged twice.
+
+**2. Safe retries.** Idempotency is what makes automatic retries (by clients, load balancers, message queues, service meshes) safe. Without it, every retry risks duplicate side effects.
+
+**3. At-least-once delivery becomes effectively-once.** Distributed systems and message brokers (SQS, Kafka, etc.) usually guarantee *at-least-once* delivery, meaning duplicates are expected. Idempotent consumers turn that into *effectively-once* processing.
+
+**4. Concurrency and resilience.** It simplifies reasoning about failures — you can replay a request without auditing whether it already ran.
+
+## Making non-idempotent operations idempotent
+
+For operations like `POST /payments` that are inherently "do it again each time," the standard pattern is an **idempotency key**:
+
+1. The client generates a unique key (e.g., a UUID) per logical operation and sends it, typically in a header:
+   ```
+   POST /v1/charges
+   Idempotency-Key: 3f9c1e7a-...-b2
+   ```
+2. The server records the key alongside the result of the first request.
+3. If a request arrives with a key it has already seen, the server **skips re-processing** and returns the stored original response.
+
+This is exactly how Stripe, PayPal, and most payment APIs prevent double-charges on retry.
+
+### Implementation considerations
+- **Storage & TTL:** Keys are usually persisted (Redis/DB) with an expiry (e.g., 24h).
+- **Race conditions:** Two concurrent requests with the same key must be handled atomically — lock on the key or use a unique DB constraint so only one wins.
+- **Scope the key correctly:** Tie it to the request payload so the same key with a *different* body is rejected (a `409`), rather than silently returning the wrong cached result.
+- **Client responsibility:** The key must stay constant across retries of the *same* logical action and differ across distinct actions.
+
+## Bottom line
+
+Idempotency is a correctness property that lets distributed systems tolerate the duplicates and retries that unreliable networks make inevitable — without corrupting state or double-charging users. Design `GET`/`PUT`/`DELETE` to honor their natural idempotent semantics, and protect `POST`-style "create/charge" operations with idempotency keys.

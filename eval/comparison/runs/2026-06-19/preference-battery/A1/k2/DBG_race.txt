@@ -1,0 +1,17 @@
+Almost always this is shared state between tests, not a bug in the test itself — running in parallel just removes the isolation that hid it. The goal is to find *which other test* it collides with and *what they share*. Here's the order I'd work in.
+
+**1. Make the failure reproducible first.** A flaky test you can't trigger on demand can't be bisected. Pin down the runner's nondeterminism: fix the random seed and the worker count. Most runners print or accept these — `pytest -p no:randomly` / `--randomly-seed=`, `jest --runInBand` vs `--maxWorkers=2`, Go's `-p` and `-parallel`, `vitest --no-file-parallelism`. Run the suite repeatedly at the same seed until it fails consistently. If it only fails under high worker counts and never at 2, lean toward resource contention (timeouts, connection-pool/port exhaustion) rather than a specific colliding test.
+
+**2. Capture the *real* error.** "Fails in parallel" usually gets reported as a bare assertion or timeout. Get the actual message and stack — a row count that's off, a duplicate-key violation, a wrong value, a connection refused. That alone often names the shared resource.
+
+**3. Bisect to the colliding pair.** Keep your target test in every run and halve the rest of the suite each time, two workers minimum so collisions can actually happen. When you're down to two tests that fail together but pass apart, you've found the pair. This is the highest-leverage step — don't skip to guessing.
+
+**4. Inspect what the pair shares.** In rough order of likelihood:
+- **Database rows / fixtures** — both seed or count the same table, or one's writes leak because the transaction isn't rolled back per test. Parallel workers need separate schemas/databases or per-test transactions, not a shared truncate.
+- **Global / singleton / module-level state** — a cache, a registry, a class attribute, a mocked module that one test mutates and another reads.
+- **Filesystem / ports / temp dirs** — both write the same path or bind the same port; fix with per-worker temp dirs and ephemeral ports.
+- **Environment variables and clock** — one test sets an env var or freezes time and another races on it.
+
+**5. Confirm the fix by re-running at the seed that failed**, many iterations, full parallelism — not just once. A single green run doesn't clear a flaky test.
+
+If you tell me the language and test runner (and paste the actual parallel failure), I can give you the exact flags and the most likely shared-state culprit for that stack.

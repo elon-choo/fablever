@@ -1,0 +1,21 @@
+Short version: default to REST, and reach for GraphQL only if you hit a specific problem it solves. For most mobile backends REST gets you to production faster and is easier to operate.
+
+Here's the reasoning that matters for *mobile* specifically:
+
+**Where GraphQL genuinely wins**
+- You have many screens with diverse, nested data needs and you're iterating the UI fast. The client picks exactly the fields it wants in one round trip, so you avoid over-fetching (wasted bandwidth/battery) and under-fetching (chatty request chains on flaky mobile networks).
+- You want to add UI features without shipping new backend endpoints each time.
+- You're aggregating several services behind one schema.
+
+**Where REST wins**
+- Simplicity and operational maturity. HTTP caching, CDNs, status codes, logging, and debugging all "just work" — with GraphQL (everything is `POST /graphql`, `200 OK`) you rebuild a lot of that yourself.
+- Smaller team or straightforward data model. Less tooling, less to learn, fewer ways to shoot yourself in the foot (e.g. expensive nested queries, N+1 resolvers).
+- File uploads, webhooks, and third-party integrations are more natural.
+
+**My recommendation for you:** start with REST. It's the lower-risk default, and you can always add a GraphQL layer later (or a "backend-for-frontend" endpoint) if you find your screens are making too many round trips or over-fetching. The reverse — ripping out GraphQL once it's load-bearing — is much harder.
+
+Two things that would flip me to GraphQL from the start: (1) you already know you'll have lots of distinct, data-heavy screens evolving quickly, or (2) your mobile clients are frequently on poor networks where minimizing round trips is a real product concern.
+
+A common middle path worth knowing: REST for the bulk of CRUD, plus one or two purpose-built aggregate endpoints for the heaviest screens — you get most of GraphQL's round-trip savings without the operational overhead.
+
+If you tell me your team size, how complex/nested the data is, and whether the same backend will also serve a web client, I can give you a firmer call.

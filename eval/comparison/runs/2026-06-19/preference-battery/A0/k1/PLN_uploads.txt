@@ -1,0 +1,13 @@
+I checked before sketching a plan, and I want to flag something before going further:
+
+**There's no Express app in this directory.** This repo (`/Users/elon/work/fable-profile`) is `fablever` — a zero-dependency Claude Code behavioral-profile tool. Both `package.json` files declare `"dependencies": {}`, there's no `express` anywhere, and the only JS here is the MCP server / orchestration tooling. So I'd be writing a file-upload plan against code that isn't here.
+
+A couple of ways this could be:
+
+- **Your Express app lives in another directory.** Point me at it (e.g. `~/work/<your-app>`) and I'll read the actual routing/middleware setup and build the plan around it — multer vs. busboy, disk vs. S3/object storage, where the upload route slots into your existing app, validation/limits, etc.
+- **You're in the wrong working directory.** If you meant to be in a different project, `cd` there (or just tell me the path).
+- **You want me to scaffold a new Express app here.** Possible, but this repo is intentionally dependency-free and is published to npm as `fablever`, so adding Express + multer here would change its nature — I wouldn't do that without you explicitly confirming that's the intent.
+
+Which is it? Once I know where the app actually is, I can read it and give you a concrete, grounded plan rather than generic boilerplate.
+
+One design question I'll need either way, so you can answer now to save a round-trip: **where should uploaded files land — local disk, or cloud object storage (S3/GCS/R2)?** That choice drives most of the rest of the plan.

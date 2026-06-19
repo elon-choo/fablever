@@ -1,0 +1,29 @@
+A couple of things worth flagging:
+
+**1. `userInput == ''` is the real bug.** Loose equality coerces, so this rejects more than just empty strings:
+
+```js
+0      == ''   // true  → numeric 0 gets rejected
+false  == ''   // true  → boolean false gets rejected
+[]     == ''   // true  → empty array gets rejected
+```
+
+If `userInput` can legitimately be `0` or `false`, this incorrectly rejects valid input. Use strict equality: `userInput === ''`.
+
+**2. `userInput == null` is actually fine** — it's a deliberate idiom that catches both `null` and `undefined` (the only two values loosely equal to `null`). Keep it, or make it explicit if you prefer consistency with `===`.
+
+**3. Whitespace slips through.** `'   '` (spaces/tabs) is not `''`, so it passes validation. If blank-but-not-empty should be rejected, trim first.
+
+A tightened version:
+
+```js
+if (userInput == null || String(userInput).trim() === '') { reject(); }
+```
+
+Or, if you only ever expect a string and want to reject any falsy-ish blank:
+
+```js
+if (!userInput?.trim?.()) { reject(); }
+```
+
+The one that bites people in production is #1 — `0` being treated as "empty." Whether that matters depends on what `userInput` is expected to hold. Want me to adjust based on the expected type?

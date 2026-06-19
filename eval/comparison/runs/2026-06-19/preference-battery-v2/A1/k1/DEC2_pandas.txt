@@ -1,0 +1,15 @@
+Plain Python. For a small one-off cleaning script, pandas is usually the wrong tool — it adds a multi-second import and a heavyweight dependency to do what the standard library already handles for genuinely small, throwaway work.
+
+Reach for plain Python when:
+- The file is small (say, under ~10k rows) and you run this once.
+- The logic is row-by-row: strip whitespace, fix dates, drop blanks, rename keys. `csv.DictReader`/`DictWriter` plus a loop is readable and dependency-free.
+- The environment is constrained (no pandas installed, a Lambda, a colleague's machine) — `import csv` always works.
+
+Reach for pandas when:
+- You're doing **columnar** operations — group-by, joins/merges across files, pivots, aggregations, fillna across a column.
+- The data is messy in ways pandas already solves: mixed types, many date formats (`pd.to_datetime`), Excel input, thousands separators.
+- It might stop being one-off. If you'll rerun or extend it, pandas' vocabulary pays off.
+
+Rule of thumb: if you can describe the job as "for each row, do X," plain Python with the `csv` module is the cleaner choice. If you catch yourself wanting to operate on whole columns at once, switch to pandas.
+
+If you share what the data looks like and what "cleaning" means here, I'll tell you which one fits and sketch it.

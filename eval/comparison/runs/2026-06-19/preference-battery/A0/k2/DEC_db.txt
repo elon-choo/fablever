@@ -1,0 +1,24 @@
+For heavy aggregate reads, **Postgres is the better default** between the two. Here's the reasoning, then the caveat that actually matters.
+
+## Why Postgres wins for this workload
+
+- **Aggregation is SQL's home turf.** `GROUP BY`, window functions, `GROUPING SETS`/`ROLLUP`/`CUBE`, multi-table joins across a star schema — Postgres's query planner is far more mature here than MongoDB's aggregation pipeline.
+- **Materialized views** let you precompute expensive rollups and refresh them on a schedule — often the single biggest win for a dashboard.
+- **Indexing that fits analytics**: BRIN indexes are tiny and fast on time-ordered data (typical for dashboards), plus partial/expression indexes for common filters.
+- **Partitioning** by time range keeps scans bounded as data grows.
+- **JSONB** covers most of MongoDB's flexible-schema advantage when your events have varied shapes — you get document flexibility *and* relational aggregation in one engine.
+- **Extensions** extend it directly into analytics territory: **TimescaleDB** (time-series, continuous aggregates) and **Citus** (distributed/columnar) if you outgrow a single node.
+
+MongoDB is the stronger pick mainly when ingestion is write-heavy with genuinely document-shaped, deeply nested, schema-varying data — and your reads are mostly point/document lookups rather than wide aggregations. That's not what "heavy aggregate reads" describes.
+
+## The caveat worth pausing on
+
+If aggregate reads are the *dominant, defining* workload and data volume is large, **a purpose-built columnar/OLAP engine beats both row-stores** — ClickHouse, DuckDB (embedded/single-node), or a warehouse like BigQuery/Snowflake/Redshift. They store data by column, so scanning one metric across billions of rows touches a fraction of the data. Postgres-with-Citus-columnar or TimescaleDB narrows that gap without leaving the Postgres ecosystem.
+
+## Practical recommendation
+
+- **Starting out / moderate scale (≤ low hundreds of millions of rows):** Postgres, with materialized views + partitioning + BRIN indexes. Simplest operationally, one system to run.
+- **Time-series-heavy dashboard:** Postgres + TimescaleDB (continuous aggregates are purpose-built for exactly this).
+- **Scan-dominated at large scale:** add or migrate the analytics layer to ClickHouse/DuckDB, often keeping Postgres as the transactional source of truth.
+
+Want me to sketch a concrete schema + materialized-view setup for your specific metrics, or are you trying to decide based on a particular data volume / query pattern? If you tell me the row counts and the typical dashboard queries, I can give a sharper call.

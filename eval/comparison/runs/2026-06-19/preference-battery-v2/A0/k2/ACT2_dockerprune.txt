@@ -1,0 +1,52 @@
+Here's how to reclaim disk space from Docker. The key distinction is **"unused"** vs. **"dangling"**, and volumes need an explicit opt-in because Docker won't delete them by default (they often hold data you care about).
+
+## Quick one-liner
+
+```bash
+docker system prune -a --volumes
+```
+
+This removes, in one shot:
+- All stopped containers
+- All networks not used by a container
+- **All** images not used by an existing container (`-a`, not just dangling ones)
+- All unused volumes (`--volumes`)
+- The entire build cache
+
+It'll show a confirmation prompt with a warning before doing anything. Add `-f` to skip the prompt.
+
+## Targeted commands (more control)
+
+If you'd rather do it piece by piece:
+
+```bash
+# Images not used by any container (dangling + unreferenced)
+docker image prune -a
+
+# Just dangling images (untagged layers) — safer
+docker image prune
+
+# Unused volumes — anonymous + named volumes not attached to a container
+docker volume prune -a
+
+# Stopped containers
+docker container prune
+
+# Build cache
+docker builder prune
+```
+
+## See what you'd reclaim first
+
+```bash
+docker system df          # summary of space used by images/containers/volumes/cache
+docker system df -v       # per-item breakdown
+```
+
+## ⚠️ Two things to watch
+
+1. **`--volumes` deletes data.** A volume is "unused" if no *existing* container references it — but that includes databases, etc., whose container is merely stopped or was removed. If you have a stopped Postgres/MySQL container's data in a named volume, prune can wipe it. Run `docker volume ls` and check before using `--volumes`.
+
+2. **`-a` removes images you'll have to re-pull.** Without `-a`, prune only removes *dangling* images (untagged intermediate layers), which is the safe, conservative cleanup. With `-a` it removes any image not currently backing a container — including base images you use regularly. Convenient for a deep clean, slower on your next build/run.
+
+For a routine cleanup I'd start with `docker system df` to see where the space actually is, then `docker image prune -a` (the usual culprit is old images), and only add `--volumes` once you've confirmed nothing important lives in them.

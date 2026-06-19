@@ -1,0 +1,41 @@
+loaded 546 ok verdicts (of 546 files)
+gated pairs: 273 both-orders present; position-flip (tie) rate: 29.3%
+
+=== PRIMARY (unit=question, n=96; decisive=78, ties=18) ===
+A1 preferred on 44/78 decisive questions = 56.4%
+exact two-sided binomial p = 0.3082  n.s.
+Wilson 95% CI = [45.4%, 66.9%]
+cluster-bootstrap 95% CI = [44.9%, 66.7%]  (excludes 50%: false)
+
+=== per-judge (direction must hold independently) ===
+  gemini: A1 22/64 = 34.4%  (p=0.0169)
+  gpt: A1 58/78 = 74.4%  (p=0.0000)
+
+=== per-category (descriptive; pre-registered: ACT/DEC/DBG strong A1, PLN moderate, EXP/REV predicted A1 loss/tie) ===
+  ACT  action/how-to  A1 13/16 = 81%  Wilson[57,93]
+  DEC  decision       A1 7/12 = 58%  Wilson[32,81]
+  DBG  debug          A1 6/13 = 46%  Wilson[23,71]
+  PLN  planning       A1 4/12 = 33%  Wilson[14,61]
+  EXP  explanation    A1 5/10 = 50%  Wilson[24,76]
+  REV  code-review    A1 9/15 = 60%  Wilson[36,80]
+
+=== inter-judge agreement (GPT vs Gemini, k=1 decisive, n=50) ===
+  raw agreement 78%  Cohen's kappa 0.58 (moderate)
+
+=== position-bias diagnostics ===
+  first-slot win-rate 61.4% (counterbalancing OK if ~50%)
+  A1 win-rate when A1 in slot1: 64.5%  | when A1 in slot2: 41.8%  (A1 should win in BOTH)
+
+=== sub-dimensions (per-call, arm-resolved) ===
+  answer_first_winner    A1 367/546 = 67%
+  decisiveness_winner    A1 312/546 = 57%
+  actionability_winner   A1 279/546 = 51%
+  fabrication_more: A1 invents-more 39, A0 invents-more 106, none 401  (lower A1 = better)
+
+=== length ===
+  mean words  A0 407  A1 345  (A1/A0 = 0.85)
+  |Δwords| near   (n=23): A1 win 43%
+  |Δwords| mod    (n=36): A1 win 69%
+  |Δwords| large  (n=16): A1 win 56%
+
+wrote analysis-summary.json

@@ -1,0 +1,14 @@
+Use **pnpm**. For a fresh monorepo it's the clear default in 2026.
+
+The short reasoning:
+
+- **Native workspaces that scale.** pnpm's `pnpm-workspace.yaml` plus its content-addressable store gives you fast, disk-efficient installs and a non-flat `node_modules` that prevents phantom dependencies (packages using deps they never declared). That strictness pays off most in a monorepo where cross-package leakage is easy to introduce and painful to debug later.
+- **Speed and disk.** Hard-linking from a global store means the second install of the same dependency across packages is nearly free, and CI installs are noticeably faster than npm.
+- **Built-in monorepo ergonomics.** `pnpm --filter <pkg>` for scoped commands, `workspace:*` protocol for internal deps, and good support for running tasks across packages. Pair it with **Turborepo** or **Nx** when you want task caching and dependency-graph-aware builds.
+
+When the others make sense:
+
+- **npm** — pick it only if you want zero extra tooling and the absolute most standard, "it just works everywhere" setup, and your monorepo is small. Its workspaces work but installs are slower and the flat `node_modules` is leak-prone.
+- **Yarn** — Yarn Berry (v4) with PnP is powerful but the PnP module resolution still causes friction with some tools; Yarn's main edge over pnpm has largely eroded. No strong reason to start a new repo on it today.
+
+If you want, tell me your stack (TypeScript? what build tool? apps + packages layout?) and I'll scaffold the `pnpm-workspace.yaml` and root config.

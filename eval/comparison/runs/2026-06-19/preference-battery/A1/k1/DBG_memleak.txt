@@ -1,0 +1,50 @@
+The fastest reliable path is **diffing heap snapshots taken hours apart** and reading the "objects allocated between snapshot 1 and 2 that are still alive." Everything else is narrowing down what kind of leak it is first. Here's the order I'd work it.
+
+## 1. Confirm what's actually growing
+
+Log `process.memoryUsage()` every 30–60s before doing anything else. The fields tell you which leak you have:
+
+- **`heapUsed` climbing** → JS object leak (the common case; snapshots will find it).
+- **`external` / `arrayBuffers` climbing but heap flat** → Buffers, sockets, native addons. Snapshots won't show these well; look at I/O and native modules.
+- **`rss` climbing while heap is flat** → native memory / fragmentation, not a JS object retention bug.
+
+This 2-minute step decides which of the tools below is even relevant.
+
+## 2. Take heap snapshots and diff them
+
+Run the process with the inspector and let it grow:
+
+```bash
+node --inspect your-app.js
+# or trigger snapshots programmatically:
+```
+
+```js
+const v8 = require('v8');
+// call this at startup, then again an hour or two later once RSS has clearly grown
+v8.writeHeapSnapshot(`/tmp/heap-${Date.now()}.heapsnapshot`);
+```
+
+Take snapshot A early, snapshot B after significant growth. Open both in **Chrome DevTools → Memory tab**, load them, then select snapshot B and switch the dropdown to **"Comparison"** against A. Sort by **"# Delta"** / **"Size Delta"**. The constructors with large positive deltas that never get freed are your leak. Click into one and read the **Retainers** pane — that's the chain holding the object alive, which usually points straight at the offending closure, array, map, or cache.
+
+Two snapshots is the minimum; three (e.g. startup, +1h, +2h) is better because it filters out one-time growth from steady-state leaks.
+
+## 3. If snapshots are too big or it OOMs before you can grab one
+
+- **Allocation timeline**: DevTools → Memory → "Allocation instrumentation on timeline." Shows allocation stacks live, so you see *where* the leaked objects are created, not just their type. Heavier, but gives you the call site directly.
+- **Raise the ceiling to buy time**: `node --max-old-space-size=8192` so it survives long enough to snapshot.
+- **Auto-dump on OOM**: `node --heapsnapshot-near-heap-limit=2` writes a snapshot automatically as it approaches the limit — useful when the OOM happens overnight.
+
+## 4. Usual suspects to check by eye in parallel
+
+While snapshots cook, the leaks that cause exactly this "slow growth over hours" pattern are almost always one of:
+
+- **Unbounded `Map`/`Set`/array/object used as a cache** that's only ever added to. Look for caches keyed by request/user/id with no eviction or TTL.
+- **Event listeners added per-request/connection** without `removeListener`. A `MaxListenersExceededWarning` in logs is a dead giveaway.
+- **Closures captured by long-lived timers/intervals** (`setInterval`, retry loops) that pin large scopes.
+- **Module-scope arrays that accumulate** (logs, metrics, pending jobs) and are never drained.
+- **Outstanding promises / async work that never settles**, holding their context.
+
+If `external` was the one growing in step 1, instead look at undrained streams, un-`destroy`ed sockets, or a native addon.
+
+Want me to look at this project's code for these patterns, or wire up the snapshot logging into your actual entry point? If so, point me at the process you're running and I'll dig in.

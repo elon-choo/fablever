@@ -1,0 +1,21 @@
+Yes — a few things, mostly around unsafe assumptions:
+
+**1. No "not found" handling.** If `db.find(id)` returns `null`/`undefined` (no matching user), then `u.profile` throws `TypeError: Cannot read properties of null`. Most `find`-style calls return nullish on a miss rather than throwing.
+
+**2. No guard on `profile`.** Even if `u` exists, `u.profile` might be missing → `u.profile.name` throws.
+
+**3. Errors propagate unhandled.** The `await` will reject if the DB call fails. That may be intentional (let the caller catch it), but there's no context added.
+
+A safer version:
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  if (!u) return null;            // or throw a typed "not found" error
+  return u.profile?.name ?? null; // optional chaining + fallback
+}
+```
+
+**Worth deciding:** what should the contract be when the user doesn't exist — return `null`, or throw? The current code implicitly "throws a confusing TypeError," which is the worst of both. Pick one explicitly.
+
+One thing I can't judge without context: whether `u` and `u.profile` are *guaranteed* present by an upstream invariant (e.g. `id` always comes from a foreign key). If so, the code is technically fine but still reads as fragile. What's the actual source of `id`?

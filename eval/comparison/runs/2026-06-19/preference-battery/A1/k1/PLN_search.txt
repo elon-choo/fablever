@@ -1,0 +1,45 @@
+You skipped the questions, so I'll give you the plan for the most likely case — Postgres, keyword search with ranking — and flag exactly where it changes if your situation differs. Your global context leans heavily on Aurora PostgreSQL, so that's my working assumption.
+
+## The recommendation
+
+Use Postgres's built-in full-text search. At 100k rows it's fast (single-digit milliseconds with the right index), needs zero new infrastructure, and stays transactionally consistent with your data — no sync pipeline to build or keep from drifting. Don't add Elasticsearch/OpenSearch/Algolia/Meilisearch for this; that scale doesn't earn the operational cost.
+
+## Plan (Postgres FTS)
+
+1. **Add a generated `tsvector` column.** Stored and computed from the searchable fields, so you never hand-maintain it:
+   ```sql
+   ALTER TABLE records ADD COLUMN search_vector tsvector
+     GENERATED ALWAYS AS (
+       to_tsvector('english',
+         coalesce(title,'') || ' ' || coalesce(body,''))
+     ) STORED;
+   ```
+   Weight fields differently (`setweight`) if title should rank above body — that needs a function/trigger instead of the inline expression above.
+
+2. **Index it with GIN.** This is what makes 100k rows trivial:
+   ```sql
+   CREATE INDEX idx_records_search ON records USING GIN (search_vector);
+   ```
+
+3. **Query with ranking.**
+   ```sql
+   SELECT id, title,
+          ts_rank(search_vector, q) AS rank
+   FROM records, websearch_to_tsquery('english', $1) q
+   WHERE search_vector @@ q
+   ORDER BY rank DESC
+   LIMIT 20;
+   ```
+   `websearch_to_tsquery` accepts Google-style input (quotes, `or`, `-term`) so you can pass the raw search box straight through.
+
+4. **Add pagination and a sensible default sort** for empty/short queries, then wire it to your API endpoint.
+
+That's the whole feature. It's a migration plus one query.
+
+## Where the plan changes
+
+- **You need typo tolerance / fuzzy matching** (search "fable" matches "fabel"): add the `pg_trgm` extension and a GIN trigram index, and either combine it with the FTS query or use `similarity()`. Still pure Postgres.
+- **You need facets, filters, highlighting, instant-search-as-you-type** as a real product surface: that's the one case worth a dedicated engine — I'd reach for **Typesense or Meilisearch** (self-hostable, simple, built for exactly this) before Elasticsearch, and you'd add a sync step from Postgres.
+- **You're not on Postgres:** MySQL → `FULLTEXT` index; MongoDB → text index or Atlas Search; SQLite → FTS5 (excellent at this scale). The shape of the plan is the same — add a search index, query it with ranking.
+
+Tell me your actual stack and which of those rows you're in, and I'll turn the matching path into concrete migrations and query code for your app. I haven't touched anything yet — this is the plan for your sign-off.

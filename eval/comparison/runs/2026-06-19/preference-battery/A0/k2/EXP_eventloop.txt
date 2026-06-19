@@ -1,0 +1,77 @@
+The Node.js event loop is the mechanism that lets a single-threaded JavaScript runtime handle thousands of concurrent operations without blocking. Here's how it actually works.
+
+## The core idea
+
+Node runs your JavaScript on **one thread**. But I/O (file reads, network calls, DB queries) is slow. Instead of blocking that thread while waiting, Node hands those operations off to the OS or a background thread pool (via **libuv**), keeps executing your code, and later picks up the results through callbacks. The event loop is the coordinator that decides *when* each callback runs.
+
+## The phases
+
+libuv's event loop runs in a repeating cycle of **phases**. Each phase has a FIFO queue of callbacks it processes before moving on:
+
+```
+   ┌───────────────────────────┐
+┌─>│           timers          │  setTimeout, setInterval callbacks
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+│  │     pending callbacks     │  deferred I/O callbacks (e.g. some TCP errors)
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+│  │       idle, prepare       │  internal use only
+│  └─────────────┬─────────────┘      ┌───────────────┐
+│  ┌─────────────┴─────────────┐      │   incoming:   │
+│  │           poll            │<─────┤  connections, │  ← retrieves new I/O events;
+│  └─────────────┬─────────────┘      │   data, etc.  │    executes I/O callbacks
+│  ┌─────────────┴─────────────┐      └───────────────┘    (blocks here if idle)
+│  │           check           │  setImmediate callbacks
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+└──┤      close callbacks      │  e.g. socket.on('close', ...)
+   └───────────────────────────┘
+```
+
+The phases that matter most in practice:
+
+- **timers** — runs callbacks scheduled by `setTimeout`/`setInterval` whose threshold has elapsed.
+- **poll** — the heart of the loop. Retrieves new I/O events and runs their callbacks (incoming data, completed file reads, etc.). If there's nothing else to do, the loop *blocks here* waiting for I/O — this is what makes Node efficient rather than spin-looping.
+- **check** — runs `setImmediate` callbacks, which fire right after the poll phase.
+- **close callbacks** — cleanup callbacks like `'close'` events.
+
+## The microtask queues (the important subtlety)
+
+Separate from the libuv phases, there are two **microtask queues** that drain **between every callback**, not just between phases:
+
+1. **`process.nextTick` queue** — highest priority, drained first.
+2. **Promise queue** (`.then`, `await`) — drained next.
+
+After *any* callback finishes, Node empties both of these completely before continuing. This is why:
+
+```js
+setTimeout(() => console.log('timeout'), 0);
+setImmediate(() => console.log('immediate'));
+Promise.resolve().then(() => console.log('promise'));
+process.nextTick(() => console.log('nextTick'));
+console.log('sync');
+
+// Output:
+// sync       ← synchronous code runs first
+// nextTick    ← microtasks drain before the loop continues
+// promise
+// timeout    ← then the loop's phases (order of timeout vs
+// immediate    immediate here can vary; see below)
+```
+
+A practical gotcha: starving the loop. If you recursively schedule `process.nextTick`, you can prevent the loop from ever reaching the I/O phases, because microtasks always drain first.
+
+## `setTimeout(fn, 0)` vs `setImmediate`
+
+A classic interview question. From the main module their order is **non-deterministic** (depends on process timing). But inside an I/O callback, `setImmediate` *always* fires first — because you're already past the poll phase, so `check` comes before the loop wraps back around to `timers`.
+
+## Key mental model
+
+- **CPU-bound work blocks the loop.** A long `for` loop or synchronous crypto hash freezes everything — there's only one thread for *your* JS. Offload heavy compute to worker threads or the thread pool.
+- **The thread pool is real but limited.** libuv has a default pool of 4 threads (`UV_THREADPOOL_SIZE`) for operations that can't be done async at the OS level — file I/O, DNS lookups, `crypto.pbkdf2`, zlib. Network I/O, by contrast, uses the OS's native async mechanisms (epoll/kqueue/IOCP), not the pool.
+- **"Non-blocking" means the I/O waits elsewhere**, and your callback joins a queue to be run when the loop gets to it.
+
+---
+
+Want me to go deeper on any part — e.g. the libuv internals, how `async/await` maps onto the microtask queue, or how to diagnose event-loop lag in a real app?

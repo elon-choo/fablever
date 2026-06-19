@@ -1,0 +1,17 @@
+The failure is almost certainly a test-isolation problem, not a bug in the test itself: passing alone but failing in parallel means the test depends on shared state that another concurrently-running test mutates. Your job is to find *what's shared* and *which other test touches it*. Here's how I'd track it down.
+
+**1. Make it reproducible first.** A flake you can't trigger on demand can't be debugged. Run the suite in a loop until it fails and capture everything — seed, worker assignment, the failing assertion. Lock the test ordering/seed your runner used so you can replay the exact failing arrangement. If it only fails ~1 in 20 runs, run it 50× in the background and save the first failing log.
+
+**2. Read the actual failure, not just "it failed."** What value was wrong — a row count off by one, a 409 conflict, a missing record, a port-in-use, a timeout? That symptom points straight at the category:
+- Wrong/extra/missing data → shared database rows, a shared fixture, or a non-isolated transaction
+- Conflict / "already exists" / port-in-use → a hardcoded ID, fixed port, or fixed file path two tests both claim
+- Timeout / deadlock → connection-pool exhaustion or lock contention
+- Intermittently wrong computed value → a global, singleton, static, env var, clock, or unseeded RNG
+
+**3. Find the culprit *pair*.** It's an interaction between your test and one other. Bisect: run your test alongside half the suite, then halve again until one other test reliably triggers the failure. Most runners let you do this — and crucially, dropping to **2 workers** while keeping parallelism usually still reproduces it but makes the offending pair obvious.
+
+**4. Confirm it's isolation by neutralizing sharing.** Once you suspect the shared resource, prove it: give each worker its own database/schema/namespace, its own temp dir, a port of 0 (OS-assigned), or wrap each test in a rolled-back transaction. If the failure vanishes, you've confirmed the cause and likely found the fix.
+
+The fix is then one of: scope the shared resource per-worker (separate DB/schema, unique IDs via the worker index, `tmpdir`, ephemeral ports), reset/rollback state between tests, or — only if the test genuinely can't be isolated — mark it to run serially.
+
+Tell me which test runner you're on (pytest-xdist, Jest, `go test`, JUnit/Gradle, Vitest…) and I'll give you the exact flags for forcing the failing order, pinning workers, and isolating per-worker state. If you can paste the failing assertion, I can probably name the shared resource directly.

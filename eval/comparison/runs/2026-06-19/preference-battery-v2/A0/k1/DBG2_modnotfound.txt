@@ -1,0 +1,33 @@
+Short answer: your local machine has something the deploy environment doesn't — usually a dependency that isn't actually declared, or a filename whose casing only matters on Linux. "Works locally" is the trap: local has your full `node_modules`, your OS filesystem, and your Node version. Deploy does a clean install on a different OS.
+
+Here are the usual culprits, roughly in order of how often they bite, with a quick check for each:
+
+**1. Dep is in `devDependencies` (or not declared at all)**
+Production installs skip dev deps (`npm ci --omit=dev`, `NODE_ENV=production`). It resolves locally because it's sitting in `node_modules`, but a clean prod install never fetches it.
+- Check: `npm ls <module>` — is it under dependencies? Try a clean install yourself: `rm -rf node_modules && npm ci --omit=dev` then run.
+
+**2. Filename casing (the #1 "works on my Mac" bug)**
+macOS/Windows filesystems are case-insensitive; Linux deploy targets are case-sensitive. `import './MyComponent'` happily finds `mycomponent.ts` locally and fails on deploy.
+- Check: does the `import` path match the file on disk *exactly*, including the folder names?
+
+**3. Lockfile out of sync or not committed**
+Local installed an older/different tree than the manifest declares. CI installs from the lockfile (or fresh) and gets something else.
+- Check: is `package-lock.json` / `yarn.lock` / `pnpm-lock.yaml` committed and current?
+
+**4. The file is gitignored / dockerignored**
+The module exists locally but never gets shipped.
+- Check: `git check-ignore -v path/to/file` and look at `.dockerignore`.
+
+**5. Native/platform-specific binary**
+Built for `darwin-arm64` locally, deploy needs `linux-x64` (e.g. `esbuild`, `sharp`, `bcrypt`, `@swc/core`). Often shows as "module not found" for the platform-specific optional dep.
+
+**6. Build-time path aliases not resolved at runtime**
+TS `paths` (`@/foo`) or bundler aliases that work in dev but aren't rewritten in the production bundle.
+
+**7. Node version mismatch** — different subpath-exports / resolution behavior between your local Node and the deploy's.
+
+To pinpoint it for you, tell me:
+- Stack (Node/JS? Python? something else?) and the **exact** error line + module name
+- Where it deploys (Vercel/Docker/Lambda/…) and the install command in your build
+
+Or point me at the repo and I'll dig through `package.json`, the lockfile, and the import in question directly.

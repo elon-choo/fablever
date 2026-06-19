@@ -1,0 +1,12 @@
+Since the questions are still open, here's the concrete plan for the most likely case so you have something actionable now — **PostgreSQL with basic-to-good keyword search**:
+
+1. **Add a generated `tsvector` column** on the searchable table, e.g. `search tsvector GENERATED ALWAYS AS (to_tsvector('english', coalesce(title,'') || ' ' || coalesce(body,''))) STORED`. Generated + stored means it stays in sync automatically — no triggers to maintain.
+2. **Index it:** `CREATE INDEX idx_search ON records USING GIN (search);`. GIN is the right index type for full-text at this size.
+3. **Query** with `websearch_to_tsquery` (it parses Google-style input — quotes, `or`, `-exclude` — safely from user text): `WHERE search @@ websearch_to_tsquery('english', $1)`, and rank with `ORDER BY ts_rank(search, websearch_to_tsquery('english', $1)) DESC`.
+4. **If you want typo tolerance**, add the `pg_trgm` extension and a trigram index for fuzzy fallback — but only if step 3 isn't good enough.
+
+At 100k rows this builds in seconds and queries in single-digit milliseconds. No new service, no sync pipeline, no ops burden.
+
+If your stack is **SQLite** instead, the equivalent is an `FTS5` virtual table kept in sync with triggers and ranked by `bm25()` — equally trivial at this scale. And only if you genuinely need typo-tolerant, as-you-type instant search with faceting would I add a lightweight dedicated engine (Meilisearch or Typesense, single binary) — never Elasticsearch for 100k records.
+
+Tell me your datastore and how polished the search needs to feel (or just answer the two prompts above) and I'll tighten this into exact, copy-pasteable steps for your app — including where it lives in your codebase if you point me at it.

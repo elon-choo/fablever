@@ -1,0 +1,45 @@
+This is a textbook **SQL injection** vulnerability. The critical problem in one line:
+
+```javascript
+const q = "SELECT * FROM users WHERE email = '" + email + "'"; db.query(q);
+```
+
+`email` is concatenated straight into the SQL string, so whatever the caller supplies becomes executable SQL.
+
+## The attack
+
+If `email` comes from user input, an attacker sends:
+
+| Input | Resulting query | Effect |
+|-------|-----------------|--------|
+| `' OR '1'='1` | `... WHERE email = '' OR '1'='1'` | Returns **every** user |
+| `'; DROP TABLE users; --` | two statements | Data destruction (if multi-statement is allowed) |
+| `' UNION SELECT password,... --` | union injection | Exfiltrate other columns/tables |
+
+Combined with `SELECT *`, a bypass dumps every column (password hashes, tokens, etc.).
+
+## The fix — parameterized query
+
+Never build SQL by string concatenation. Let the driver bind the value:
+
+```javascript
+// node-postgres
+const q = "SELECT id, email, name FROM users WHERE email = $1";
+db.query(q, [email]);
+
+// mysql2 / sqlite
+const q = "SELECT id, email, name FROM users WHERE email = ?";
+db.query(q, [email]);
+```
+
+The parameter is sent separately from the SQL text, so it can never change the query's structure — injection is structurally impossible, not just filtered.
+
+## Secondary cleanups
+
+- **Drop `SELECT *`** — list the columns you actually need. It limits blast radius if something does leak and avoids pulling sensitive columns by accident.
+- **Confirm the result shape** — `email` lookups usually expect 0 or 1 row; make sure callers handle "not found."
+- If your driver/ORM doesn't support parameters here for some reason, the fallback is strict allow-list validation + escaping — but parameterized queries are the only answer you should ship.
+
+**Bottom line:** don't merge as-is. The one-line change to bound parameters closes the hole completely.
+
+Want me to scan the rest of the codebase for other concatenated-SQL spots in the same pattern?

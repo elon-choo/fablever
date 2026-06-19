@@ -1,0 +1,28 @@
+Quick note first: the app isn't in this directory — `/Users/elon/work/fable-profile` is the "fablever" Claude Code project (no React, no i18n libs anywhere). So this is a framework-level plan, not one grounded in your actual code. If you point me at the real repo I can make it concrete.
+
+## Recommendation
+
+For a standard React app, use **react-i18next** (the `i18next` ecosystem). It's the default for good reasons: handles plurals/interpolation/namespaces, has solid language detection and lazy-loading, and integrates with every translation-management tool. The two things that would change this plan:
+
+- **If it's Next.js**, use `next-intl` (or `next-i18next` for the Pages Router) instead — server components and locale routing need framework-aware handling, and react-i18next alone fights the App Router.
+- **If one of your 3 languages is RTL** (Arabic, Hebrew, Farsi), you have real layout work on top of translation — budget for it explicitly (see Phase 5).
+
+The single biggest cost isn't the library setup (a day or two). It's **extracting hardcoded strings** from existing components — that's the bulk of the effort and it scales with how big the app already is.
+
+## Phased plan
+
+**Phase 0 — Decide the workflow before touching code.** Pick your source language (usually English), decide how translations get produced (in-repo JSON edited by a translator, or a TMS like Lokalise/Crowdin/Tolgee that syncs files via CI), and lock a key-naming convention (e.g. `feature.component.label`). Getting this wrong is the expensive thing to undo, not the code.
+
+**Phase 1 — Wire up the plumbing.** Install i18next + react-i18next + the language-detector plugin. Set up the provider at the app root, configure your 3 locales with a fallback, persist the chosen language (localStorage + `<html lang>`), and build a language switcher. Get one hardcoded string rendering through `t()` end-to-end to prove the pipe works.
+
+**Phase 2 — Define file structure.** Organize translations by **namespace** (per-feature files: `common.json`, `auth.json`, etc.) so you can lazy-load and avoid one giant file. Establish the source-language files first; the other two start as copies and get translated.
+
+**Phase 3 — Extract strings (the long pole).** Sweep components replacing literals with `t('key')`. Use `i18next-parser` to auto-extract keys into the JSON files instead of hand-maintaining them. Handle the tricky cases deliberately: interpolation (`t('greeting', {name})`), pluralization (i18next plural keys), and rich text inside translations (`<Trans>` component). Route all dates/numbers/currency through the `Intl` API, not string concatenation — formatting differs per locale.
+
+**Phase 4 — Translate.** Hand the source files to translators or your TMS. Watch for **text expansion** — German/French run ~30% longer than English and will break tight layouts.
+
+**Phase 5 — Locale-aware concerns.** SEO/routing (if it matters: locale-prefixed URLs `/en` `/de`, `hreflang` tags — this is where Next.js earns its keep). RTL support if applicable (logical CSS properties, `dir` attribute, mirrored layouts). Fonts that cover all three scripts (CJK and Arabic need specific font coverage).
+
+**Phase 6 — Guardrails.** Add **pseudo-localization** in dev to surface un-externalized strings (anything still in English under pseudo mode was missed). Add a CI check for missing/unused keys so the three files don't drift apart. Test the switcher and persistence.
+
+If you tell me which framework (plain React/Vite vs Next.js) and which three languages, I'll turn this into a concrete task list with the actual packages and config for your setup.

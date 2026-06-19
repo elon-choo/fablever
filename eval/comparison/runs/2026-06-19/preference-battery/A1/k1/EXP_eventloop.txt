@@ -1,0 +1,53 @@
+The Node.js event loop is the mechanism that lets a single-threaded JavaScript runtime handle many concurrent operations without blocking. Your JS runs on one thread, but I/O (file reads, network, timers) is offloaded to the system or a background thread pool, and the event loop is what decides when to run the callbacks for that finished work.
+
+## The core idea
+
+When Node starts, it runs your top-level script to completion. Any asynchronous operation you kick off (a `setTimeout`, a file read, an HTTP request) gets registered and handed off — to the OS kernel, or to libuv's internal thread pool for things that can't be done asynchronously at the OS level. Your code keeps running and finishes. *Then* the event loop takes over: it repeatedly checks "is any of that offloaded work done? if so, run its callback," and keeps cycling until there's nothing left to wait for.
+
+So "non-blocking" doesn't mean things happen in parallel in your JS — it means your thread never sits idle waiting. It starts an operation, moves on, and comes back to the result later via a callback.
+
+## The phases
+
+Each turn of the loop ("tick") moves through a fixed sequence of phases, each with its own queue of callbacks:
+
+1. **Timers** — runs callbacks scheduled by `setTimeout` and `setInterval` whose time has elapsed.
+2. **Pending callbacks** — runs certain system-level callbacks deferred from the previous loop (e.g. some TCP error types).
+3. **Idle/prepare** — internal use only.
+4. **Poll** — this is the heart of it. It retrieves new I/O events and runs their callbacks (incoming data, a finished file read, etc.). If there's nothing queued, the loop will *block here and wait* for I/O — this is where Node spends its idle time, rather than busy-looping.
+5. **Check** — runs `setImmediate` callbacks.
+6. **Close callbacks** — runs cleanup callbacks like `socket.on('close')`.
+
+After the close phase it loops back to timers. If at any point there's no pending work, no timers, and no open handles, the loop exits and the process ends.
+
+## The part that trips people up: microtasks
+
+Between phases — actually after *each individual callback* — Node drains two higher-priority queues before continuing:
+
+- **`process.nextTick` queue** (highest priority)
+- **Promise microtask queue** (`.then`, `await` continuations)
+
+This is why this prints in a non-obvious order:
+
+```js
+setTimeout(() => console.log('timeout'), 0);
+setImmediate(() => console.log('immediate'));
+Promise.resolve().then(() => console.log('promise'));
+process.nextTick(() => console.log('nextTick'));
+console.log('sync');
+
+// sync
+// nextTick
+// promise
+// timeout      (timeout vs immediate order here can vary)
+// immediate
+```
+
+The synchronous `console.log` runs first. Then, before the event loop even begins its phases, the microtask queues drain — `nextTick` before promises. Only then does the loop start working through timers, poll, check, etc. A subtlety worth knowing: a `nextTick` callback that schedules another `nextTick` can starve the event loop, because the queue is fully drained before the loop advances.
+
+## Why it matters in practice
+
+The model is excellent for I/O-bound work — a server can juggle thousands of connections on one thread because each one is mostly waiting, and waiting is free here. It's bad for CPU-bound work: a long synchronous computation blocks the single thread, and every queued callback — including incoming requests — stalls until it finishes. That's what worker threads, the cluster module, or offloading to a child process are for.
+
+One clarification on the thread pool: libuv keeps a small pool (default 4 threads) for operations the OS can't do asynchronously — file system calls, DNS lookups, some crypto. Network I/O usually doesn't use it; that's handled by the kernel's own async mechanisms (epoll, kqueue, IOCP). So "Node is single-threaded" is true for *your JavaScript*, but there are background threads doing real work underneath.
+
+If you want, I can go deeper on any one piece — the `setTimeout` vs `setImmediate` ordering quirk, how `await` maps onto microtasks, or when to reach for worker threads.

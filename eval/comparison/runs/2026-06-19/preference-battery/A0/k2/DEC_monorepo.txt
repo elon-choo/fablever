@@ -1,0 +1,27 @@
+For 3 related services, **default to a monorepo.** That's the right call for most teams, and "related" is the key word — it's doing the work in that sentence.
+
+## Why monorepo wins here
+
+- **Atomic cross-service changes.** Change a shared type/API contract and update all 3 consumers in one commit + one PR. With separate repos, that's a coordinated dance across 3 PRs with version-bump lag in between.
+- **One source of truth for shared code.** Types, validation, client SDKs, config live in one place — no publishing internal packages to a registry just so service B can import from service A.
+- **Single setup.** One clone, one dependency install, one lint/test/CI config. New contributors are productive immediately.
+- **Refactoring stays honest.** Rename something and the compiler/tests catch every broken caller across all 3 services at once.
+
+## When to split into separate repos instead
+
+Pick separate repos if **two or more** of these are true:
+
+- **Different teams own different services** with little overlap, and you want hard ownership/access boundaries (e.g. one service has stricter security/compliance scope).
+- **Independent release cadences** that you don't *want* coupled — different deploy pipelines, on-call, versioning.
+- **Open-sourcing one** service but not the others.
+- **Radically different tech stacks** with no shared code at all (then the monorepo's main benefit evaporates).
+
+## The nuance people miss
+
+Monorepo ≠ monolith and ≠ shared deploy. You can keep a monorepo and still deploy each service independently — path-based CI triggers (only build/test/deploy what changed) give you that. So you don't sacrifice independent deployability by choosing a monorepo; you only need tooling for it once the repo gets large (Turborepo/Nx for JS, Bazel/Pants for polyglot, or just workspaces + path filters to start).
+
+---
+
+**My recommendation:** start with a monorepo using your ecosystem's native workspaces (npm/pnpm/yarn workspaces, Go modules, Cargo workspaces, etc.) and path-filtered CI. It's reversible — splitting a monorepo later is straightforward, while merging 3 repos with divergent histories and tooling is painful. Only reach for separate repos if the team-boundary or compliance reasons above clearly apply.
+
+If you tell me the **stack, team size, and how independently these deploy**, I'll give you a concrete layout and CI setup.

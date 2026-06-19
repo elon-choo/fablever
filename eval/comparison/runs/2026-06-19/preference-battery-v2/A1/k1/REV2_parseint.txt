@@ -1,0 +1,20 @@
+This snippet has a few real problems, the most likely bug being an off-by-one in the offset math. Here's what stands out, roughly in order of severity:
+
+**1. No validation — `NaN` flows into the query.** If `page` is missing or non-numeric (`?page=abc`, or no `page` at all), `parseInt` returns `NaN`, so `offset = NaN * 20 = NaN`. That `NaN` then goes into your `LIMIT/OFFSET` and either errors or behaves unpredictably depending on the driver.
+
+**2. Likely off-by-one.** `offset = page * 20` is 0-indexed. If your API contract is 1-indexed (the common case — `?page=1` means the first page), then `page=1` produces `offset=20` and silently skips the first 20 rows. You probably want `(page - 1) * 20`.
+
+**3. No floor for negative/huge values.** `?page=-5` yields a negative offset (error in most databases). There's also no upper bound, so deep pagination (`?page=99999999`) is a cheap way to hammer the DB.
+
+**4. Missing radix.** `parseInt(x, 10)` is the safe habit; rely on the default and a leading-zero or unusual input can bite you.
+
+**5. `req.query.page` may be an array.** Express turns `?page=1&page=2` into `['1','2']`; `parseInt` then coerces it to the string `"1,2"` and parses `1`. Not a crash, but not what you intended either.
+
+A version that closes 1–4:
+
+```js
+const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+const offset = (page - 1) * 20;
+```
+
+The one thing I can't decide for you is **0- vs 1-indexed pages** — that depends on your API contract. If clients genuinely send 0-based pages, keep `page * 20` but still clamp the lower bound and handle `NaN`. Want me to adjust the fix for whichever convention you're using?

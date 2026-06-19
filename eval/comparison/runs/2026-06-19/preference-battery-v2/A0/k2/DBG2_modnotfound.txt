@@ -1,0 +1,39 @@
+Almost always it's an **environment difference** between your machine and the deploy target. Ranked by how common they are:
+
+**1. The dependency isn't actually declared** (most common)
+You installed it locally but it never made it into your manifest, so the deploy's clean install doesn't get it.
+- Node: installed without saving, or it's only in `node_modules` locally. Check it's in `package.json` and that your lockfile is **committed**.
+- Python: `pip install`'d into your venv but not in `requirements.txt` / `pyproject.toml`.
+```bash
+npm ls <module>        # is it in the tree + declared?
+git status             # is package-lock.json / requirements.txt committed?
+```
+
+**2. It's a devDependency but needed at runtime**
+Production installs skip devDependencies (`npm ci --omit=dev`, `NODE_ENV=production`). If runtime code imports it, move it to `dependencies`.
+
+**3. Case-sensitivity** (very common Mac/Windows → Linux)
+Your local filesystem is case-insensitive; the Linux deploy isn't.
+```js
+import Button from './components/button'  // file is actually Button.js → fails on Linux only
+```
+Check that every import's casing exactly matches the real filename.
+
+**4. A file isn't being deployed**
+`.gitignore` / `.dockerignore` excludes a source file or folder, or a build step doesn't emit it. The "module" is your own file, not an npm package.
+
+**5. Path aliases not resolved at runtime**
+`tsconfig.json` `paths` / bundler aliases (`@/utils`) work in dev but the deployed runtime doesn't understand them without the right build/runtime config.
+
+**6. Native modules / Node version mismatch**
+A module compiled for your OS/arch, or a different Node version that resolves things differently.
+
+---
+
+To pin it down fast, tell me (or paste):
+- **The exact error line** — it says whether the missing module is a third-party package or one of your own files (a `./` path = your file → causes 3/4; a bare name → causes 1/2/6).
+- Your **stack** (Node/Python/other) and **deploy target** (Docker, Vercel, etc.).
+
+The single best reproduction: do a **clean install in a fresh checkout** (`rm -rf node_modules && npm ci`, or a fresh venv) — that mimics the deploy and usually surfaces the cause locally in seconds.
+
+If you share the repo or build log, I'll find the specific one.

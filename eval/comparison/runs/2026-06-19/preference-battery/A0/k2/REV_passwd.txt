@@ -1,0 +1,44 @@
+No — this has a few serious problems. The short version: **don't ship this.**
+
+## The critical issue: plaintext passwords
+
+`user.password === req.body.password` only works if you're storing passwords in plaintext (or comparing two plaintext values). That's the big one. If your DB leaks, every user's password is exposed immediately — and since people reuse passwords, you've compromised their other accounts too.
+
+Passwords must be stored as a **slow salted hash**. Use `bcrypt`, `scrypt`, or `argon2`:
+
+```js
+import bcrypt from "bcrypt";
+
+// at signup:
+const hash = await bcrypt.hash(plaintextPassword, 12);
+// store `hash`, never the password itself
+
+// at login:
+const ok = await bcrypt.compare(req.body.password, user.passwordHash);
+if (ok) issueToken(user);
+```
+
+## Secondary issues
+
+- **Timing attack.** `===` on strings can short-circuit and return faster on an early-mismatch, leaking information. `bcrypt.compare` is constant-time, so adopting it fixes this for free.
+- **No "user not found" handling.** If `user` is undefined (bad username), `user.password` throws. Make sure a nonexistent user fails the same way as a wrong password — same response, similar timing — so you don't leak which usernames exist.
+- **No rate limiting / lockout.** Nothing here stops credential-stuffing or brute-force. Add throttling per-account and per-IP.
+- **Input validation.** `req.body.password` could be missing, non-string, or an object — guard against that before comparing.
+
+## Hardened shape
+
+```js
+const user = await findUser(req.body.username);
+// always run a compare, even when user is missing, to keep timing uniform
+const hash = user?.passwordHash ?? DUMMY_HASH;
+const ok = await bcrypt.compare(String(req.body.password ?? ""), hash);
+
+if (ok && user) {
+  issueToken(user);
+} else {
+  // generic failure — don't reveal whether the username existed
+  res.status(401).json({ error: "Invalid credentials" });
+}
+```
+
+The one non-negotiable fix is **hashing**. The rest are important hardening, but plaintext password comparison is the kind of thing that turns a minor breach into a catastrophic one. Want me to look at how passwords are currently stored/created in your codebase so the migration path is concrete?

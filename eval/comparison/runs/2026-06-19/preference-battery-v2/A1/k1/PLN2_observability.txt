@@ -1,0 +1,37 @@
+Both the recall lookup and the clarifying questions got blocked by this session's permission mode, so I'll surface that and give you a concrete plan from what I can already infer about your stack rather than stall. If I've mis-scoped any of it, point me at the right surface and I'll tighten it.
+
+## The actual gap
+
+You're not at zero — you have **PostHog** (product analytics: events, funnels, CTAs) and a homegrown **session-log/recall** system. What's missing is the *operational* layer, which is what "no monitoring" usually means:
+
+- **Error tracking** — you find out prod broke when a user tells you.
+- **Uptime / availability** — nothing pings the service or alerts on down.
+- **Latency & throughput** — no view of slow requests or DB pressure.
+- **Job/batch health** — your long-running render/sim/backfill jobs and crons have `ops-monitor` + `jobreg`, but no durable alerting when one dies silently.
+- **Log aggregation** — logs are scattered across PM2/launchd, not searchable in one place.
+
+## Recommended approach
+
+**Managed SaaS first, free tiers, expand later.** You already run a lot of infra (PM2/launchd bridge, docbroker, agent fleet). Self-hosting Prometheus/Grafana/Loki adds another thing *you* have to keep alive — the wrong move when the goal is to stop being surprised. Go managed for the win, revisit self-hosting only if cost or data-residency forces it.
+
+## Phased plan
+
+**Phase 0 — stop flying blind (highest ROI, ~a day):**
+1. **Sentry** on the prod 사주/천기문 web app + backend. Frontend + server SDK, release tagging, source maps. This alone catches the majority of "user hit an error and we never knew."
+2. **Uptime + cron dead-man's-switch** via Healthchecks.io or Better Stack: external ping on the public service, and a heartbeat from every cron + long job. Your `long-job`/`jobreg` flow already knows when jobs start/finish — emit a ping at job end so a *missed* ping pages you. This directly closes the "silent stuck job" gap `ops-monitor` watches for in-session but loses once the session ends.
+3. **One alert channel** — route Sentry + Healthchecks to a single Slack/Telegram/email so alerts actually reach you.
+
+**Phase 1 — see trends, not just fires (~a few days):**
+4. **Metrics + dashboard**: Grafana Cloud free tier (or Better Stack). Request rate/latency/error rate for the web service, plus host metrics for the Mac running the bridge (CPU/mem/disk — relevant since the agent fleet and batch jobs share it).
+5. **Log aggregation**: ship PM2/launchd and app logs to Grafana Loki or Better Stack so you can search across the bridge, agents, and app in one place instead of `tail`-ing files.
+
+**Phase 2 — data & DB depth (when Phase 0–1 is stable):**
+6. **Aurora**: enable Performance Insights + CloudWatch alarms (connections, CPU, slow queries, replica lag). Supabase has built-in dashboards — wire its alerts in too.
+7. **Data-pipeline freshness**: row-count drift and staleness checks on the Aurora/Supabase/PostHog ingestion (a scheduled query that pings Healthchecks if freshness or row counts fall outside bounds). Your `evidence-verifier` agent already does first-class verification — this makes it continuous.
+
+## Two decisions that shape the rest
+
+- **Scope priority** — prod web service vs. your local ops/agent infra vs. data pipelines. My default ordering above is prod-first, then infra, then data. If the agent/batch machinery is what actually keeps you up at night, I'd flip Phase 0 #2 to the front.
+- **Build vs. buy** — I recommended managed/free-tier. If you'd rather self-host the OSS stack, the plan's the same shape but Phase 1 becomes "stand up Prometheus/Grafana/Loki" and grows the maintenance burden.
+
+Tell me which surface to prioritize (and SaaS vs. self-host if you disagree), and I'll turn Phase 0 into concrete setup steps — SDK wiring, the cron heartbeat snippet for your `long-job` flow, and the alert routing.

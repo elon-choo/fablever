@@ -1,0 +1,46 @@
+For a new TypeScript project, **use Vitest.** Here's the reasoning:
+
+## Why Vitest
+
+**TypeScript & ESM work out of the box.** Vitest uses Vite/esbuild for transforms, so `.ts` files, ESM, and path aliases just run. With Jest you're wiring up `ts-jest` or `babel-jest`, dealing with `transform` config, and fighting ESM support that's still flagged experimental.
+
+**Speed.** Vitest runs tests in parallel with esbuild-based transforms and has a genuinely good watch mode (HMR-style — only reruns affected tests). Noticeably faster on most suites.
+
+**Jest-compatible API.** `describe`/`it`/`expect`, mocks, snapshots — all near drop-in. The mental model transfers, and migration guides exist if you ever need them.
+
+**Less config.** If you (or your stack) already use Vite, tests share one `vite.config.ts`. Even without Vite, setup is minimal.
+
+## When Jest still makes sense
+
+- **React Native** — the ecosystem is still Jest-centric.
+- **Large existing Jest investment** — custom transformers, niche reporters, deep `jest.mock` usage. (Not your case — this is a new project.)
+- **Org standardization** — your team/CI already mandates Jest.
+
+## Quick start
+
+```bash
+npm i -D vitest
+```
+
+```ts
+// vitest.config.ts
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    globals: true,        // optional: use describe/it/expect without imports
+    environment: 'node',  // or 'jsdom' / 'happy-dom' for browser-ish tests
+  },
+})
+```
+
+```jsonc
+// package.json
+"scripts": {
+  "test": "vitest",            // watch mode
+  "test:run": "vitest run",    // single run (CI)
+  "coverage": "vitest run --coverage"
+}
+```
+
+**Bottom line:** for a greenfield TS project, Vitest gives you better TS/ESM ergonomics and speed with essentially the same API — go with it unless you're on React Native or constrained by an existing Jest setup.

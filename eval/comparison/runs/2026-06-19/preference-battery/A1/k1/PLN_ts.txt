@@ -1,0 +1,39 @@
+Here's a battle-tested incremental path. The core idea: get TypeScript *tooling* in place first so nothing breaks, then convert file-by-file behind a strictness ratchet that prevents backsliding. You never need a big-bang rewrite.
+
+## Phase 0 — Tooling in, zero conversions
+
+Add TypeScript but keep every existing `.js` file working as-is.
+
+- Install `typescript` and a `tsconfig.json` with `allowJs: true`, `checkJs: false`, and **loose** strictness (`strict: false`, `noImplicitAny: false`). This lets `.ts` and `.js` coexist and import each other.
+- **Separate type-checking from transpiling.** Use your existing bundler (esbuild/swc/Babel) for builds — they strip types fast but *don't* type-check. Run `tsc --noEmit` purely as the type checker. If you have no bundler, `tsc` can emit, but for 30k lines the strip-only transpilers are much faster.
+- Wire `tsc --noEmit` into CI so it runs green on day one (it will, since nothing's checked yet). This is the gate you'll tighten later.
+
+## Phase 1 — Convert in dependency order, leaf-first
+
+Rename `.js` → `.ts` starting from files with the fewest internal imports: constants, pure utils, then shared types, then the modules that depend on them. Working leaf-first means each file you convert imports already-typed code, so types flow inward instead of fighting `any` everywhere.
+
+- For a codebase this size, **`ts-migrate` (Airbnb's tool)** can bulk-rename and auto-insert `any`/`@ts-ignore` stubs so the whole thing compiles immediately. Then you replace the stubs incrementally. Good if you want everything as `.ts` fast; skip it if you'd rather convert deliberately.
+- Add `@types/*` packages for your dependencies. For untyped third-party modules, drop a `declare module 'foo';` in a `globals.d.ts` to unblock, and tighten later.
+- Convert one module per PR. Small PRs keep review sane and isolate type-error blast radius.
+
+## Phase 2 — Ratchet strictness
+
+Don't aim for `strict: true` on the first pass — turn flags on one at a time across the whole project, fix the fallout, commit:
+
+1. `noImplicitAny` — forces real signatures (the highest-value flag).
+2. `strictNullChecks` — the biggest behavior-correctness win; also the most work.
+3. Then `strictFunctionTypes`, `noImplicitThis`, etc., and finally flip `strict: true`.
+
+For JS files you haven't converted yet, add `// @ts-check` at the top of a few and type them with **JSDoc** — you get checking without renaming, useful for files that are risky to touch.
+
+## Phase 3 — Prevent backsliding
+
+The migration fails if new untyped code leaks in, so make the ratchet structural:
+
+- Once `tsc --noEmit` is clean for converted files, make it a **required CI check**. It now blocks regressions.
+- Use an ESLint rule (`@typescript-eslint/no-explicit-any`) at warn level, and a project-wide alias like `type FixMe = any` for deliberate temporary holes — grep-able so you can burn them down.
+- Track a simple `.ts`-vs-`.js` file count in CI output as a progress signal.
+
+**Two decisions that change the specifics:** (1) your current build setup — a bundler vs plain Node vs a framework like Next/Vite changes the transpile config; (2) whether you want everything renamed-to-`.ts`-fast (`ts-migrate`) or converted deliberately module-by-module.
+
+If you point me at the actual repo, I'll read the build setup and generate the `tsconfig.json` plus the first conversion batch in dependency order rather than leaving it abstract.

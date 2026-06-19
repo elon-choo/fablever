@@ -1,0 +1,38 @@
+EADDRINUSE means *something already holds that address/port* — the "nothing obvious is running" part is almost always one of a handful of non-obvious holders. Here's how to find it and the usual suspects, roughly in order of likelihood:
+
+## First, find the actual holder
+
+```bash
+# macOS / Linux — replace 3000 with your port
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+# or
+lsof -nP -i:3000           # shows non-LISTEN states too (TIME_WAIT, etc.)
+```
+
+That one command usually ends the mystery — it prints the PID and command name. Then `kill <PID>` (or `kill -9` if stubborn).
+
+## Why "nothing" is actually something
+
+1. **A zombie copy of your own app.** A previous run got detached, backgrounded, or a file-watcher (`nodemon`, `ts-node-dev`, `next dev`) spawned a child that outlived the parent, or restarted before the old one released the socket. The `lsof` above will show a `node` PID you forgot about — `pkill -f node` or kill the specific PID.
+
+2. **PM2 / launchd / pm2-resurrect auto-restarting it** — *this is very likely on your machine specifically*, since your Mac runs a PM2/launchd bridge. PM2 keeps a process registered and respawns it the instant it dies, so your manual `node` start finds the port already taken by PM2's copy. Check:
+   ```bash
+   pm2 list
+   pm2 stop <name>     # or: pm2 delete <name>
+   ```
+
+3. **macOS system services on the "free" port.** On macOS Monterey+, **AirPlay Receiver listens on ports 5000 and 7000**. Control Center also grabs some. If your port is 5000/7000 and `lsof` shows `ControlCe`/`AirPlay`, turn off System Settings → General → AirDrop & Handoff → AirPlay Receiver, or just use another port.
+
+4. **A Docker container publishing the port.** `docker ps` — a `-p 3000:3000` mapping holds the host port even when no `node` is visible. `docker stop <id>`.
+
+5. **A stale Unix domain socket file** (if you `listen()` on a path, not a TCP port). Node throws EADDRINUSE when the `.sock` file already exists on disk. Fix by `unlink`-ing it on startup or before binding.
+
+6. **Double-binding inside your own process.** Calling `server.listen()` twice, two `createServer().listen(samePort)`, or cluster workers each binding the same port without sharing the handle. This fires EADDRINUSE with *zero* external processes — `lsof` shows nothing because it's you, twice. Grep your code for multiple `.listen(`.
+
+7. **IPv4/IPv6 dual-stack collision.** One server bound to `0.0.0.0:3000` and another to `:::3000` (or `localhost` resolving to `::1`) can collide. Pin the host explicitly.
+
+Note: classic **TIME_WAIT** is *usually not* the cause in Node — it sets `SO_REUSEADDR` on `listen()` by default, so freshly-closed sockets in TIME_WAIT don't block a rebind. If you see TIME_WAIT blocking you, you're likely binding a raw socket without that option.
+
+---
+
+If you tell me the **port** and whether it's TCP or a `.sock` path, I can run the `lsof`/`pm2 list`/`docker ps` checks for you and pinpoint the holder.

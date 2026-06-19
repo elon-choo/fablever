@@ -1,0 +1,30 @@
+For an analytics dashboard dominated by aggregate reads, **pick Postgres.** It's the better fit on almost every axis that matters here.
+
+## Why Postgres wins for this workload
+
+**Aggregation is its home turf.** `GROUP BY`, window functions, `GROUPING SETS`/`ROLLUP`/`CUBE`, `FILTER` clauses, CTEs, percentiles — all first-class and heavily optimized. MongoDB's aggregation pipeline can do most of this, but it's more verbose, harder to optimize, and you'll hit awkward edges (e.g. multi-stage `$group` + `$lookup` joins).
+
+**Joins.** Analytics almost always means slicing facts by dimensions (user, campaign, region, time bucket). Postgres does this natively and efficiently. In MongoDB, joins (`$lookup`) are second-class and slow at scale, which pushes you toward denormalization — fine until a dimension attribute changes and you must rewrite millions of embedded copies.
+
+**Indexing for read-heavy aggregates.** Postgres gives you partial indexes, expression indexes, covering indexes (`INCLUDE`), and BRIN indexes (excellent for append-only time-series — tiny and fast for range scans).
+
+**Materialized views.** Precompute expensive rollups and refresh on a schedule — a natural fit for dashboards where data is read far more than it's written.
+
+**SQL + ecosystem.** Every BI tool (Metabase, Superset, Tableau, Looker) speaks SQL natively. Analysts can self-serve.
+
+## When MongoDB would actually be the better call
+- Documents are genuinely schema-variable / deeply nested and you rarely aggregate across them.
+- The dashboard is mostly fetch-by-key or simple filters, not cross-dimensional rollups.
+- You're already all-in on Mongo operationally and the analytics load is light.
+
+## The caveat worth knowing
+If "heavy aggregate reads" means **billions of rows or high-concurrency sub-second dashboards**, vanilla Postgres can struggle, but the answer is still the Postgres family, not Mongo:
+- **TimescaleDB** (Postgres extension) — continuous aggregates + compression for time-series.
+- A **columnar engine** — ClickHouse, DuckDB, or a warehouse (BigQuery/Snowflake/Redshift) — if it's truly OLAP-scale.
+
+Columnar storage beats row-based Postgres *and* document-based Mongo for big aggregate scans, so at extreme scale the real competition is Postgres-vs-columnar, not Postgres-vs-Mongo.
+
+## Bottom line
+Default to **Postgres**. Start there, add materialized views / TimescaleDB if read latency becomes a problem, and only graduate to a dedicated columnar/OLAP store if you cross into hundreds-of-millions-to-billions of rows. MongoDB is the wrong default for aggregate-heavy analytics.
+
+Want me to sketch a schema (star schema + materialized rollups) for your specific dashboard?

@@ -1,0 +1,16 @@
+**pnpm.** For a fresh monorepo it's the strongest default in 2026.
+
+Why it wins for monorepos specifically:
+
+- **Workspaces are first-class and fast.** `pnpm-workspace.yaml` plus its content-addressed store means installs are quick and disk-cheap even with many packages, and its filtering (`pnpm --filter ./packages/foo build`, `--filter ...^`) is the best built-in story for running tasks across a dependency graph.
+- **Strict by default.** The symlinked `node_modules` layout blocks phantom dependencies — a package can only import what it actually declares. That catches a whole class of bugs that npm and yarn (classic) silently allow, and it matters more as a monorepo grows.
+- **It's the de facto standard now.** Most modern monorepo tooling (Turborepo, Nx) assumes or recommends pnpm, and the ecosystem momentum is clearly there.
+
+When I'd pick something else:
+
+- **npm** — only if you want zero extra toolchain and the repo is small with few cross-package deps. Its workspaces work but lack pnpm's speed, strictness, and filtering ergonomics.
+- **Yarn (modern, Berry w/ PnP)** — if you specifically want Plug'n'Play (no `node_modules` at all) or its constraints/plugin system. Powerful, but PnP still causes occasional tooling friction, so it's a more deliberate choice than a safe default.
+
+One practical note: pin the version with Corepack so everyone uses the same release — add `"packageManager": "pnpm@<version>"` to the root `package.json`.
+
+If you're also choosing a task runner, the common pairing is **pnpm + Turborepo** for caching and orchestration. Want me to scaffold the workspace layout?

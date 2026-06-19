@@ -1,0 +1,32 @@
+For a small startup, **use a managed auth provider — don't roll your own.** That's the default, and the bar for deviating from it is high. Here's the reasoning and the nuance.
+
+## Why not write your own
+
+Auth looks like "check a password, set a cookie" but the real surface area is huge and unforgiving:
+
+- Password hashing (bcrypt/argon2 + correct params), secure session/token handling, CSRF, secure cookie flags
+- Email verification, password reset flows (the reset-token logic is where many homegrown systems leak)
+- Rate limiting, brute-force/credential-stuffing protection, account lockout
+- MFA/TOTP, and eventually SSO/SAML when your first enterprise customer asks
+- Social logins (Google/GitHub/Apple) and their OAuth quirks
+- Ongoing maintenance: every CVE, every "sign in with X" API change is now your problem
+
+A bug in any of these is a breach, not a bug ticket. As a small team, the time you'd spend getting this *right* (not just working) is time not spent on your actual product. The opportunity cost is the real argument, even more than the security one.
+
+## But Auth0 specifically?
+
+Auth0 is solid but **pricing is its well-known weakness** — it gets expensive fast as you grow, and the jump between tiers (especially to get features like SSO or attack protection) can be steep. So I'd treat "managed auth" and "Auth0" as separate decisions. Strong alternatives worth a look for a small startup:
+
+| Option | Good fit when |
+|---|---|
+| **Clerk** | Web/React/Next.js app, want drop-in UI components — fastest to ship |
+| **Supabase Auth** | Already using Supabase/Postgres; generous free tier, you own the data |
+| **WorkOS** | You expect to sell to enterprises soon (SSO/SCIM is their core) |
+| **AWS Cognito** | Already deep in AWS, cost-sensitive, willing to tolerate rougher DX |
+| **Auth0** | Need maturity/breadth and the pricing fits your stage |
+
+## The honest exception
+
+Rolling your own can make sense if auth *is* part of your product (you're building an identity/security product), or your needs are genuinely trivial and isolated (an internal tool, a single API key). For a typical user-facing startup, neither usually holds.
+
+**My recommendation:** pick a managed provider, and choose based on your stack and where you're selling. If you tell me your tech stack (frontend framework, backend, whether you're on Supabase/AWS already) and whether enterprise SSO is on your roadmap, I'll narrow it to one.

@@ -1,0 +1,75 @@
+Hoisting is JavaScript's behavior of moving *declarations* to the top of their scope before any code runs. The key nuance: the declaration is hoisted, but the **assignment** (the value) stays put. What differs between `var`, `let`/`const`, and functions is *whether* and *how* the name is usable before its line.
+
+## `var` — hoisted and initialized to `undefined`
+
+A `var` declaration is hoisted to the top of its function (or global) scope and immediately initialized to `undefined`. So reading it before the assignment line gives `undefined`, not an error.
+
+```js
+console.log(x); // undefined — declaration hoisted, assignment not
+var x = 5;
+console.log(x); // 5
+```
+
+The engine effectively treats it as:
+
+```js
+var x;          // hoisted, x === undefined
+console.log(x);
+x = 5;
+```
+
+Note `var` is scoped to the enclosing *function*, not the block — so a `var` inside an `if` is still hoisted to the top of the function.
+
+## `let` and `const` — hoisted but *not* initialized (the TDZ)
+
+`let` and `const` are also hoisted, but they are **not** initialized. From the start of the block until the declaration line executes, the variable sits in the **Temporal Dead Zone (TDZ)**. Touching it there throws:
+
+```js
+console.log(y); // ReferenceError: Cannot access 'y' before initialization
+let y = 5;
+```
+
+This is why people sometimes say "let isn't hoisted" — it's a useful half-truth. The name *is* reserved at the top of the block (so it shadows any outer `y`), but you can't read or write it until its line runs. `const` behaves the same way and additionally requires an initializer.
+
+## Function declarations — fully hoisted
+
+A function *declaration* is hoisted entirely — name **and** body — so you can call it before it appears in the source:
+
+```js
+greet(); // "hi" — works
+function greet() {
+  console.log("hi");
+}
+```
+
+## Function *expressions* follow their variable's rules
+
+When a function is assigned to a variable, only the variable is hoisted, by the rules above — not the function body:
+
+```js
+speak(); // TypeError: speak is not a function (var: hoisted as undefined)
+var speak = function () {
+  console.log("hello");
+};
+```
+
+With `let`/`const` the same call throws a `ReferenceError` instead, because of the TDZ. Arrow functions are always expressions, so they never get the full-function-declaration treatment.
+
+## Precedence and a gotcha
+
+Function declarations are hoisted *above* `var` declarations of the same name. And only the declaration is hoisted, so reassignment can surprise you:
+
+```js
+console.log(fn); // [Function: fn] — function decl wins over the var
+var fn = 1;
+function fn() {}
+console.log(fn); // 1 — the assignment ran
+```
+
+## Practical takeaways
+
+- Prefer `let`/`const` — the TDZ turns "silent `undefined`" bugs into loud errors, and block scoping matches how most people reason about code.
+- Declare before use; don't lean on hoisting for ordering. The one reasonable exception is calling a top-level `function` declaration before its definition, which is idiomatic.
+- Remember hoisting is *per scope*: `var` to the function, `let`/`const`/function to the block.
+
+A one-line mental model: **`var` = "declared and `undefined`", `let`/`const` = "declared but off-limits until its line", function declaration = "fully ready early."**

@@ -1,0 +1,52 @@
+For a form with 8 fields, the answer depends less on field *count* and more on how the fields interact. Here's the practical breakdown:
+
+## Use `useState` if...
+- The fields are mostly independent (each just stores its own value)
+- Updates are simple `onChange` → `setValue`
+- You don't have complex validation/derived state interactions
+
+With a single object you avoid 8 separate hooks:
+
+```jsx
+const [form, setForm] = useState({
+  firstName: '', lastName: '', email: '', phone: '',
+  address: '', city: '', zip: '', country: '',
+});
+
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  setForm(prev => ({ ...prev, [name]: value }));
+};
+
+// <input name="email" value={form.email} onChange={handleChange} />
+```
+
+This is clean, scales fine to 8 fields, and is what most forms actually need.
+
+## Use `useReducer` if...
+- Updates involve **logic** beyond "set this value" (e.g., changing `country` resets `zip`, toggling a mode clears several fields)
+- You have **multi-step flows**, validation state, dirty/touched tracking, submit/error states bundled together
+- You want update logic **testable and centralized** instead of scattered across handlers
+
+```jsx
+function formReducer(state, action) {
+  switch (action.type) {
+    case 'change':
+      return { ...state, [action.field]: action.value };
+    case 'reset':
+      return initialState;
+    case 'submitStart':
+      return { ...state, status: 'submitting', errors: {} };
+    default:
+      return state;
+  }
+}
+```
+
+## My recommendation
+
+**Start with `useState`** (single object). 8 fields alone doesn't justify a reducer — that's a count, not a complexity signal. Reach for `useReducer` only once you notice update logic branching or state values depending on each other.
+
+One more option worth naming: if this form grows validation, async submission, and error handling, a form library (**React Hook Form**) will save you more than either hook — it also avoids re-rendering on every keystroke, which the single-`useState`-object approach does not.
+
+Want me to sketch the version that fits your actual fields and validation needs?

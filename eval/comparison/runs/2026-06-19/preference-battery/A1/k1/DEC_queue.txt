@@ -1,0 +1,13 @@
+Short version: **if you already run Postgres and your volume is modest (say under a few hundred jobs/sec), use a DB table. Reach for BullMQ once you actually need retries-with-backoff, scheduling, rate limiting, and concurrency control out of the box. Use a cloud queue (SQS/Cloud Tasks) only when you want zero queue infrastructure to operate or need to decouple across services.**
+
+The deciding factor isn't really the three options — it's whether you already have Redis and how much you'll lean on queue features.
+
+**DB table** — best when you already have a database and don't want a new dependency. You get transactional enqueue (the job and your business write commit together, no dual-write race), trivial visibility (it's just rows you can query), and it survives restarts for free. The cost is you hand-build the parts: `SELECT ... FOR UPDATE SKIP LOCKED` for safe concurrent pickup, a polling loop, retry/backoff logic, and a dead-letter convention. Fine for emails, webhooks, report generation. Don't push it to high-throughput fan-out.
+
+**BullMQ** — best when the queue *is* a core part of the app: thousands of jobs/sec, delayed/repeatable jobs, per-queue rate limits, priorities, flows/dependencies, a ready-made dashboard (Bull Board). The cost is operating Redis, and that enqueue is no longer transactional with your DB — if the request fails after the job is added, you can get an orphan job. It's the right default for a Node app that needs a *real* queue and can run Redis.
+
+**Cloud queue** — best when you're already on AWS/GCP, want managed durability and scaling with no ops, or need to hand work between separate services/languages. The cost is local-dev friction, vendor lock-in, and weaker first-class Node ergonomics than BullMQ.
+
+My default for a typical single-Node-app starting point: **DB table if you have Postgres, BullMQ the moment you outgrow it.** Skip cloud queues unless you're already living in that cloud or crossing service boundaries.
+
+Two questions decide it for your case — do you already run Redis, and roughly what job volume and feature needs (delays? scheduling? rate limits?) are you expecting? Tell me those and I'll commit to one.

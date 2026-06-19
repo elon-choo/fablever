@@ -1,0 +1,23 @@
+The fastest way to crack this is to first bisect where the duplication happens: **open the browser Network tab, reproduce, and count the outgoing requests.** That one observation splits the problem in half.
+
+**Two requests leave the browser → it's client-side.** The usual culprits:
+
+- *The handler is bound twice.* In the devtools console run `getEventListeners(formEl)` (Chrome) — if `submit` has two entries, something attaches the listener more than once: a component that re-mounts, hot-reload leftovers, or a script included twice. React 18 StrictMode also double-invokes effects/handlers in dev only, so check whether it reproduces in a production build.
+- *Two paths both submit.* A `type="submit"` button inside a form that also has its own `onClick`/`onSubmit`, or an AJAX submit where you forgot `e.preventDefault()` so the JS request fires *and* the native form posts.
+- *A real double-click.* On a slow network the user taps twice before the button disables. The tell: two requests 100–300ms apart from one gesture.
+
+To tell these apart, instrument the handler before anything else:
+
+```js
+form.addEventListener('submit', (e) => {
+  console.log('submit', performance.now(), e.isTrusted);
+});
+```
+
+Per single click: two logs a few ms apart = double binding; one log = it's firing once in JS but the default isn't prevented; `isTrusted: false` on one = a synthetic/programmatic submit somewhere. A larger gap (>100ms) with two real clicks = debounce/disable problem.
+
+**One request leaves the browser but the server records two → it's server-side.** Look at fetch/axios retry config (a retry-on-timeout will resend if the first response is slow), proxy or load-balancer retries, service-worker replay, or at-least-once message redelivery if a queue sits behind the endpoint.
+
+Two things worth adding regardless of cause, because they also help you diagnose: stamp each form render with a unique nonce and send it with the submit — identical nonce on both hits means the same gesture duplicated; different nonces mean two genuine submissions. And disable the button on first submit, which both fixes the double-click case and makes the binding/retry cases stand out cleanly in the logs.
+
+If you tell me the stack (vanilla JS, React, server framework) or paste the submit code, I can point at the specific line.

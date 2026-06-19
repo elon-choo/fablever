@@ -1,0 +1,32 @@
+For a content-heavy marketing site, **server-side rendering — and ideally static generation (SSG) — is almost certainly the right call.** CSR is the wrong fit here. Here's the reasoning:
+
+## Why not CSR
+
+A client-rendered app ships a near-empty HTML shell plus a JS bundle, then fetches and renders content in the browser. For a marketing site that's a bad trade:
+
+- **SEO suffers.** Crawlers and link-preview bots (Google, Slack, Twitter/X, LinkedIn) see an empty shell on first load. Google *can* execute JS, but it's slower, flakier, and many social/preview bots don't run JS at all — so your Open Graph cards and meta tags break.
+- **Slow first paint.** Users stare at a blank screen until the bundle downloads, parses, and the data fetch resolves. Marketing traffic is often mobile / cold-cache / ad-clicks — exactly the audience that bounces on slow loads.
+- **Content is the product.** On a marketing site the content *is* the thing. Making it depend on JS execution adds fragility for no benefit.
+
+## What to actually pick
+
+For mostly-static content (landing pages, blog, docs, pricing):
+
+- **SSG / prerendering** is the sweet spot. Pages are built to HTML ahead of time and served from a CDN — fastest possible load, perfect SEO, trivial to scale, cheap to host.
+- **SSR** when content is dynamic/personalized or updated frequently enough that rebuilds are impractical (e.g. per-request data, A/B logic, localization).
+- **ISR / on-demand revalidation** (Next.js and similar) blends both: static speed with periodic or triggered regeneration. Great default for a CMS-backed marketing site.
+
+In practice you don't pick one globally — frameworks let you choose per-route. Static-generate the landing/blog pages, SSR the few dynamic ones, and hydrate interactive islands (nav, forms, animations) on top.
+
+## Rule of thumb
+
+| Signal | Lean SSG/SSR |
+|---|---|
+| SEO / shareability matters | ✅ strongly |
+| Content mostly static | ✅ SSG |
+| Content dynamic/personalized | ✅ SSR or ISR |
+| Highly interactive app behind login (dashboard) | CSR is fine there |
+
+**Bottom line:** go SSR, and prefer static generation (SSG/ISR) wherever the content allows. Reserve CSR for interactive, authenticated app sections — not for the marketing pages themselves.
+
+If you tell me your stack (Next.js, Astro, SvelteKit, plain React, etc.) I can give you a concrete per-route rendering strategy.

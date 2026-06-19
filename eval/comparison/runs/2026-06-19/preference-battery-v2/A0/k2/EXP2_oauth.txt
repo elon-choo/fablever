@@ -1,0 +1,99 @@
+# OAuth2 Authorization Code Flow
+
+The authorization code flow is the most common and secure OAuth2 grant type, designed for apps that have a **backend server** that can keep a client secret confidential. It exchanges a short-lived "code" for tokens through a back-channel, so access tokens never pass through the browser.
+
+## The participants
+
+| Role | Who it is |
+|------|-----------|
+| **Resource Owner** | The user who owns the data |
+| **Client** | Your application requesting access |
+| **Authorization Server** | Issues codes & tokens (e.g. Google, GitHub, Auth0) |
+| **Resource Server** | The API holding the protected data |
+
+## The flow, step by step
+
+```
+  User        Client (your app)      Authorization Server      Resource Server
+   │                 │                        │                       │
+   │  1. clicks      │                        │                       │
+   │  "Log in" ─────▶│                        │                       │
+   │                 │  2. redirect to /authorize                     │
+   │◀────────────────┤───────────────────────▶│                       │
+   │  3. login + consent                      │                       │
+   │────────────────────────────────────────▶│                       │
+   │  4. redirect back with ?code=abc123      │                       │
+   │◀─────────────────────────────────────────┤                       │
+   │  ──────────────▶│                        │                       │
+   │                 │  5. POST /token                                │
+   │                 │  (code + client_secret)│                       │
+   │                 │───────────────────────▶│                       │
+   │                 │  6. access_token (+ refresh_token)             │
+   │                 │◀───────────────────────┤                       │
+   │                 │  7. call API with access_token                 │
+   │                 │───────────────────────────────────────────────▶│
+   │                 │  8. protected data                             │
+   │                 │◀───────────────────────────────────────────────┤
+```
+
+1. **Initiate** — User clicks "Log in with X."
+2. **Authorization request** — Client redirects the browser to the authorization server's `/authorize` endpoint:
+   ```
+   GET /authorize?
+     response_type=code
+     &client_id=YOUR_CLIENT_ID
+     &redirect_uri=https://app.com/callback
+     &scope=read:profile
+     &state=xyz123              ← random, anti-CSRF
+   ```
+3. **Authenticate & consent** — User logs in and approves the requested scopes (this happens entirely on the authorization server, so the client never sees the password).
+4. **Authorization code returned** — The browser is redirected back to `redirect_uri` with a short-lived `code` (and the `state` echoed back):
+   ```
+   https://app.com/callback?code=abc123&state=xyz123
+   ```
+5. **Token exchange (back channel)** — The client's **server** POSTs the code to the `/token` endpoint, authenticating itself with its `client_secret`:
+   ```
+   POST /token
+     grant_type=authorization_code
+     &code=abc123
+     &redirect_uri=https://app.com/callback
+     &client_id=YOUR_CLIENT_ID
+     &client_secret=YOUR_SECRET
+   ```
+6. **Tokens issued** — The server returns an `access_token`, usually a `refresh_token`, and metadata:
+   ```json
+   {
+     "access_token": "eyJ...",
+     "token_type": "Bearer",
+     "expires_in": 3600,
+     "refresh_token": "def456",
+     "scope": "read:profile"
+   }
+   ```
+7. **Access the API** — The client calls the resource server with `Authorization: Bearer eyJ...`.
+8. **Refresh** — When the access token expires, the client uses the `refresh_token` to get a new one without involving the user again.
+
+## Why the two-step (code → token) dance?
+
+The redirect in step 4 travels through the **browser/URL**, where it can leak (logs, history, referrer headers). By making it a *one-time, short-lived code* that's useless without the `client_secret`, the actual tokens only ever travel over a direct, authenticated server-to-server call.
+
+## Key security points
+
+- **`state` parameter** — A random value you generate and verify on return; prevents CSRF.
+- **`redirect_uri` must be pre-registered** and exactly matched — stops codes being sent to an attacker.
+- **Authorization code is single-use and short-lived** (typically ~10 min/30–60 sec).
+- **Client secret never reaches the browser** — that's the whole point of this flow.
+
+## PKCE — the modern default
+
+For **SPAs and mobile apps** that *can't* hold a secret, use **Authorization Code + PKCE** (Proof Key for Code Exchange, RFC 7636):
+
+1. Client generates a random `code_verifier` and sends its hash (`code_challenge`) in step 2.
+2. In step 5, it sends the original `code_verifier`.
+3. The server checks the hash matches — proving the same client that started the flow is finishing it.
+
+PKCE is now recommended **even for confidential (server-side) clients**, so in practice the "authorization code flow with PKCE" is today's baseline for almost every app.
+
+---
+
+Want me to show this for a specific provider (Google, GitHub, Auth0…), a concrete code example in some language, or how it compares to the other OAuth2 grant types?

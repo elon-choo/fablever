@@ -1,0 +1,29 @@
+A couple of things, depending on what `userInput` can hold:
+
+**1. `== ''` is the real trap — loose equality coerces.** Empty string compares by *numeric* coercion, so these all match unexpectedly:
+
+```js
+0     == ''  // true  ❗
+false == ''  // true  ❗
+[]    == ''  // true  ❗
+```
+
+So a legitimate `0` (number field) or `false` (checkbox) gets rejected. Use strict `===`:
+
+```js
+if (userInput == null || userInput === '') { reject(); return; }
+```
+
+**2. `== null` is fine — keep it.** That one's the deliberate idiom: `x == null` is true for *both* `null` and `undefined` and nothing else. Don't "fix" it to `=== null`, or you'll stop catching `undefined`.
+
+**3. Probably missing a `return`/`else`.** Unless `reject()` throws, execution falls through and keeps running with the bad input. Add `return` (or wrap the valid path in `else`).
+
+**4. Whitespace slips through.** `"   "` is neither `null` nor `''`, so it passes. If blank-ish should be rejected:
+
+```js
+if (userInput == null || String(userInput).trim() === '') { reject(); return; }
+```
+
+— but note that also rejects `0`/`false` again (they stringify to `"0"`/`"false"`, which are non-empty, so actually they're *safe* here). Pick #1 if `0`/`false` are valid inputs; pick #4 if `userInput` is always meant to be a string and whitespace counts as empty.
+
+The one I'd actually flag in review is **#1** — silent rejection of falsy-but-valid values is a classic source of "why won't my form accept 0" bugs.

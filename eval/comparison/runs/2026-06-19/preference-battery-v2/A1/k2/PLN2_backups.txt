@@ -1,0 +1,5 @@
+No problem — I'll default to the most likely target and you can redirect if I'm off.
+
+I'll assume the gap is the **Aurora PostgreSQL production database** (the revenue/user data — the one worth protecting first). Given Aurora always keeps a continuous backup window, the practical work is layers 2–6 above: extend retention and take a snapshot now, add encrypted off-account `pg_dump` copies, set up cross-region snapshot copy, run a restore test, and wire in monitoring.
+
+I can't execute any of that from this session — there's no `aws`/`psql`/`pg_dump` on the bridge and the sandbox is restricted to `/tmp`. So to move from plan to implementation I need either AWS CLI access (with credentials/role that can touch the cluster) in an environment I can run in, or for you to run a verification command I hand you. The honest first step is checking the current Aurora retention and Supabase tier so we're fixing the real gap rather than the assumed one — tell me how you want to grant that access and I'll start there.

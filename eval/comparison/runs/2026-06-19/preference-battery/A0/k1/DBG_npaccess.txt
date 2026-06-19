@@ -1,0 +1,24 @@
+The error message itself tells you exactly where it breaks: `u.profile` is `undefined`, and you're reading `.name` off of it.
+
+Note the wording — it's "cannot read property **name** of undefined", *not* "...property **profile** of undefined". That distinction matters:
+
+- If `u` were undefined, the error would mention `profile`.
+- Since it mentions `name`, `u` is fine — it's `u.profile` that's missing.
+
+So it's **data-dependent**, which is why it's only "sometimes": for most records `db.find(id)` returns a user that *has* a `profile`, but some records come back with no `profile` field (or `profile: null`/`undefined`). When you hit one of those, `u.profile.name` throws.
+
+Common causes for the missing `profile`:
+- Some users genuinely have no profile row/field (optional relation, not-yet-completed signup, soft-deleted, etc.).
+- `db.find(id)` found nothing and returns `undefined` for the *whole* record — but that would throw on `.profile`, so that's a **separate** failure mode worth guarding too.
+
+Fix with optional chaining, and decide what "no profile" should return:
+
+```js
+async function getUser(id) {
+  const u = await db.find(id);
+  if (!u) throw new Error(`No user for id ${id}`); // or return null
+  return u.profile?.name ?? null;                  // null instead of crashing
+}
+```
+
+If a missing profile is genuinely an error in your domain, throw a clear message instead of returning `null` — but either way, the silent `.profile.name` chain is what's biting you. To confirm the root cause, log the offending record (`console.log(id, u)`) right before the return and check which IDs come back without a `profile`.

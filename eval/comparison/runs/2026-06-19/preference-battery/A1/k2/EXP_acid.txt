@@ -1,0 +1,21 @@
+ACID is a set of four guarantees a database makes about transactions — a transaction being any group of operations you want treated as a single unit (e.g. "move $100 from account A to account B," which is really two writes). The acronym stands for Atomicity, Consistency, Isolation, and Durability.
+
+**Atomicity** — all or nothing. Either every operation in the transaction happens, or none of them do. In the money-transfer example, you can never end up in a state where A was debited but B was never credited. If anything fails partway, the whole thing rolls back.
+
+**Consistency** — a transaction moves the database from one valid state to another, never leaving it in a state that violates its rules (constraints, foreign keys, data types). If a transaction would break a rule, it's rejected wholesale.
+
+**Isolation** — concurrent transactions don't step on each other. Even when many run at the same time, the result is as if they ran one after another. This is what stops two people from both "successfully" booking the last seat on a flight. (In practice databases offer tunable isolation *levels* that trade strictness for speed — this is the property with the most nuance.)
+
+**Durability** — once the database confirms a transaction committed, it stays committed, even if the power dies one millisecond later. The data is written somewhere persistent, not just held in memory.
+
+**Why you should care:**
+
+The practical payoff is that you can reason about your data as if failures and concurrency don't exist. Without ACID, *you* have to write application code to handle every crash-in-the-middle and every race between simultaneous users — which is brutally hard to get right. ACID pushes that burden down into the database, which has spent decades solving it.
+
+Where it actually bites you:
+
+- **Money, inventory, bookings, anything that must balance.** If your data has invariants that can't be violated even briefly, you want a database that gives you these guarantees (most traditional SQL databases — PostgreSQL, MySQL/InnoDB, SQLite — do).
+- **Choosing a database.** Many NoSQL and distributed systems relax some of these (often Consistency/Isolation) to get more speed and scale, advertising "eventual consistency" instead. That's a fine trade for a social feed or analytics, and a dangerous one for a bank ledger. Knowing ACID lets you read that trade-off honestly instead of being surprised by it.
+- **Isolation levels specifically.** Even within an ACID database, the default isolation level may allow subtle anomalies (a value changing between two reads in the same transaction, for instance). When you hit a weird concurrency bug under load, this vocabulary is what lets you diagnose and fix it.
+
+The one-sentence version: ACID is the database promising that your transactions are reliable under failure and concurrency, so you don't have to reinvent that reliability yourself — and you should care because the alternative is writing very hard, very bug-prone code by hand.

@@ -1,0 +1,14 @@
+Use a managed provider, not your own. For a small startup, hand-rolling auth is almost always the wrong place to spend your limited engineering time — and the security downside is real, since the failure mode isn't "it doesn't work," it's "it works until someone exploits the session handling or password reset flow you didn't have time to get right."
+
+That said, I'd push back gently on Auth0 specifically. It's solid, but its pricing has a reputation for jumping sharply once you cross from the free tier into paid MAU bands or need features like SSO/SAML, and migrating off later is painful because your users' identities live in their system. For a small startup the more common picks today are:
+
+- **Clerk** — best-in-class developer experience and prebuilt React/Next.js UI components; fastest to ship. Pricing is MAU-based and also climbs as you grow.
+- **Supabase Auth** — cheap, open-source, and you own the Postgres user table; great if you're already using Supabase or want to avoid lock-in. Less polished UI out of the box.
+- **AWS Cognito** — cheapest at scale and won't surprise you on the bill, but the developer experience is rough.
+- **Auth0** — most mature/enterprise-ready, good if you'll need compliance and SSO sales features soon.
+
+What "write your own" actually means doing well: password hashing, secure session/token handling, email verification, password reset, rate limiting, and eventually MFA, OAuth social logins, and account recovery. Each is a known footgun. The only cases where rolling your own makes sense are unusual auth requirements a provider can't model, a hard requirement to keep all identity data in-house, or strict cost constraints at large scale where you have the security expertise to do it safely.
+
+My concrete recommendation: start with Clerk or Supabase Auth depending on whether you value speed-to-ship (Clerk) or low cost and data ownership (Supabase). Both get you to production in a day and let you move faster on the product that actually differentiates you.
+
+If you tell me your stack (e.g. Next.js, Rails, plain Node) and whether you expect to sell to enterprises, I can narrow it to one.

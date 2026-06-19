@@ -1,0 +1,30 @@
+For a small one-off cleaning script, default to **plain Python**. Here's the reasoning:
+
+**Plain Python wins when:**
+- The file is small enough to not need vectorized speed (a few thousand rows, or anything that streams line-by-line).
+- It's a script you'll run once and throw away — `import pandas` alone is ~0.5–1s of startup, and the install/env footprint is real if it's not already there.
+- The logic is row-by-row: filtering, fixing delimiters, stripping whitespace, dropping bad lines. The `csv` module + a loop is often *clearer* than the equivalent pandas chain.
+- You want zero dependencies (easy to hand off or rerun anywhere).
+
+```python
+import csv
+with open("in.csv") as f, open("out.csv", "w", newline="") as out:
+    r, w = csv.DictReader(f), None
+    for row in r:
+        if not row["email"].strip():
+            continue
+        row["name"] = row["name"].strip().title()
+        if w is None:
+            w = csv.DictWriter(out, fieldnames=row.keys()); w.writeheader()
+        w.writerow(row)
+```
+
+**Reach for pandas when:**
+- You need column-wise operations across the whole table: dedup, joins/merges, group-by aggregation, type coercion, fillna.
+- You're exploring the data interactively before deciding what "clean" means.
+- The data already lives in Excel/Parquet/messy CSV that pandas parses in one line (`pd.read_excel`, mixed types, etc.).
+- It's already in your environment and the file fits comfortably in memory.
+
+**Rule of thumb:** if you can describe the cleaning as "for each row, do X," plain Python is simpler and lighter. If you're describing "for each *column*" or "across the whole table," pandas earns its import.
+
+What does the cleaning actually involve? I can tell you definitively which way to go (or sketch it).

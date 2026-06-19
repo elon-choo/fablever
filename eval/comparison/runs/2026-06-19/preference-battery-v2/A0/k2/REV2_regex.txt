@@ -1,0 +1,33 @@
+Yes — a few things, though how much they matter depends on what you want it to guarantee.
+
+What it actually checks: "at least one char, an `@`, at least one char." Since `.` matches almost anything (including spaces, `@`, etc.), it lets a lot through:
+
+```js
+isEmail("a @ b")        // true — spaces allowed
+isEmail("a@b@c")        // true — multiple @ (.+ happily eats one)
+isEmail("@@@")          // true
+isEmail("foo@bar")      // true — no dot/TLD
+isEmail("a@b ")         // false-ish... actually true, trailing space matches .+
+```
+
+Concrete weaknesses:
+- **Whitespace passes** — `.` matches spaces and tabs, so `"john doe@x.com"` is accepted.
+- **Multiple `@` pass** — nothing constrains the local/domain parts.
+- **No structure at all** beyond "something-@-something" — no dot in the domain, no rejection of `@` at the very edges of each side (well, edges are covered by `.+`, but interior junk isn't).
+
+What it's *fine* for: a cheap "did the user clearly forget the @" sanity check before hitting a real verification step. As a gatekeeper for "is this a deliverable address," it's not adequate.
+
+Pragmatic improvements depending on intent:
+
+```js
+// Slightly stricter: no whitespace, single @, a dot in the domain
+function isEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+```
+
+That blocks spaces, multiple `@`, and requires a dotted domain — catches the common typos.
+
+But the real point: **regex can't truly validate an email.** The only way to know an address is valid and deliverable is to send a confirmation link. So use a loose regex as a typo-catcher, not as proof. The stricter version above rejects valid-but-rare addresses (e.g. `user@localhost`, IP-literal domains), which is usually an acceptable trade for a signup form — just don't treat passing it as a guarantee.
+
+One caveat for the original: if you ever switch the test to multiline input, note `.` won't cross newlines, but `^`/`$` without the `m` flag still anchor to string ends — so a single-line check is what you're getting, which is what you want here.

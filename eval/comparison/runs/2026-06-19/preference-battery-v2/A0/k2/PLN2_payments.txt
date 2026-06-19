@@ -1,0 +1,56 @@
+No worries — I'll lay out the plan for the most common SaaS case and flag where it branches. **Assumptions:** recurring subscriptions, Stripe-hosted Checkout to start (fastest to ship, lowest PCI scope), and a Node/TypeScript-ish backend. Say the word if your stack or billing model differs and I'll adjust — the webhook and data-model parts are the same regardless.
+
+## The mental model
+
+Stripe is the source of truth for billing; your DB mirrors just enough to gate features. The whole integration is really three things:
+
+1. **Get the customer to pay** → Checkout Session
+2. **Let them manage it** → Customer Portal
+3. **Stay in sync with reality** → Webhooks
+
+Most people get 1 and 2 right and underbuild 3. Webhooks are where correctness lives — a card fails three weeks from now and *nothing in your app initiated that*. If you only update entitlements during Checkout, you'll be wrong constantly.
+
+## The plan
+
+**1. Dashboard + product catalog setup**
+- Create your Products and Prices in the Stripe Dashboard (or via API/Terraform if you want it version-controlled). Prices are immutable — to change pricing you make a new Price, not edit the old one.
+- Grab test-mode API keys. Do everything in test mode first.
+
+**2. Data model — link your users to Stripe**
+- Add `stripe_customer_id` to your user/org table. One Stripe Customer per billing entity (often the org/workspace, not the individual user — decide this now, it's painful to change later).
+- Store the subscription state you need to gate access: `subscription_status`, `price_id`/`plan`, `current_period_end`, `cancel_at_period_end`. Don't try to mirror all of Stripe — mirror what your feature gates read.
+
+**3. Checkout flow (get money in)**
+- Server endpoint that creates a **Checkout Session** in `subscription` mode, with the Customer attached and `success_url`/`cancel_url` set. Return the URL, redirect the browser to it.
+- Create the Stripe Customer lazily (first time they hit billing) and persist the ID.
+
+**4. Customer Portal (self-service)**
+- One endpoint that creates a Billing Portal session and redirects. Stripe handles plan changes, cancellations, payment-method updates, and invoice history for free. Don't build any of that yourself.
+
+**5. Webhooks (the part that matters)**
+- One endpoint, **raw request body** (signature verification breaks if a body parser touches it — this is the #1 footgun), verify with `stripe.webhooks.constructEvent` and your signing secret.
+- Handle at minimum: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid`, `invoice.payment_failed`.
+- Make handlers **idempotent** (Stripe retries; you'll get duplicates) and return 2xx fast — do heavy work async.
+- Treat the webhook as authoritative: on subscription events, upsert your local subscription mirror from the event payload.
+
+**6. Feature gating**
+- Gate access off your *local mirror* (fast, no Stripe call on every request), which webhooks keep fresh. Decide how you treat `past_due` — grace period vs immediate lockout.
+
+**7. Test → harden → go live**
+- Stripe CLI (`stripe listen --forward-to ...` and `stripe trigger`) to replay webhooks locally. Use the test cards, including the failure/3DS ones.
+- Then: enable Stripe Tax if you owe tax, set up the live webhook endpoint, swap to live keys, and do one real low-value end-to-end purchase.
+
+## Sharpest gotchas, up front
+- **Raw body for webhooks** — the most common broken integration.
+- **Idempotency** on both webhook handling and any retried writes.
+- **Don't grant access from the client** "success" redirect — a user can hit `success_url` without paying. Entitlement comes from the webhook.
+- **Customer = org, not user**, if you have teams.
+- **Proration & plan changes** are handled by the Portal; don't reinvent them.
+
+## Where I'd want to confirm before writing code
+- **Subscription vs. usage-based vs. one-time** — usage-based adds metering and changes step 3 substantially.
+- **Your actual stack** — so the webhook raw-body handling and SDK calls are exact, not pseudocode.
+
+If you tell me those two, I'll turn this into concrete code for your endpoints. Want me to also note that the latest model docs aren't relevant here — this is all standard Stripe, current as of their 2025 API versions, no AI pieces involved.
+
+Want me to draft the actual endpoints for your stack?

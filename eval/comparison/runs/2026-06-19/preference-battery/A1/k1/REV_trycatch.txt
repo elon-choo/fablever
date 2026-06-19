@@ -1,0 +1,25 @@
+This swallows every failure silently — that's the core problem, and it's almost never what you want.
+
+What it actually does wrong:
+
+- **Hides real bugs.** The catch doesn't discriminate. A `TypeError` from a typo, a null dereference, an out-of-memory — all caught and discarded exactly like an expected network blip. You lose the signal that something is broken.
+- **No record.** With nothing logged, a failure is invisible. When `doWork()` stops happening in production, there's no trace to debug from.
+- **Lies to the caller.** Execution continues past the block as if the work succeeded. Any code that depends on `doWork()`'s effects now runs on a false assumption, so the failure surfaces later, somewhere unrelated, much harder to diagnose.
+
+When an empty-ish catch is legitimate: the work is genuinely best-effort and its failure changes nothing downstream — telemetry, cache warming, a cleanup that doesn't matter. Even then you log at debug level and narrow what you catch, rather than blanket-ignoring.
+
+A more defensible shape:
+
+```javascript
+try {
+  await doWork();
+} catch (e) {
+  // Only if failure is truly non-fatal to this flow:
+  logger.warn("doWork failed; continuing", { error: e });
+  // otherwise: rethrow, or handle the specific expected error and let the rest propagate
+}
+```
+
+The decision you actually need to make: is a failure here recoverable or not? If yes, handle the *specific* expected error and log it. If no, don't catch it at all — let it propagate to someone who can react. The empty `/* ignore */` is the one option that's almost always wrong, because it picks "neither" and stays silent about it.
+
+One caveat — if `e` is unused and your linter flags it, modern JS lets you write `catch {` with no binding. That's cosmetic; the substance above is what matters.

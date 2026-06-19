@@ -1,0 +1,45 @@
+No worries — I'll lay out the plan with sensible defaults and flag where it forks, so you can just react instead of answering a quiz.
+
+One real blocker first: **this repo (`fable-profile`) isn't your web app**, so I can't read your actual stack yet. Point me at the web-app repo path and I'll make this concrete. Until then, here's the plan keyed to the decisions that matter.
+
+## The one decision that shapes everything: in-app vs. push
+
+| | **In-app real-time** (recommended first) | **Browser/OS push** |
+|---|---|---|
+| What it does | Bell/toast/badge updates **while the tab is open** | Reaches user **even when tab is closed** |
+| Needs | A live connection (SSE / WebSocket / Supabase Realtime) | Service worker + Web Push API + VAPID keys |
+| Gotchas | Reconnect logic, auth on the socket | iOS Safari is restrictive; permission prompts hurt opt-in |
+| Effort | ~1–2 days | ~3–5 days on top of in-app |
+
+**My recommendation: ship in-app real-time first, add push later as phase 2.** Most "live notification" value lands with in-app, and push is strictly additive.
+
+## Recommended architecture (in-app)
+
+Since you already run **Supabase** elsewhere (per your other tooling), **Supabase Realtime** is the near-zero-infra path and what I'd default to:
+
+```
+┌──────────┐   insert    ┌─────────────────┐  Realtime   ┌──────────┐
+│ trigger  │ ──────────▶ │ notifications   │ ──────────▶ │ browser  │
+│ (job/    │   row       │ table (Postgres)│  subscribe  │ bell UI  │
+│  action) │             │  user_id, ...   │  by user_id │ + toast  │
+└──────────┘             └─────────────────┘             └──────────┘
+```
+
+If you're **not** on Supabase: same shape, but the transport becomes **SSE** (one-way server→client, simplest) or **WebSocket** (if you later need bidirectional). I'd pick SSE for notifications — they're one-directional.
+
+## Phased plan
+
+1. **Data model** — a `notifications` table: `id, recipient_user_id, type, payload jsonb, read_at, created_at`. This is the backbone regardless of transport.
+2. **Write path** — your triggers (DB change / another user's action / backend job) insert a row. With Supabase, a DB trigger or your existing write code does it; otherwise an `emitNotification(userId, type, payload)` helper.
+3. **Live transport** — Supabase Realtime subscription filtered by `recipient_user_id` (or an SSE endpoint `/notifications/stream` scoped to the authed user).
+4. **Client UI** — a bell with unread count, a dropdown list, toast on arrival; mark-as-read writes `read_at`.
+5. **Hardening** — auth on the channel, reconnect/backfill on reconnect (fetch unread since last seen), pagination, rate limiting.
+6. **(Phase 2) Web Push** — service worker + VAPID for closed-tab delivery, reusing the same `notifications` table.
+
+## What I need from you to make this real
+
+1. **The web-app repo path** (so I read your actual stack — framework, auth, whether Supabase is wired up).
+2. Confirm **in-app first** vs. you actually need push from day one.
+3. What **triggers** a notification (DB change / another user's action / backend job) — picks the write path in step 2.
+
+Give me the repo path and a yes/no on "in-app first," and I'll turn this into a concrete, file-level implementation plan against your code.

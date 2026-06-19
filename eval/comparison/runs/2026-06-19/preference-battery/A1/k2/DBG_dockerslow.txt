@@ -1,0 +1,23 @@
+No Dockerfile in this project, so I'll answer generally — but the first move is almost always the same.
+
+**Check your layer ordering: copy and install dependencies *before* copying your source code.** Slow-on-every-change is the classic symptom of cache invalidation — Docker rebuilds every layer from the first one that changed, so if you `COPY . .` early and then install dependencies, any one-character code edit busts the cache and reinstalls everything from scratch.
+
+The fix is to split the copy into two stages so the expensive dependency layer only rebuilds when the dependency manifest actually changes:
+
+```dockerfile
+# dependency manifest first — this layer is cached until deps change
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# source code last — editing it only invalidates from here down
+COPY . .
+```
+
+(Swap in `requirements.txt`/`pip install`, `go.mod`/`go mod download`, `Cargo.toml`, etc. for your stack — the principle is identical.)
+
+Two things to do alongside it:
+
+- **Add a `.dockerignore`** (at minimum `node_modules`, `.git`, build output). Without it, `COPY . .` ships junk into the build context, which both slows the copy and invalidates the cache more often.
+- **Confirm BuildKit is on** (`DOCKER_BUILDKIT=1`, or default in recent Docker). It parallelizes stages and caches more aggressively.
+
+If you paste your Dockerfile I can point to the exact line that's breaking the cache.

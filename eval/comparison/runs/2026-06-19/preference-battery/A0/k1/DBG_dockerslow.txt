@@ -1,0 +1,44 @@
+No Dockerfile in this repo, so I'll answer generally — but this is the same advice that works for ~90% of "slow on every code change" cases.
+
+## Do this first: fix layer-cache ordering
+
+The reason a build is slow *on every code change* is that your code copy sits **above** an expensive step (dependency install), so editing one line invalidates the cache for everything below it. Docker re-runs the install every time.
+
+The fix is to copy your dependency manifest, install, **then** copy the rest of the source:
+
+```dockerfile
+# ❌ Slow: any code change re-runs install
+COPY . .
+RUN npm install
+
+# ✅ Fast: install only re-runs when deps change
+COPY package.json package-lock.json ./
+RUN npm install
+COPY . .          # code changes only invalidate from here down
+```
+
+Same pattern for any stack — `requirements.txt`/`poetry.lock` (pip), `go.mod`/`go.sum` (Go), `Gemfile.lock`, `Cargo.toml`, etc. Copy the lockfile, install, then copy source.
+
+## Then, two quick wins
+
+1. **Add a `.dockerignore`.** Without it, `COPY . .` ships `node_modules`, `.git`, build artifacts, and local junk into the build context — which both slows the transfer and busts caches. At minimum:
+   ```
+   node_modules
+   .git
+   dist
+   *.log
+   ```
+
+2. **Make sure BuildKit is on** (default in modern Docker, but verify). It gives you parallel stages and better caching: `DOCKER_BUILDKIT=1 docker build ...`, or set `"features": { "buildkit": true }` in Docker daemon config.
+
+## How to know what to fix
+
+Time the layers to see what's actually slow:
+```bash
+DOCKER_BUILDKIT=1 docker build --progress=plain -t myapp . 2>&1 | grep -E 'DONE|CACHED'
+```
+The step that says `DONE 45.3s` instead of `CACHED` on a no-op code change is your culprit — and it's almost always the dependency install sitting below the source copy.
+
+---
+
+If you paste your Dockerfile (or point me at the repo with it), I'll give you the exact reordering for your stack. What are you building — Node, Python, Go, something else?

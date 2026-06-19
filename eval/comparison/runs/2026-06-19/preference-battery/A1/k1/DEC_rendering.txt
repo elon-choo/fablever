@@ -1,0 +1,13 @@
+Server-side rendered — or more precisely, prerendered/static — not client-side. For a content-heavy marketing site this isn't close.
+
+The deciding factors all point the same way:
+
+- **SEO.** Marketing sites live on organic search. Server-rendered HTML means crawlers get full content immediately. Client-side rendering forces crawlers to execute JS to see your content, which is slower, less reliable, and weaker for ranking — especially for non-Google bots and the link-preview scrapers below.
+- **First paint / perceived speed.** Content-heavy means lots to show. SSR sends meaningful HTML on the first response so visitors see content right away. CSR ships a blank shell, then JS, then a data fetch, then render — a visible delay that costs you bounce rate on exactly the landing pages that matter.
+- **Social/link previews.** Slack, iMessage, Twitter/X, Facebook, LinkedIn read your OpenGraph tags from the raw HTML response and do *not* run JS. With CSR your share cards come up empty. With SSR they just work.
+
+One refinement: since marketing content is mostly static and changes infrequently, the ideal isn't necessarily *runtime* SSR — it's **static generation (SSG) / prerendering at build time**. You get all the SSR benefits above plus you can serve pages straight from a CDN with no server render on each request: cheaper, faster, and far less to break. Reach for runtime SSR only for the parts that are genuinely per-request (personalization, A/B logic, auth-gated content), and sprinkle client-side interactivity on top where you need it (the standard "static shell + hydration / islands" approach).
+
+Practically, that means a framework with static export and per-route rendering control — Next.js, Astro, SvelteKit, Nuxt. Astro is especially well-suited to content-heavy marketing sites because it ships zero JS by default and only hydrates the interactive bits.
+
+Pure client-side rendering (a plain SPA) is the right call for app-like, behind-login dashboards where SEO and first-paint of public content don't matter — the opposite of a marketing site.

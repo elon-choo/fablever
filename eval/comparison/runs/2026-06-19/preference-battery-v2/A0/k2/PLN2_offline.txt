@@ -1,0 +1,68 @@
+No problem — I'll lay out the plan against the most common target (app loads + works on a flaky/no network), and flag where it branches if you need full offline writes. Adjust to your stack and I'll get specific.
+
+## The mental model
+
+"Offline" is really four separate problems. Solve them in order — each one is independently shippable:
+
+1. **App shell loads offline** — HTML/JS/CSS served from a cache, not the network.
+2. **Data reads work offline** — last-known API responses available when the network isn't.
+3. **Data writes work offline** *(only if you need it)* — mutations queue locally and replay on reconnect.
+4. **The UX tells the truth** — the user knows they're offline and what's stale.
+
+Most "keep working offline" needs are satisfied by 1, 2, and 4. Number 3 is where the effort (and the bugs) balloon.
+
+## Phase 0 — Prerequisites (half a day)
+
+- **HTTPS everywhere.** Service workers only run on HTTPS (or `localhost`). Non-negotiable.
+- **Add a Web App Manifest** (`manifest.webmanifest`) — name, icons, `start_url`, `display: standalone`. This makes it installable and gives you the "real app" feel.
+- **Audit your asset URLs** — hashed/fingerprinted filenames (`app.a1b2c3.js`) are what make cache-busting safe. If you serve unversioned assets, fix that first.
+
+## Phase 1 — App shell offline (the core, ~1–2 days)
+
+A **service worker** is the whole game. Don't hand-roll it — use **Workbox**, which handles the nasty parts (cache versioning, cleanup, navigation fallbacks).
+
+- **Precache** the build output (JS/CSS/fonts/icons) so the app boots with zero network.
+- **Routing strategies** per asset type:
+  - Static build assets → **cache-first** (they're hash-named, so they never go stale).
+  - HTML navigation → **network-first with cache fallback** (fresh when online, still loads when not).
+  - Images/fonts → **stale-while-revalidate**.
+- **Navigation fallback** → serve the cached app shell (or a dedicated `/offline.html`) when a route request fails.
+- **Lifecycle:** plan for updates now. A new SW activates on next load; surface a *"New version available — reload"* prompt rather than silently trapping users on old code. This is the #1 thing people forget.
+
+The tooling depends on your stack (this is what I was trying to pin down):
+- **Vite** → `vite-plugin-pwa`
+- **Next/SvelteKit/Remix** → `Serwist` (formerly `next-pwa`)
+- **CRA/Webpack** → Workbox `InjectManifest`
+- **No build step** → Workbox from CDN + a small hand-written `sw.js`
+
+## Phase 2 — Data reads offline (~1–3 days)
+
+- **Cacheable GET API responses** → Workbox runtime caching (stale-while-revalidate), with an expiration policy (max entries / max age) so the cache doesn't grow forever.
+- **Structured/app data** → **IndexedDB** (use a wrapper like `idb` or `Dexie`; don't use `localStorage` — it's synchronous and tiny). Cache query results here so lists/detail views render from local data first.
+- If you use **React Query / SWR**, lean on their persistence (`persistQueryClient`) — it gives you offline reads with very little custom code.
+
+## Phase 3 — Writes & sync *(only if scope demands it — this is the hard part)*
+
+- **Queue mutations** in IndexedDB while offline; replay them on reconnect (the **Background Sync API**, with a manual "retry on `online` event" fallback for Safari).
+- **Conflict resolution** is the real cost: decide per-entity between last-write-wins (simple, lossy) and merge/CRDT (correct, complex). Don't build this generically — pick the few entities that truly need offline writes.
+- **Idempotency:** every queued write needs a client-generated ID so replays don't double-apply.
+- If this is central to the app, evaluate an offline-first sync engine (**PouchDB/Couch, RxDB, ElectricSQL, or Replicache**) instead of hand-rolling — hand-rolled sync is a classic underestimate.
+
+## Phase 4 — Honest UX (~half a day, do not skip)
+
+- An **online/offline indicator** (`navigator.onLine` + `online`/`offline` events).
+- **Stale-data badges** ("last updated 3h ago") on cached views.
+- **Disable or queue** actions that genuinely can't work offline, with a clear message — never let a button silently no-op.
+
+## Verification
+
+- **Chrome DevTools → Application** tab: inspect the SW, caches, and IndexedDB; toggle **Offline** and **"Update on reload."**
+- **Lighthouse PWA audit** for a baseline checklist.
+- Test the **update flow** explicitly (deploy a change, confirm users get prompted) and the **first-visit-then-offline** flow.
+- Hard cases to script: a half-cached app, a hung SW, quota-exceeded errors.
+
+---
+
+**My recommendation:** ship **Phases 1, 2, and 4** first — that's "the app keeps working offline" for the vast majority of apps, in roughly a week, with low risk. Only take on **Phase 3** if users genuinely need to *create/edit* while disconnected, and scope it to specific entities rather than "everything."
+
+Tell me your stack (and whether you need offline *writes*), and I'll turn the relevant phase into concrete config and a service-worker file for your setup.

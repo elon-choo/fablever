@@ -1,0 +1,41 @@
+The cleanest way is to skip the callback API entirely and use Node's built-in promise-based `fs`:
+
+```js
+import { readFile } from 'node:fs/promises';
+// CommonJS: const { readFile } = require('node:fs/promises');
+
+const data = await readFile('file.txt', 'utf8');
+```
+
+That's the preferred approach in any reasonably modern Node (≥ 10 for the API, and top-level `await` needs ESM or Node ≥ 14.8). `readFile` here already returns a Promise, so no wrapping needed.
+
+**If you're stuck with the callback version** for some reason, you have two options:
+
+`util.promisify` — turns any standard error-first callback function into a promise-returning one:
+
+```js
+import { readFile } from 'node:fs';
+import { promisify } from 'node:util';
+
+const readFileAsync = promisify(readFile);
+const data = await readFileAsync('file.txt', 'utf8');
+```
+
+Or wrap it manually (useful when the callback doesn't follow the `(err, result)` convention):
+
+```js
+function readFileAsync(path, encoding) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, encoding, (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  });
+}
+
+const data = await readFileAsync('file.txt', 'utf8');
+```
+
+**Recommendation:** just use `node:fs/promises`. It exists precisely so you don't have to promisify or hand-wrap anything.
+
+One reminder regardless of which you pick: `await` only works inside an `async` function (or at the top level of an ES module), and you'll want a `try/catch` around it since a rejected promise throws.

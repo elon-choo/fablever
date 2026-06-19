@@ -1,0 +1,27 @@
+The flagged routing rule is for diff/gate reviews needing recorded verdicts; this is a one-line snippet, so I'll just review it directly.
+
+## Review
+
+```js
+function addItem(arr, x) { arr.push(x); return arr; }
+```
+
+The function works, but given that **`arr` is shared application state**, it has one core design flaw with two consequences.
+
+### Problem: it mutates shared state in place
+`arr.push(x)` modifies the array everyone else is holding a reference to. That's "spooky action at a distance" — code that never called `addItem` still sees its state change.
+
+1. **Breaks change detection.** `return arr` hands back the *same reference* that came in, so `next === prev` is always true. Anything relying on referential equality — React/`useMemo`, Redux/`reselect`, `Object.is` diffing — will not see a change and won't re-render or recompute. This is the classic immutable-store bug.
+2. **Misleading signature.** Returning a value *looks* like it produces a new array (functional style), but it doesn't. Callers writing `const updated = addItem(state, x)` get aliased state, not a copy.
+
+### Fix — make it pure
+```js
+function addItem(arr, x) { return [...arr, x]; }
+```
+Leaves shared state untouched, returns a genuinely new array, and the caller decides how to commit it to the store.
+
+### Caveats
+- If in-place mutation is *deliberate* (an explicit mutable store), then don't `return arr` — it falsely advertises a new value. Mutate via the store's own API and return `void`, with a comment saying so.
+- Either way, no guard on `arr` being null/non-array — `.push`/spread will throw. Add one if inputs aren't trusted.
+
+**Verdict:** functionally correct, but unsafe as written for shared state. Prefer the immutable version unless you have a specific reason to mutate — and if you do, drop the return.

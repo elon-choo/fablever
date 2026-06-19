@@ -1,0 +1,26 @@
+No problem — I'll lay out the path without blocking on a selection. Here's where things stand and how I'd proceed depending on what you meant.
+
+## What I found
+The `fable-profile` repo has **no public HTTP API to rate-limit**. Its only request surfaces are MCP **stdio** servers (`mcp/src/server.js`, optional `fusion/fusion-server.js`) — JSON-RPC over stdin/stdout, no listening port, not reachable by outside clients. So conventional API rate limiting has nothing to attach to here.
+
+That leaves three realistic interpretations. Tell me which and I'll go deep:
+
+**1. Your API is in another repo/directory.** Most likely — you may just be in the wrong working dir. Point me at the path (or repo) and I'll read the actual server/framework and produce a concrete, code-level plan (where the middleware hooks in, what store to use, what limits per route).
+
+**2. You want to throttle the *outbound* OpenRouter calls** in `fusion/fusion-server.js` (`runFusion()`). That's client-side rate limiting, not public-API protection — a token-bucket/concurrency cap + 429 backoff around the fetch. Small, self-contained; I can spec it against that file directly.
+
+**3. You want a framework-agnostic design** you can apply wherever your API actually lives.
+
+## Generic plan (applies once we know the target)
+If you just want the blueprint now, this is the shape I'd implement:
+
+1. **Pick the dimension** — limit per API key (authenticated) or per client IP (anonymous), often both, with different ceilings.
+2. **Pick the algorithm** — **token bucket** or **sliding-window counter** for smooth limits with burst tolerance (avoid naive fixed-window; it allows 2× bursts at the boundary).
+3. **Pick the store by topology** — single instance → in-memory is fine; multiple instances/serverless → **Redis** (atomic `INCR`+TTL or a Lua sliding-window) so the limit is shared, not per-process.
+4. **Set tiered limits** — sensible defaults (e.g. 60 req/min/IP unauth, higher per-key tiers), stricter caps on expensive/write endpoints, allowlist for internal callers.
+5. **Respond correctly** — `429 Too Many Requests` with `Retry-After` and `RateLimit-Limit`/`-Remaining`/`-Reset` headers so clients can self-pace.
+6. **Place it early** — as middleware before auth/business logic but after a cheap IP parse; make sure it reads the real client IP (trust proxy / `X-Forwarded-For`) so a reverse proxy doesn't collapse everyone to one bucket.
+7. **Fail open or closed deliberately** — decide what happens if the limiter store is down (usually fail-open with an alert, so an outage doesn't take the whole API offline).
+8. **Observe** — log/emit metrics on throttle events to tune limits and spot abuse.
+
+Which of the three is it — and if it's #1, what's the path to the real API?

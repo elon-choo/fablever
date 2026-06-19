@@ -1,0 +1,42 @@
+Connection pool exhaustion is almost always a symptom of connections being **held too long or leaked**, not of the pool being genuinely too small. So check in this order — cheapest, most-likely-culprit first:
+
+## 1. Look at what's actually holding connections (do this first)
+```sql
+-- Connections grouped by state
+SELECT state, count(*)
+FROM pg_stat_activity
+WHERE datname = current_database()
+GROUP BY state;
+```
+The tell-tale sign is a pile of **`idle in transaction`** connections. That means your app opened a transaction (or just a connection) and isn't committing/rolling back — the connection is alive but useless. To find the worst offenders:
+```sql
+SELECT pid, state, now() - state_change AS idle_for, query
+FROM pg_stat_activity
+WHERE state = 'idle in transaction'
+ORDER BY idle_for DESC;
+```
+If you see these, the bug is in app code, not the pool size.
+
+## 2. Confirm where the limit actually is
+There are **two** pools, and exhaustion at either looks the same:
+- **App-side pool** (HikariCP, pgbouncer client side, node-pg, SQLAlchemy, etc.) — `maxPoolSize` / `pool_size` + `max_overflow`.
+- **Postgres server** — `SHOW max_connections;`
+
+If `(instances × pool_size)` approaches `max_connections`, you'll exhaust Postgres before the app pool even fills. Add up the real numbers across all app instances + background workers + migrations.
+
+## 3. Common root causes, in likelihood order
+- **Leaked connections** — a code path that acquires but doesn't release on error (missing `finally` / context manager / `defer`). Most pools have a leak-detection threshold — turn it on (e.g. HikariCP `leakDetectionThreshold`).
+- **Long-running / slow queries** holding connections under load — check `pg_stat_activity` for long `active` queries; a missing index that's fine at low traffic falls over under load.
+- **Transactions spanning external calls** — e.g. an HTTP request or sleep inside an open transaction. Classic `idle in transaction`.
+- **Pool timeout too low / acquisition starvation** — requests queue waiting for a connection because throughput, not pool size, is the bottleneck.
+
+## 4. Quick mitigations (after you understand the cause)
+- Set `idle_in_transaction_session_timeout` in Postgres so leaked transactions get reaped instead of accumulating.
+- Set a sane `statement_timeout`.
+- If you have many app instances, put **PgBouncer** in `transaction` pooling mode in front — it multiplexes far more app connections onto few server ones.
+
+---
+
+**The one thing to check first:** run the `idle in transaction` query in step 1 under load. It tells you in seconds whether this is a leak/transaction-scope bug (usually) or a genuine capacity problem (rarely).
+
+If you tell me your stack (pooler + language/framework) and the output of that first query, I can point at the specific cause.

@@ -1,0 +1,45 @@
+This is the classic "swallow everything" anti-pattern. The `try/await/catch` mechanics are correct, but the empty catch is the problem. Here's what's wrong and how to fix it.
+
+## Problems
+
+1. **Invisible failures.** Nothing is logged, so when `doWork()` fails in production you get no signal at all. Debugging becomes guesswork because the failure leaves no trace.
+
+2. **It catches *everything*, not just expected errors.** A `TypeError` from a typo, an out-of-memory, an `AbortError` from a cancelled request — all silently discarded the same as a benign network blip. Programmer bugs get hidden instead of surfaced.
+
+3. **Control flow lies.** Execution continues as if the work succeeded. Any downstream code that assumes `doWork()`'s side effects happened (a row was written, a file exists, state was mutated) now runs on a false premise.
+
+4. **`e` is captured but unused** — most linters (`no-unused-vars`, `no-empty`) will flag this anyway.
+
+## Better options
+
+If you genuinely want to tolerate the failure, **say so explicitly and leave a trace**:
+
+```javascript
+try {
+  await doWork();
+} catch (e) {
+  logger.warn('doWork failed, continuing', { error: e });
+}
+```
+
+If only a *specific* failure is acceptable, narrow it and rethrow the rest:
+
+```javascript
+try {
+  await doWork();
+} catch (e) {
+  if (e.name !== 'NotFoundError') throw e;  // tolerate missing, surface everything else
+}
+```
+
+If the work is truly fire-and-forget, make that intentional and still observe errors:
+
+```javascript
+void doWork().catch(e => logger.warn('background doWork failed', { error: e }));
+```
+
+## The rule of thumb
+
+An empty catch is only defensible when **all three** hold: the error is *expected*, *fully recoverable*, and *intentionally ignored* — and even then add a one-line comment explaining *why* it's safe (e.g. `// best-effort cache warm; stale cache is fine`). `/* ignore */` says "I'm hiding this," not "this is safe to skip." If you can't write that justification, the catch shouldn't be empty.
+
+Want me to scan the actual codebase for this pattern (empty/comment-only catch blocks) so you can triage the real instances?

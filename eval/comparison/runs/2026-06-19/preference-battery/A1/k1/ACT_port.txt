@@ -1,0 +1,10 @@
+`lsof -i :3000` — it lists the process holding the port, with its PID and command name.
+
+If you just want the PID to kill it:
+
+```bash
+lsof -ti :3000        # prints only the PID(s)
+kill -9 $(lsof -ti :3000)   # kill whatever's on the port
+```
+
+On macOS `lsof` is the standard tool. A close second is `lsof -nP -iTCP:3000 -sTCP:LISTEN`, which skips DNS/port-name lookups (faster) and shows only the listening socket if a server is bound there.

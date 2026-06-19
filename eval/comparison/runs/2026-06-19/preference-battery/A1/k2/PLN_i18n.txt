@@ -1,0 +1,23 @@
+Internationalizing for 3 languages is mostly a one-time extraction effort plus an ongoing translation workflow. The single most important decision is to route every user-facing string through one library from day one, so you never have to do a second sweep. Here's how I'd sequence it.
+
+**Pick the library first.** For a React app, use **react-i18next**. It's the most mature option, handles pluralization/interpolation/namespaces, has solid lazy-loading, and the ecosystem (extraction tooling, detectors) is the deepest. Reach for react-intl (FormatLJS) only if you specifically want ICU message syntax everywhere, or LinguiJS if you want compile-time extraction with minimal key bookkeeping. For three languages, react-i18next is the safe default.
+
+**One thing that changes the whole plan: which three languages?** If one is right-to-left (Arabic, Hebrew) you also need bidirectional layout work — `dir="rtl"`, logical CSS properties (`margin-inline-start` instead of `margin-left`), and mirrored icons. If one is CJK (Chinese/Japanese/Korean) you mostly just need font and line-break attention, not layout changes. If all three are LTR European languages, skip the RTL phase entirely. Tell me the three and I'll tighten this.
+
+The phases:
+
+1. **Set up the infrastructure** (small, do it once). Install i18next + react-i18next + a language detector. Create a translation file structure — one folder per locale (`/locales/en/`, etc.), split into namespaces by feature (`common`, `auth`, `dashboard`) so files stay reviewable and can lazy-load. Wrap the app in the provider, configure fallback language and detection (browser → stored preference → default).
+
+2. **Extract existing strings** (the bulk of the work). Every hardcoded string becomes a `t('key')` call. Use a key convention up front — I'd use feature-scoped dotted keys (`auth.login.submitButton`) over English-text-as-key, because it survives copy edits. An extraction tool (`i18next-parser`) can scan your code and scaffold the key files so translators get a complete English source. Budget the most time here; it's tedious and touches every component.
+
+3. **Handle the formatting traps.** Don't concatenate translated fragments — use interpolation (`t('greeting', {name})`) so word order can differ per language. Use i18next's plural support, not `if (count === 1)`. Route all dates, numbers, and currency through the `Intl` API (`Intl.DateTimeFormat`, `Intl.NumberFormat`) keyed to the active locale rather than formatting them yourself.
+
+4. **Language switching and persistence.** Add a switcher, persist the choice (localStorage or user profile), and decide your URL strategy: path prefix (`/fr/...`) is best for SEO and shareable links; a cookie/state-only approach is simpler if SEO doesn't matter. Set `<html lang>` to match.
+
+5. **Translation production.** Decide *who* translates and *how*. For three languages, a spreadsheet or JSON handoff to translators can work, but a lightweight TMS (Locize, Crowdin, Tolgee) pays off fast because it keeps keys in sync and flags missing/outdated strings. Establish that English is the source of truth and new keys flow from there.
+
+6. **Guardrails.** Turn on missing-key logging in dev so untranslated strings are loud. Add pseudo-localization (accented, padded text) to catch hardcoded strings and layouts that break with longer German/French text. Optionally a CI check that fails if a locale is missing keys present in English.
+
+The order matters: get phase 1 in place and the team aligned on the key convention *before* the extraction sweep, otherwise you'll rewrite keys mid-flight. The translation files themselves can be stubbed (English in all three) so you can ship the machinery and fill in real translations as they come back.
+
+If you point me at the actual repo and tell me the three languages and your build setup (Vite/CRA/Next), I can turn this into concrete file changes and a more exact effort estimate.

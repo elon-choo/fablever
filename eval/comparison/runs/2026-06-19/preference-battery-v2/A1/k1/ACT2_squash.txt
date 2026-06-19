@@ -1,0 +1,18 @@
+You have two main options.
+
+**Interactive rebase** (most common):
+```bash
+git rebase -i HEAD~3
+```
+This opens an editor listing your 3 commits (oldest at top). Leave the first one as `pick`, change the other two to `squash` (or `s`). Save and close, then you'll get a second editor to write the combined commit message.
+
+**Soft reset** (simpler if you just want one fresh message):
+```bash
+git reset --soft HEAD~3
+git commit -m "your combined message"
+```
+This rewinds the branch pointer by 3 commits but keeps all the changes staged, then you make a single new commit.
+
+Both rewrite history, so if you've already pushed these commits you'll need a force push afterward (`git push --force-with-lease`) — only do that if no one else is working on the branch.
+
+The soft reset is usually the easiest when you don't care about preserving the individual messages. Use interactive rebase if you want to selectively keep parts of each message.

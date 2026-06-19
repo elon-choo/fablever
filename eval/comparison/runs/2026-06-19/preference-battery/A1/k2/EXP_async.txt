@@ -1,0 +1,37 @@
+They're the same thing underneath — `async/await` is syntax sugar over Promises, not a separate mechanism. An `async` function always returns a Promise, and `await` just pauses the function until a Promise settles, then unwraps its resolved value (or throws its rejection). So you're never choosing between two execution models; you're choosing how to *write* code that consumes Promises.
+
+The real differences are all ergonomic:
+
+**Control flow reads top-to-bottom.** With `.then()` chains, sequential async steps nest or chain into callbacks. With `await`, they look like ordinary sequential statements:
+
+```js
+// Promises
+function load(id) {
+  return fetchUser(id)
+    .then(user => fetchOrders(user.id))
+    .then(orders => orders.filter(o => o.active));
+}
+
+// async/await
+async function load(id) {
+  const user = await fetchUser(id);
+  const orders = await fetchOrders(user.id);
+  return orders.filter(o => o.active);
+}
+```
+
+**Error handling uses normal `try/catch`.** Instead of `.catch()`, rejections become thrown exceptions you catch synchronously-looking. This also means a single `try/catch` can wrap both sync and async failures in the same block.
+
+**Intermediate values stay in scope.** In a `.then()` chain, if a later step needs a value from an earlier step, you have to thread it through (nest the chain, or pass tuples). With `await`, every prior `const` is just a variable still in scope.
+
+**Debugging is better.** `await` preserves clearer stack traces and lets you set breakpoints on each line, where chained `.then()` callbacks are harder to step through.
+
+A few things worth knowing where the distinction actually matters:
+
+- **`await` serializes by default.** Writing `await a(); await b();` runs them one after another. If they're independent, that's a latency bug — you want `await Promise.all([a(), b()])`. Plain Promise code makes the concurrency more visible because you explicitly hold the Promise objects. This is the single most common mistake when people switch to `await`.
+
+- **You can mix them freely.** `await Promise.all(...)`, `await Promise.race(...)` — `await` consumes Promises, so the combinators are still how you express concurrency. `async/await` doesn't replace the Promise API; it sits on top of it.
+
+- **Promises can be more concise for fire-and-pass-through cases** like a single `.then()` transform, or when you want to start a Promise now and await it later (`const p = fetch(...); ...; const r = await p;`).
+
+Rule of thumb: use `async/await` for readability in almost all application code, and drop to explicit Promises (`Promise.all`, storing a Promise to await later) when you need to express concurrency or hold onto an unsettled Promise.

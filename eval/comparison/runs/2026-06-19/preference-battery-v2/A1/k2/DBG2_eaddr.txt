@@ -1,0 +1,21 @@
+Short version: the port really is taken — `ps` just isn't showing you what holds it. `EADDRINUSE` only fires when a `bind()` collides with an existing listener (or a reserved port), so "nothing obvious" almost always means the holder is something you're not looking at with a plain process list.
+
+The single command that settles it (you're on macOS):
+
+```bash
+lsof -nP -iTCP:<port> -sTCP:LISTEN      # then re-run with sudo if it prints nothing
+```
+
+`sudo` matters — if the holder runs as another user or root, an unprivileged `lsof` shows you nothing, which is exactly the "nothing is running" illusion.
+
+The usual culprits, roughly in order:
+
+- **An orphaned child of your own dev server.** `nodemon`, `ts-node-dev`, `next dev`, or a debugger restart spawns a child that keeps the socket when the parent dies or is killed with the wrong signal. The terminal looks idle but the listener is still there. Kill it: `kill $(lsof -ti:<port>)`.
+- **macOS AirPlay Receiver / Control Center.** If your port is **5000** or **7000**, that's macOS itself, not your code. Turn it off under System Settings → General → AirDrop & Handoff → AirPlay Receiver, or just use another port.
+- **A Docker container with a published port.** `docker ps` — a `-p 3000:3000` mapping means `docker-proxy` binds the host port, and that won't show up in a Node-focused process search.
+- **Binding twice in one process.** Calling `listen()` more than once, instantiating two servers on the same port, or a test/HMR setup that imports the server module twice. This one is in your code, not the OS — grep for your `listen(`.
+- **IPv4/IPv6 dual-stack collision.** One listener on `0.0.0.0:<port>` and another on `[::]:<port>` can conflict. `lsof` will show both addresses if this is it.
+
+`TIME_WAIT` is usually *not* the cause here — Node sets `SO_REUSEADDR` by default, so leftover closing sockets don't normally block a rebind.
+
+If you tell me the port number (and paste the `lsof`/`sudo lsof` output), I can tell you which of these it actually is rather than guessing.

@@ -1,0 +1,16 @@
+No — it has a serious flaw and a couple of smaller ones.
+
+**The serious one: plaintext password comparison.** `user.password === req.body.password` only works if you're storing raw passwords in your database. You should never do that — a database leak would expose every user's actual password. Store a salted hash (bcrypt, scrypt, or argon2) and verify against it:
+
+```js
+const ok = await bcrypt.compare(req.body.password, user.passwordHash);
+if (ok) issueToken(user);
+```
+
+**Secondary issues:**
+
+- **No null check on `user`.** If the lookup didn't find a user, `user` is `undefined` and this throws (or behaves unexpectedly). Handle the "user not found" case the same way as "wrong password" — same response, same timing — so you don't leak which usernames exist.
+- **Timing side-channel.** `===` on strings short-circuits on the first differing character, which can leak information. `bcrypt.compare` is constant-time, so switching to hashed comparison fixes this for free. (If you ever compare opaque tokens directly, use `crypto.timingSafeEqual`.)
+- **Out of scope for the snippet but worth confirming exists elsewhere:** rate limiting / lockout on repeated failures to slow brute-force attempts.
+
+The fix that matters most is the first one. The rest follow naturally once you're verifying against a hash instead of a stored plaintext password.

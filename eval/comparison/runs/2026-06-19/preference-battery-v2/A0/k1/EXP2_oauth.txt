@@ -1,0 +1,85 @@
+# OAuth2 Authorization Code Flow
+
+The authorization code flow is the most common and secure OAuth2 flow, designed for apps that can keep a secret confidential (server-side web apps). It lets a user grant a third-party app access to their resources **without sharing their password**.
+
+## The Players
+
+- **Resource Owner** — the user who owns the data
+- **Client** — the app requesting access (e.g., "Login with Google" on some website)
+- **Authorization Server** — issues tokens (e.g., Google's OAuth endpoint)
+- **Resource Server** — holds the protected data (e.g., the Google API)
+
+## The Flow
+
+```
+  User          Client App        Authorization Server      Resource Server
+   │                │                      │                       │
+   │  1. clicks     │                      │                       │
+   │  "Log in" ───► │                      │                       │
+   │                │  2. redirect to auth │                       │
+   │ ◄──────────────┼──────────────────────►                      │
+   │  3. logs in & consents               │                       │
+   │ ──────────────────────────────────► │                        │
+   │                │  4. redirect back    │                       │
+   │                │  with ?code=XYZ      │                       │
+   │ ◄──────────────┼──────────────────────                       │
+   │                │                      │                       │
+   │                │  5. POST code +      │                       │
+   │                │  client_secret ────► │                       │
+   │                │  6. access_token  ◄──│                       │
+   │                │     (+ refresh_token)│                       │
+   │                │                      │                       │
+   │                │  7. API call with access_token ───────────► │
+   │                │  8. protected data ◄────────────────────────│
+```
+
+### Step by step
+
+1. **Initiation** — User clicks "Log in with X" in the client app.
+
+2. **Authorization request** — Client redirects the browser to the authorization server's `/authorize` endpoint with query params:
+   - `response_type=code`
+   - `client_id` — identifies the app
+   - `redirect_uri` — where to send the user back
+   - `scope` — what access is requested (e.g., `read:email`)
+   - `state` — random anti-CSRF token the client verifies later
+
+3. **Authentication & consent** — User logs in directly with the authorization server (the client never sees the password) and approves the requested scopes.
+
+4. **Authorization code returned** — The auth server redirects back to `redirect_uri` with a short-lived, single-use `code` (and the original `state`).
+
+5. **Token exchange** — The client's **backend** makes a server-to-server `POST` to the `/token` endpoint with:
+   - `grant_type=authorization_code`
+   - `code`
+   - `redirect_uri`
+   - `client_id` + `client_secret` (proves the client's identity)
+
+6. **Tokens issued** — The auth server returns an `access_token` (short-lived), usually a `refresh_token` (long-lived), and metadata like `expires_in`.
+
+7–8. **Accessing resources** — The client calls the resource server's API with `Authorization: Bearer <access_token>` and receives the protected data.
+
+## Why the extra "code" step?
+
+You might wonder why not just return the access token directly. The two-step design keeps the access token off the browser/URL:
+
+- The **code** travels through the browser redirect (visible in logs, history) but is useless alone — it's short-lived and single-use.
+- The **access token** is exchanged over a direct, authenticated back-channel using the `client_secret`, so it never appears in the URL.
+
+## PKCE — the modern essential
+
+For public clients that **can't** keep a secret (mobile apps, SPAs), use **PKCE** (Proof Key for Code Exchange):
+
+1. Client generates a random `code_verifier` and sends its hash (`code_challenge`) in step 2.
+2. In step 5, it sends the original `code_verifier`.
+3. The auth server verifies the hash matches — so a stolen code can't be exchanged by an attacker.
+
+PKCE is now recommended for **all** clients, including confidential ones (OAuth 2.1 makes it mandatory for the authorization code flow).
+
+## Key security points
+
+- Always validate `state` to prevent CSRF.
+- Register exact `redirect_uri` values to prevent code interception.
+- Authorization codes are single-use and expire in seconds/minutes.
+- Access tokens are short-lived; use the refresh token to get new ones without re-prompting the user.
+
+Want me to show a concrete example (e.g., actual HTTP requests, or a code snippet in a specific language)?

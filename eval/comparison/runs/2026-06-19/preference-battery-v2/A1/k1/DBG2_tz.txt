@@ -1,0 +1,22 @@
+This is almost certainly a timezone boundary bug, and the "some users but not others" pattern is the tell: it splits by the user's UTC offset, not randomly.
+
+The classic mechanism: a **date-only value gets treated as a timestamp at midnight UTC**, then rendered in each user's local time. Crossing midnight shifts the calendar day for anyone whose offset pushes it over the boundary.
+
+Concretely, take a stored date of `2026-06-19`:
+- Parsed as `2026-06-19T00:00:00Z` (midnight UTC).
+- A user in Seoul (UTC+9) sees `2026-06-19 09:00` → still **June 19**. Correct.
+- A user in US Pacific (UTC−7) sees `2026-06-18 17:00` → displays as **June 18**. Off by one.
+
+So users *east* of UTC look fine while users *west* of UTC see the date a day early — which reads exactly as "some users but not others." (The reverse happens if midnight is interpreted as local and converted to UTC for storage: then eastern users shift the other way.)
+
+Where it usually originates:
+- `new Date("2026-06-19")` in JavaScript parses as **UTC midnight**, but `new Date(2026, 5, 19)` parses as **local midnight** — mixing these is a common source.
+- A DB `DATE` column (no time, no zone) being injected into a `timestamptz`/`Date` object that assumes UTC.
+- Server formats in its own timezone (often UTC) while the client formats in the browser's timezone, or vice versa.
+- Truncating a timestamp to a date *after* converting to the wrong zone.
+
+How to confirm quickly: find one affected and one unaffected user and check their timezones — affected ones will cluster on one side of UTC. Or log the raw stored value plus the offset at the point of formatting; you'll see the date flip right at the UTC conversion.
+
+The fix depends on intent. If the value is a true calendar date (birthday, due date, event day), it should never be timezone-converted — store and render it as a plain `YYYY-MM-DD` string or a date-only type, formatting without zone math. If it's a real instant in time, store it as UTC and convert consistently to one chosen zone everywhere.
+
+If you point me at the code that stores or formats these dates, I can tell you which of these it is and exactly where the conversion goes wrong.

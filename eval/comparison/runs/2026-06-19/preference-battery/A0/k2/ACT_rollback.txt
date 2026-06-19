@@ -1,0 +1,63 @@
+To roll back Rails migrations, use `rails db:rollback`. Here are the common scenarios:
+
+## Roll back the last migration
+
+```bash
+rails db:rollback
+```
+
+This reverts the single most recent migration (whatever ran last).
+
+## Roll back multiple migrations
+
+```bash
+rails db:rollback STEP=3
+```
+
+Reverts the last 3 migrations.
+
+## Roll back to a specific migration
+
+```bash
+rails db:migrate VERSION=20260115123045
+```
+
+Migrates *down* to that version (the timestamp prefix on the migration filename). Everything after it gets reverted; the named version itself stays applied. Use `VERSION=0` to undo everything.
+
+## Redo (rollback + re-run) — handy while developing
+
+```bash
+rails db:migrate:redo          # last migration
+rails db:migrate:redo STEP=2   # last 2
+```
+
+## Checking state
+
+```bash
+rails db:migrate:status        # shows up/down for each migration
+```
+
+---
+
+## Important gotchas
+
+**1. The migration must be reversible.** `rollback` runs the `down` direction. If you used `change` with reversible operations (`create_table`, `add_column`, etc.), Rails auto-reverses it. But irreversible operations will raise `ActiveRecord::IrreversibleMigration`. Fix by either:
+- Splitting `change` into explicit `up`/`down` methods, or
+- Wrapping data changes in `reversible do |dir| ... end`.
+
+**2. Data is not restored.** Rollback reverses *schema* changes. If a migration dropped a column or table, rolling back recreates the structure but the **data is gone**. On production, take a backup first.
+
+**3. If the migration was already deployed/shared**, prefer writing a *new* migration that corrects the problem rather than rolling back and editing the old one — otherwise teammates (and prod) who already ran it end up with a divergent schema. Editing an already-run migration and re-running only works cleanly in your own local dev DB.
+
+**4. After rolling back**, `db/schema.rb` (or `structure.sql`) is regenerated to match. Commit that change if the rollback is intentional and permanent.
+
+---
+
+**Typical local dev fix flow:**
+```bash
+rails db:rollback        # undo the bad one
+# edit the migration file
+rails db:migrate         # re-run it
+```
+
+Want me to look at a specific migration in your project, or is this a general reference?

@@ -1,0 +1,15 @@
+The error message points to one specific spot: it's `u.profile` that's `undefined`, not `u`.
+
+"Cannot read property `name` of undefined" means the thing immediately to the left of `.name` — which is `u.profile` — evaluated to `undefined`. So `u` itself is a valid object, but it has no `profile` field for some records. (If `u` were the undefined one, the message would instead say "cannot read property `profile` of undefined.")
+
+It's intermittent because it depends on the data: only the users whose record is missing `profile` (or has it set to `null`) trigger it. Users that happen to have a profile work fine, so it looks random until you hit a profileless record.
+
+A secondary possibility, if your `db.find` returns `undefined` when no row matches: that would throw on `.profile` instead, with a different message — so the message you're seeing specifically rules that out and incriminates `profile`.
+
+If you want to harden it, optional chaining covers both cases:
+
+```js
+return u?.profile?.name;
+```
+
+That returns `undefined` instead of throwing when either `u` or `u.profile` is missing — though you may instead want to decide deliberately what should happen for a user with no profile (return a default, throw a clear "user has no profile" error, etc.) rather than silently passing `undefined` downstream.

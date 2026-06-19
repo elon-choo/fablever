@@ -1,0 +1,19 @@
+Yes, a few real problems — though how much they matter depends on what you want the check to do.
+
+The biggest concrete bug is the **trailing newline**. In JavaScript `$` matches at the end of the string *or* just before a final `\n`, and `.` doesn't cross newlines — so `"foo@bar\n"` passes. If you're validating user input, that's an injection vector (header injection, etc.). Use `\z`-style anchoring via no-newline classes, or check explicitly.
+
+Beyond that, it's just very permissive, because `.+` matches literally anything including `@` and spaces:
+
+- `a@b` passes (no dot in the domain)
+- `a@b@c` passes (multiple `@`)
+- `" @ "` passes (spaces, leading/trailing junk)
+- `a@.` passes
+
+So it really only asserts "there's an `@` with at least one character on each side."
+
+Whether that's *wrong* depends on intent:
+
+- **If it's a cheap sanity check** ("did they obviously forget the @?"), it's mostly fine — just fix the newline issue by anchoring with `[^\n]` or testing `!s.includes('\n')`, since the loose matching is acceptable and you shouldn't try to fully validate emails with regex anyway.
+- **If it's meant to actually validate addresses**, it's far too loose, and you shouldn't reach for a stricter regex either — the real-world fix is to send a confirmation email. The only validation worth doing in code is a slightly tighter shape check like `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`, which at least rejects spaces, multiple `@`, and missing-dot domains.
+
+If you tell me which of those two you're after, I can suggest the exact replacement.

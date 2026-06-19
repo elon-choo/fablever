@@ -1,0 +1,71 @@
+The OAuth2 authorization code flow lets a third-party app get access to a user's resources without ever seeing their password. It's the most common and most secure flow for apps that have a server backend. Here's how it works end to end.
+
+## The actors
+
+- **Resource owner** — the user who owns the data.
+- **Client** — the application requesting access (e.g. "Login with Google" on some website).
+- **Authorization server** — issues tokens after authenticating the user (e.g. Google's OAuth endpoint).
+- **Resource server** — the API holding the protected data (e.g. Google Calendar API).
+
+## The flow, step by step
+
+**1. Client redirects the user to the authorization server.**
+The client sends the browser to an `/authorize` URL with query parameters:
+
+```
+GET https://auth.example.com/authorize?
+    response_type=code
+  & client_id=CLIENT_ID
+  & redirect_uri=https://app.example.com/callback
+  & scope=read_calendar
+  & state=RANDOM_STRING
+```
+
+`response_type=code` is what selects this flow. `state` is an unguessable random value the client stores to defend against CSRF.
+
+**2. User authenticates and consents.**
+The authorization server logs the user in (if not already) and shows a consent screen ("App X wants to read your calendar"). The client never sees these credentials — that's the whole point.
+
+**3. Authorization server redirects back with a code.**
+On approval, the user's browser is redirected to the registered `redirect_uri` with a short-lived, single-use **authorization code**:
+
+```
+GET https://app.example.com/callback?code=AUTH_CODE&state=RANDOM_STRING
+```
+
+The client verifies the returned `state` matches what it sent.
+
+**4. Client exchanges the code for tokens (back-channel).**
+This is a server-to-server `POST`, not a browser redirect, so it's not exposed to the user agent:
+
+```
+POST https://auth.example.com/token
+    grant_type=authorization_code
+  & code=AUTH_CODE
+  & redirect_uri=https://app.example.com/callback
+  & client_id=CLIENT_ID
+  & client_secret=CLIENT_SECRET
+```
+
+The authorization server validates the code and the client's secret, then returns:
+
+```json
+{
+  "access_token": "...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "...",
+  "scope": "read_calendar"
+}
+```
+
+**5. Client calls the resource server.**
+It attaches the access token to API requests: `Authorization: Bearer ACCESS_TOKEN`. When the access token expires, the client uses the `refresh_token` to get a new one without involving the user again.
+
+## Why the two-step (code → token) design
+
+The authorization code is a deliberate indirection. The code travels through the browser (front-channel), where it could be intercepted in logs or history — but it's useless on its own. Converting it into an access token requires the client secret over a secure back-channel, so an intercepted code can't be redeemed by an attacker.
+
+## PKCE — the modern addition
+
+For public clients that can't keep a secret (mobile apps, single-page apps), use **PKCE** (Proof Key for Code Exchange). The client generates a random `code_verifier`, sends its hash (`code_challenge`) in step 1, and sends the original `code_verifier` in step 4. The server checks they match. This binds the code to the original requester without needing a client secret, and it's now recommended for *all* clients, including confidential ones.

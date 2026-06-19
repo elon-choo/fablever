@@ -1,0 +1,47 @@
+Versioning a public API safely comes down to one rule — never change the meaning of an existing contract; only add to it — plus a strategy for the rare cases where you genuinely must break. Here's the plan I'd recommend.
+
+## 1. Pick a versioning scheme
+
+For a public HTTP API, default to **URL path versioning** (`/v1/resource` → `/v2/resource`). It's the most visible, the easiest for clients to pin to, trivially cacheable, and obvious in logs. The main alternatives:
+
+- **Header / media-type versioning** (`Accept: application/vnd.yourapi.v2+json`) — cleaner URLs and more "RESTful," but invisible in a browser, harder to test, and a frequent source of client confusion. Worth it only if you have a sophisticated audience.
+- **Query param** (`?version=2`) — easy but messy to cache and easy to forget. Avoid for a public API.
+
+Whatever you pick, **reserve major versions for breaking changes only.** Don't bump the version for additions.
+
+## 2. Define "breaking" precisely, then never do it within a version
+
+Treat these as breaking (require a new major version):
+
+- Removing or renaming a field, endpoint, or parameter
+- Changing a field's type, format, or units
+- Adding a new *required* request field
+- Tightening validation, changing defaults, or changing error codes/semantics
+- Changing pagination, sorting, or auth behavior
+
+These are **non-breaking** and allowed any time within a version:
+
+- Adding new endpoints
+- Adding new *optional* request parameters (with safe defaults)
+- Adding new fields to responses — **clients must tolerate unknown fields** (state this in your docs as a contract)
+
+This "expand, then contract" discipline lets most evolution happen without a version bump at all.
+
+## 3. Run versions in parallel
+
+When you do need v2, keep v1 serving. The cleanest implementations route both versions to a shared core and apply a thin **translation layer** at the edge (v1 request → internal model → v1-shaped response). Avoid forking your whole business logic per version; that's where maintenance burden explodes.
+
+## 4. Have a written deprecation & sunset policy *before* you need it
+
+- Publish a support window (e.g., each major version is supported ≥12 months after its successor ships).
+- Emit `Deprecation` and `Sunset` HTTP response headers (RFC 8594) on the old version so clients get programmatic warning.
+- Communicate via changelog, email to registered API consumers, and dashboard warnings. Track which clients still call v1 (by API key) so you know who'll break and can reach them directly.
+
+## 5. Make the contract enforceable
+
+- Maintain an **OpenAPI/spec** as the source of truth and run **contract tests** in CI that fail the build on any backward-incompatible change to a published version.
+- Version your spec alongside your code so "what v1 promised" is auditable.
+
+---
+
+The one place this plan forks is your API style — the above assumes REST/HTTP. If you're on **GraphQL**, the idiom is different (you generally *don't* version; you add fields and use `@deprecated` directives with field-level deprecation), and **gRPC/protobuf** has its own additive-compatibility rules (never reuse field numbers, only add fields). If you tell me which stack you're on — and whether you already have a v1 in the wild — I can turn this into concrete steps for your case.

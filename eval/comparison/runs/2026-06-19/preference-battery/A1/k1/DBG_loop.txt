@@ -1,0 +1,7 @@
+`i--` decrements the counter instead of incrementing it. `i` starts at 0, then goes to -1, -2, -3, and so on — always staying below `arr.length`, so `i < arr.length` is never false and the loop never ends. (As a side effect, `arr[i]` is `undefined` for every negative index.)
+
+Change `i--` to `i++`:
+
+```js
+for (let i = 0; i < arr.length; i++) { console.log(arr[i]); }
+```

@@ -1,0 +1,36 @@
+The simplest approach is a small `useDebounce` hook that delays updating a value, then drive your search effect off the debounced value:
+
+```jsx
+import { useState, useEffect } from "react";
+
+function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id); // cancel if value changes before delay
+  }, [value, delay]);
+
+  return debounced;
+}
+```
+
+Use it like this:
+
+```jsx
+function Search() {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (!debouncedQuery) return;
+    fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`);
+  }, [debouncedQuery]);
+
+  return <input value={query} onChange={(e) => setQuery(e.target.value)} />;
+}
+```
+
+The input stays fully controlled and responsive (`query` updates on every keystroke), but the search only fires 300ms after the user stops typing. The `clearTimeout` in the effect cleanup is what does the actual debouncing — each new keystroke cancels the pending timer.
+
+If you'd rather not maintain the hook yourself, `useDebouncedValue` from `@mantine/hooks` or `useDebounce` from `usehooks-ts` are the same thing in a package. For most cases the ~12 lines above are all you need.

@@ -1,0 +1,46 @@
+The key is to **truncate the file in place** rather than delete it. The process holds an open file descriptor pointing at the inode, not the filename — so if you `rm` the file, the process keeps writing to the now-invisible inode and disk space is *not* reclaimed until the process closes the file (or restarts). Truncating keeps the same inode, so the open fd stays valid.
+
+## The simplest way
+
+```bash
+truncate -s 0 /path/to/app.log
+```
+
+Or the classic shell redirect (works in any POSIX shell):
+
+```bash
+: > /path/to/app.log
+# or just
+> /path/to/app.log
+```
+
+Both reset the file to zero bytes while preserving the inode, owner, and permissions. The process's open fd keeps working.
+
+## Important caveat: O_APPEND vs not
+
+- **If the process opened the log with `O_APPEND`** (most well-behaved loggers do), truncation is clean — the next write goes to offset 0 and the file grows from there.
+- **If it did *not* use append mode**, the process keeps its own write offset. After you truncate, its next write happens at that old large offset, recreating a **sparse file**: it'll show a huge apparent size again (`ls -l`) but consume little real disk (`du`). Annoying but not fatal — disk space is still freed.
+
+## What *not* to do
+
+```bash
+rm app.log && touch app.log     # ❌ space not reclaimed until process closes fd;
+                                #    new file is a different inode the process isn't writing to
+```
+
+## If you need the file gone but space back *now*
+
+If you already deleted an open file and `df` still shows it full, find and truncate it via the proc filesystem (Linux):
+
+```bash
+lsof | grep deleted                          # find the PID and fd number
+: > /proc/<pid>/fd/<fd>                       # truncate through the fd
+```
+
+## macOS note
+
+You're on macOS (Darwin). `truncate` isn't installed by default — use the shell redirect `: > file`, or install coreutils (`brew install coreutils`, then `gtruncate -s 0 file`). The `/proc` trick doesn't exist on macOS; there you'd use `lsof` to find the fd and either truncate via the path or restart the process.
+
+## Best practice for the long term
+
+If this log grows large repeatedly, hand it to **`logrotate`** with `copytruncate` (which does exactly this copy-then-truncate dance safely), or better, configure the app to reopen its log file on `SIGHUP` so rotation can rename-then-signal without losing any lines.

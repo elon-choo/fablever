@@ -1,0 +1,25 @@
+The one thing to internalize: **CAP only forces a choice during a network partition, and in a distributed database the real choice is C vs. A — because P isn't optional.** Networks drop and delay packets; any database spread across multiple nodes has to cope with that. So the question is never "which two of three?" It's: *when nodes can't talk to each other, do you refuse to answer to stay correct (CP), or answer with possibly-stale data to stay up (AP)?*
+
+When there's no partition — the normal case — you get both consistency and availability. CAP says nothing about your everyday behavior. That's why the textbook "pick two" is misleading in practice.
+
+**Nail the definitions first**, because they're narrower than they sound:
+- **Consistency** here means *linearizability* — every read sees the latest write, as if there were one copy. This is not ACID's "C."
+- **Availability** means every request to a working node gets a non-error response — but not necessarily the freshest data.
+- **Partition tolerance** means the system keeps operating when messages between nodes are lost or delayed.
+
+**The extension that's actually useful for picking: PACELC.** *If* there's a Partition, choose A or C; *Else* (normal operation), choose Latency or Consistency. The second half matters more day-to-day, because partitions are rare but the latency-vs-consistency cost is paid on every request. Strong consistency across regions inherently costs round-trips.
+
+**How to use it when choosing:**
+
+1. *Does this data harm someone if two users see different values at the same moment?* Bank balances, inventory counts, unique-username checks, "did this payment already process" — lean **CP**. A stale or conflicting read is worse than a brief error or wait. Examples: PostgreSQL/MySQL in a strongly-consistent cluster, MongoDB with majority writes, Spanner, and the consensus stores (etcd, ZooKeeper, Consul).
+
+2. *Is staying up more important than being perfectly fresh?* Shopping carts, social feeds, view counts, sessions, telemetry — lean **AP**. Downtime hurts more than a value that's a few seconds behind. Examples: Cassandra, DynamoDB, Riak, CouchDB.
+
+3. *Then weigh latency (the PACELC half).* If you're multi-region and need fast reads, you'll likely accept weaker consistency even when no partition exists. If you're single-region, this matters far less.
+
+**Two caveats that keep you out of trouble:**
+
+- A single-node database (classic Postgres on one box) sidesteps CAP — with one node there's no partition to tolerate. You effectively get C and A; the failure mode is just "it's down." CAP becomes relevant the moment you add replicas or shards.
+- "CP" and "AP" are rarely whole-database labels anymore. Cassandra, DynamoDB, and Cosmos DB let you pick the consistency level *per query* (e.g., quorum reads/writes). So the real decision is often per-operation: strong consistency for the checkout, eventual for the recommendations.
+
+Practical shortcut: decide CP vs. AP **per category of data**, not per company. Most real systems run a CP store for the money/identity data and an AP store for the high-volume, tolerant-of-staleness data — and that's the correct answer, not a compromise.

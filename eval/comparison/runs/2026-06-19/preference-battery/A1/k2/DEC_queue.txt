@@ -1,0 +1,23 @@
+Default to a Postgres-backed queue library (pg-boss or graphile-worker) if you're already running Postgres. Reach for BullMQ when you outgrow it, and a cloud queue only when you want zero ops or are already living in that cloud. Here's the reasoning.
+
+The real deciding question isn't the three options — it's **do you already run Redis or Postgres, and how much throughput do you actually need?** Most Node apps that ask this question need hundreds of jobs/minute, not hundreds of thousands per second, and already have Postgres. For that case the DB-table approach wins on simplicity.
+
+**Just a DB table → use pg-boss or graphile-worker (don't hand-roll)**
+- One fewer piece of infrastructure to run, monitor, and back up.
+- The killer feature: **transactional enqueue.** You can insert the job in the *same* transaction as your business write, so you never get the "saved the order but lost the email job" dual-write problem. Neither BullMQ nor a cloud queue can do this.
+- A hand-rolled `SELECT ... FOR UPDATE SKIP LOCKED` loop is a classic trap — you'll reinvent retries, backoff, visibility timeouts, and cron. These libraries already do it on top of that exact primitive.
+- Ceiling: realistically fine into the low thousands/sec. Beyond that, polling and table churn start to hurt.
+
+**BullMQ → when you need queue features or higher throughput**
+- Best if you already run Redis, or you need its rich built-ins: rate limiting, delayed/repeatable jobs, priorities, concurrency control, and flows (parent/child job dependencies). Reproducing those on a DB table is real work.
+- Higher throughput than DB polling because it's push-based on Redis.
+- Caveat: durability is only as good as your Redis persistence config (AOF/replication). Redis is more likely to lose a job on crash than Postgres is, so it matters for money-touching work. And no transactional enqueue — you own the dual-write risk.
+
+**Cloud queue (SQS / Cloud Tasks / Pub/Sub) → when you want zero ops or already live there**
+- No server to run; managed durability and near-infinite scale.
+- Pays off when you're already on AWS/GCP, need huge or very spiky scale, or want jobs to outlive your app processes entirely.
+- Trade-offs: at-least-once delivery (your handlers must be idempotent), leaner local feature set, network latency per op, and harder local development/testing.
+
+My concrete pick for a typical Node + Postgres app: **graphile-worker** if you want minimal moving parts and Postgres-native, **pg-boss** if you want a slightly more batteries-included API (cron, archiving, pub/sub). Switch to BullMQ the day you genuinely need its scheduling/rate-limiting features, and to a cloud queue when ops burden or scale forces your hand.
+
+If you tell me your expected job volume, whether you're already on Redis or Postgres, and whether any jobs touch money/payments, I'll narrow it to one.

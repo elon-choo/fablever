@@ -1,0 +1,18 @@
+For a single instance, default to a plain in-memory cache. Reach for Redis only when a specific requirement forces it.
+
+The whole reason Redis exists in a caching role is to be a *shared* store across multiple processes or machines. With one instance you don't have that problem, so Redis mostly adds cost without buying you anything: a network hop on every get/set (vs. a nanosecond hash lookup), serialization overhead, a separate process to run and monitor, and a new failure mode. An in-process map or a small library is faster and simpler.
+
+Use an in-memory cache (a library like Caffeine on the JVM, `lru-cache` in Node, `cachetools`/`functools.lru_cache` in Python — or just a dict/map with a TTL) when:
+- One process serves all traffic.
+- The cached data fits comfortably in your heap.
+- Losing the cache on restart is fine (it just re-warms).
+
+Switch to Redis (or another out-of-process cache) when one of these is actually true, not hypothetically:
+- **You'll scale out soon.** More than one instance means each has its own cache — stale reads and duplicated work. A shared store fixes that. If horizontal scaling is on the near roadmap, starting on Redis can save a migration.
+- **Cache must survive restarts/deploys.** In-memory dies with the process; if a cold cache causes a thundering-herd against your database on every deploy, persistence helps.
+- **Cached data is large** relative to your app's memory, and you don't want it competing with your working set / triggering GC pressure.
+- **You need richer semantics** — pub/sub, atomic counters, rate-limiting structures, cross-process locks, sorted sets. At that point Redis is a data structure server, not just a cache.
+
+One middle option worth knowing: a local in-memory cache fronting Redis (near-cache / two-tier) gives you Redis's sharing with in-process speed for hot keys — but that's a multi-instance optimization, not something a single-instance app needs.
+
+So: start in-memory. The cost of being wrong is low — caching is usually behind an interface, and moving to Redis later is a contained change. Don't pay Redis's operational tax for a problem you don't have yet.

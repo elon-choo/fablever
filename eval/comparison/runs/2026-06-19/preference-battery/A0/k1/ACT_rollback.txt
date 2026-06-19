@@ -1,0 +1,62 @@
+Here's the practical playbook for rolling back Rails migrations.
+
+## The common case: undo the last migration
+
+```bash
+rails db:rollback
+```
+
+This reverts the **most recent** migration (runs its `down`). To undo several at once:
+
+```bash
+rails db:rollback STEP=3
+```
+
+## Roll back to a specific version
+
+Find the version (the timestamp prefix on the migration file, also visible via `rails db:migrate:status`), then:
+
+```bash
+rails db:migrate:status          # see what's up/down + version numbers
+rails db:migrate VERSION=20260615120000
+```
+
+This migrates **down to** that version — anything applied after it gets reverted. Use `VERSION=0` to roll everything back.
+
+## Redo (rollback + re-run) while iterating on a migration
+
+```bash
+rails db:migrate:redo            # last migration
+rails db:migrate:redo STEP=2
+```
+
+## Important gotchas
+
+**1. Rollback uses the migration file as it exists *now*.** Rails runs the `down` method (or auto-reverses a `change` method) from the current file on disk. If you've already edited or deleted the migration file, the rollback won't match what was actually applied. So **roll back before editing or deleting** the migration.
+
+**2. Not every migration auto-reverses.** `change` handles `create_table`, `add_column`, etc. automatically. But irreversible operations (raw SQL via `execute`, some `change_column` calls, dropping a column without type info) raise `ActiveRecord::IrreversibleMigration`. Fix by writing explicit `up`/`down` methods, or use `reversible do |dir|` blocks.
+
+**3. Data loss is real.** Rolling back a `create_table` or `add_column` *drops* that table/column and everything in it. Rollback reverses schema, not data — there's no undo for the data itself.
+
+**4. "Bad migration already in production / shared with the team."** Don't just roll back and edit in place — that desyncs everyone whose DB already ran it. Instead, write a **new** migration that corrects the problem and commit that forward.
+
+## If a migration failed halfway
+
+Non-Postgres databases (MySQL) don't wrap DDL in transactions, so a migration can fail partway, leaving the schema in a broken state that won't cleanly roll back. You may need to manually fix the schema, then either re-run or mark it. As a last resort to clear a stuck version row:
+
+```bash
+# only if you know what you're doing — surgically remove the bad version
+rails runner "ActiveRecord::SchemaMigration.where(version: '20260615120000').delete_all"
+```
+
+## Quick decision guide
+
+| Situation | Command |
+|---|---|
+| Undo last migration, not yet shared | `rails db:rollback` |
+| Undo last N | `rails db:rollback STEP=N` |
+| Go back to a known-good version | `rails db:migrate VERSION=xxxx` |
+| Iterating locally on a migration | `rails db:migrate:redo` |
+| Bad migration already shipped/shared | write a **new** corrective migration |
+
+If you tell me what the migration actually did (added a column? raw SQL? already deployed?), I can give you the exact, safe sequence for your case.

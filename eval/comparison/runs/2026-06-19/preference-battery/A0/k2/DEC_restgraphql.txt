@@ -1,0 +1,29 @@
+Short answer: **default to REST for a mobile backend, and reach for GraphQL only if you have a specific reason.** Here's the reasoning.
+
+## Why REST is the better default
+
+- **Caching.** This is the big one for mobile. REST gets you HTTP caching for free — CDN edge caching, `ETag`/`Cache-Control`, conditional requests. Mobile users are on flaky, high-latency networks, so cache hits matter a lot. GraphQL typically POSTs everything to a single endpoint, which defeats HTTP caching and pushes you toward a client-side normalized cache (Apollo/urql) that you have to manage.
+- **Simplicity & debugging.** Plain URLs you can curl, inspect in a proxy, and reason about. Smaller backend surface, fewer moving parts, easier on-call.
+- **Maturity.** Auth, rate-limiting, gateways, monitoring, file uploads — all the infra assumes REST. Less glue to write.
+
+## Why you'd choose GraphQL
+
+- **Over-/under-fetching is a real, measured pain.** If your screens each need a different slice of data and you find yourself either making 5 round trips or building tons of bespoke `?include=` endpoints, GraphQL's "ask for exactly these fields in one request" model is genuinely great over a slow mobile link.
+- **Many heterogeneous clients evolving fast.** iOS + Android + web all wanting different shapes, shipping on different cadences. GraphQL's schema evolves without versioned endpoints (old app versions keep working as you add fields).
+- **A graph-shaped domain** — lots of nested relationships clients traverse in varied ways (social feeds, dashboards aggregating many sources).
+
+## The honest trade-off
+
+GraphQL moves complexity from the client to the server. You trade easy HTTP caching, simple debugging, and mature tooling for client flexibility and one-round-trip fetching. For *most* mobile apps, a well-designed REST API (with a few coarse-grained, screen-shaped endpoints to avoid chattiness) hits the sweet spot.
+
+A common middle path: **REST now, add a thin GraphQL or [BFF](https://samnewman.io/patterns/architecture/bff/) (backend-for-frontend) layer later** if over-fetching becomes a measured problem. Don't adopt GraphQL preemptively for flexibility you don't yet need.
+
+---
+
+A couple of things would sharpen this for your case — what's driving the decision?
+
+- **Team familiarity** — do you/your team already know GraphQL, or would it be new? (Learning curve + operational burden is real.)
+- **Data shape** — are your screens mostly simple CRUD, or deeply nested/relational with each screen needing a different slice?
+- **Client count** — just one mobile app, or iOS + Android + web + third parties all evolving independently?
+
+If it's a fairly standard CRUD-ish app with one or two clients and no strong GraphQL experience on the team, I'd commit to REST without hesitation. Tell me a bit about those three and I'll give you a firm call.

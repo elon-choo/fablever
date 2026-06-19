@@ -1,0 +1,45 @@
+No worries — I'll lay out a plan with sensible defaults and flag the few forks where your stack changes the answer. Adjust as needed.
+
+## The goal
+
+"Observability" is just three questions you want to answer fast during an incident: **Is it broken? What's broken? Why?** Map those to the three signals — metrics (is it broken), logs (what), traces (why) — plus alerting on top so you find out before customers do.
+
+Don't boil the ocean. Roll out in phases, each one independently useful so you get value in week 1.
+
+## Phase 0 — Decisions (half a day)
+
+Two forks set everything downstream:
+
+- **Build vs buy.** Default recommendation: **start with managed SaaS** (Grafana Cloud or Datadog; Honeycomb if tracing-first). Running Prometheus/Loki/Tempo yourself is cheaper at scale but is a project of its own — don't take that on while you have *zero* monitoring. You can migrate later; if you instrument with **OpenTelemetry**, you stay vendor-neutral and avoid lock-in.
+- **Instrument on OTel from day one.** SDKs for every major language, one wire format, swap backends without re-instrumenting. This is the single highest-leverage decision.
+
+## Phase 1 — "Is it down?" (week 1)
+
+The fastest path out of flying blind:
+
+1. **Uptime/health checks** — a `/health` (liveness) and `/ready` (readiness) endpoint per service, pinged externally (Better Stack, Pingdom, or a SaaS synthetic). Catches the "customer told us first" case immediately.
+2. **Alerting wired to where you'll see it** — Slack/Discord for warnings, PagerDuty/Opsgenie (or just phone push) for wake-me-up. One real alert beats a hundred dashboards.
+3. **Error tracking — install Sentry.** Highest value-per-hour of anything here. ~30 min per service, gives grouped exceptions with stack traces, release, and user context. If you do nothing else this week, do this.
+
+## Phase 2 — "What's broken?" (weeks 2–3)
+
+4. **Centralized structured logs.** Switch app logs to **structured JSON** (level, timestamp, `service`, `trace_id`, `request_id`) and ship to one searchable place (Loki / Datadog Logs / CloudWatch). The `trace_id` field is what later links logs↔traces — add it now even before tracing exists.
+5. **Core metrics — the RED method** for each service: **R**ate, **E**rrors, **D**uration (per endpoint). For infra/hosts, **USE**: Utilization, Saturation, Errors. This is your "is it broken, and how broken" dashboard.
+
+## Phase 3 — "Why?" (week 4+)
+
+6. **Distributed tracing** via OTel auto-instrumentation (often near-zero code for HTTP/DB/queue calls). This is what turns "checkout is slow" into "the slow span is this query." Highest payoff if you have multiple services or noticeable latency; lower priority for a single monolith.
+7. **Dashboards** — one golden-signals overview per service, plus a single "is everything OK" top-level board.
+
+## Phase 4 — Make it durable
+
+8. **SLOs + alert on symptoms, not causes.** Define a couple ("99.9% of requests < 500ms"), alert on burn rate. Page on user-facing symptoms; everything else is a dashboard. This is the cure for alert fatigue.
+9. **Runbooks** linked from each alert, and a regular review to delete noisy alerts.
+
+## What I'd actually do first
+
+If you want the 80/20 this week: **Sentry + an uptime check + alerts to Slack/pager.** That alone moves you from "blind" to "we'll know." Then layer in logs → metrics → traces.
+
+---
+
+A couple of things would sharpen this into a concrete tool-by-tool plan: **what the system runs on** (K8s vs VMs vs serverless), **whether cost or ops-load is the bigger constraint**, and **what's hurting most right now**. Tell me those and I'll turn this into specific tooling picks and setup steps — and if you point me at the repo, I can scope the actual instrumentation work.

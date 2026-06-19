@@ -1,0 +1,15 @@
+For a new Node API, default to a typed query layer rather than hand-rolling raw SQL everywhere — but the specific tool matters more than the ORM-vs-SQL framing.
+
+My recommendation: **start with Prisma (or Drizzle) and drop to raw SQL for the few queries that need it.** This is the pragmatic middle that most new APIs want. You get type-safe models, migrations, and fast CRUD on day one, and both let you write raw SQL when a query gets too complex for the query builder. You don't have to choose one for the whole codebase.
+
+The actual fork in the decision is which tool, and it comes down to how SQL-heavy your workload is:
+
+- **Prisma** — best when the app is mostly standard CRUD and you value the schema-first workflow, generated client, and migration tooling. The cost: it's an abstraction with its own query semantics, generates a binary engine, and historically produces awkward SQL for complex joins/aggregations (improving, but real). You'll occasionally fight it.
+- **Drizzle or Kysely** — best when you think in SQL and want types without the abstraction. Drizzle's queries map almost 1:1 to SQL, lighter runtime, and `$client`/raw escape hatches are first-class. Kysely is a pure typed query builder, even closer to SQL.
+- **Raw SQL (with `pg` + something like pgtyped)** — worth it only when queries are the product: heavy analytics, complex reporting, performance-critical paths, or a team that strongly prefers owning the SQL. The cost is you hand-build what an ORM gives free — migrations, type mapping, relation loading.
+
+What I'd actually pick by situation: solo/small team shipping CRUD fast → **Prisma**. SQL-comfortable team or join-heavy domain → **Drizzle**. Analytics/reporting-dominated API → **raw SQL with a typed layer**.
+
+The thing to avoid is full raw SQL with no types and no migration tooling for a standard CRUD API — that's where bugs and drift accumulate.
+
+If you tell me what the API does (CRUD-heavy vs. analytics, team size, Postgres vs. something else), I'll give you a single pick instead of three.

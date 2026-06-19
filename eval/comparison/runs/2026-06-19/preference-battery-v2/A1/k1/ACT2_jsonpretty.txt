@@ -1,0 +1,19 @@
+`jq` is the standard tool for this. If you have it (it's pre-installed on most systems, or `brew install jq` on macOS):
+
+```bash
+jq . file.json
+```
+
+That reads `file.json`, parses it, and prints it indented with syntax coloring. To overwrite the file in place with the pretty-printed version:
+
+```bash
+jq . file.json > tmp && mv tmp file.json
+```
+
+If you'd rather not install anything, Python is almost always available:
+
+```bash
+python3 -m json.tool file.json
+```
+
+Both validate the JSON as a side effect — they'll error out if the file is malformed. A couple of useful `jq` variants: `jq -S` sorts object keys, and `jq --indent 4` uses 4-space indentation instead of the default 2.

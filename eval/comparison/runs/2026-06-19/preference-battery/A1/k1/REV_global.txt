@@ -1,0 +1,25 @@
+It's a data-leak bug waiting to happen. The problem is that `currentUser` is module-level state shared across every request, but in Node a single process handles many requests concurrently on one event loop. The moment `render()` (or anything in the request path) does async work, requests interleave and the global gets clobbered between users.
+
+Concretely:
+
+```js
+// request A: setUser(alice) → currentUser = alice
+//   render() hits an await, yields the event loop
+// request B: setUser(bob)   → currentUser = bob
+//   request A resumes, render() reads currentUser → bob
+// Alice gets Bob's data.
+```
+
+That's a cross-user information disclosure, not just a tidiness issue.
+
+Why it might *look* fine: in exactly the code you pasted, `render()` is synchronous, so Node never preempts it mid-render and you'd never observe the race. That's the trap — it passes every local test and then leaks the day someone adds a single `await` inside `render()` or `setUser`. The correctness depends on an invisible "this whole chain stays synchronous forever" invariant.
+
+Two other smells beyond the race: `render()` depends on `currentUser` implicitly (action at a distance — you can't tell from its signature that it needs a user), and the global is never cleared, so it retains the last request's user in between requests.
+
+The fix is to thread the value explicitly instead of stashing it:
+
+```js
+function handler(req, res) { res.send(render(req.user)); }
+```
+
+If the user is needed deep in a call chain and you don't want to pass it through every layer, that's the actual use case for `AsyncLocalStorage` — it gives you per-request ambient context that's safe under concurrency, which a module-level variable is not.

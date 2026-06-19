@@ -1,0 +1,25 @@
+No Dockerfile in this repo, so here's the concrete fix to apply wherever your build lives.
+
+The first thing to do is split your dependency install from your source copy, with deps on top. The ordering that fixes "slow on every change" looks like this (Node example — same shape for any ecosystem):
+
+```dockerfile
+# 1. Copy ONLY the dependency manifests first
+COPY package.json package-lock.json ./
+
+# 2. Install deps — this layer is now cached until the manifests change
+RUN npm ci
+
+# 3. Copy source LAST
+COPY . .
+
+# 4. Build
+RUN npm run build
+```
+
+Why this works: Docker caches each layer and reuses it until that layer's inputs change. If `COPY . .` comes *before* the install, every source edit busts the cache for the install layer below it, so you reinstall everything on every build. By copying just the manifest files first, the expensive `npm ci` / `pip install` / `go mod download` layer only re-runs when your actual dependencies change — a code edit reuses it instantly.
+
+Translate step 1 to your stack: `requirements.txt` for pip, `go.mod`/`go.sum` for Go, `Cargo.toml`/`Cargo.lock` for Rust, `pom.xml` for Maven.
+
+Do that first because it's one reordering and usually eliminates most of the per-change time. If it's still slow afterward, the next levers are a good `.dockerignore` (so `COPY . .` isn't dragging in `node_modules`, `.git`, build artifacts), enabling BuildKit (`DOCKER_BUILDKIT=1`) for `--mount=type=cache` on the package cache, and multi-stage builds to keep the final image lean — but try the reorder before reaching for those.
+
+If you paste your actual Dockerfile I'll point at the exact line to move.

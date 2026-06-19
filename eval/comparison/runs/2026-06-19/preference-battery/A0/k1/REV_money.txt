@@ -1,0 +1,26 @@
+Yes — the main problem is **using floating-point math for money**.
+
+The field name `priceFloat` strongly implies these are prices, and IEEE-754 floats can't represent most decimal fractions exactly, so the sum accumulates rounding error:
+
+```js
+0.1 + 0.2          // => 0.30000000000000004
+[10.10, 20.20, 5.30].reduce((s,p)=>s+p, 0)  // => 35.599999999999994
+```
+
+Across many items this drifts and you get cents that don't reconcile.
+
+**Fix:** do money math in integer minor units (cents), then format on the way out:
+
+```js
+function total(items) {
+  return items.reduce((s, i) => s + Math.round(i.priceFloat * 100), 0); // total in cents
+}
+```
+
+Or, better, store prices as integer cents at the source (avoid the `* 100` round-trip entirely) or use a decimal library (`decimal.js`, `dinero.js`).
+
+Secondary, lower-priority concerns:
+- **No guarding of bad data** — if any `i.priceFloat` is `undefined`/`NaN`, the result silently becomes `NaN`. Consider `s + (Number(i.priceFloat) || 0)` if inputs aren't trusted.
+- **Throws if `items` is null/undefined** — add a default (`items = []`) if that's possible in your callers.
+
+Empty array is fine (returns `0`). The float issue is the one that'll actually bite you in production.

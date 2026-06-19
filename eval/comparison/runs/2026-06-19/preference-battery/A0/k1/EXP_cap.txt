@@ -1,0 +1,47 @@
+## The CAP theorem in one sentence
+
+When a network failure splits your database nodes apart (a "partition"), you must choose: keep answering with **possibly stale data** (availability) or **refuse to answer** until you're sure the data is correct (consistency). You can't have both *during* the failure.
+
+That's the whole thing. The trap is thinking C, A, and P are three equal options you pick two of. They're not.
+
+## Why "pick 2 of 3" is misleading
+
+**P (partition tolerance) is not optional.** Networks drop packets, nodes die, cables get cut. If you run more than one machine, partitions *will* happen. So you don't get to "choose" P — reality chooses it for you.
+
+The real choice is only made *when a partition is happening*, and it's binary:
+
+- **CP** — during a partition, the side that can't guarantee correctness **stops responding** (errors or timeouts) rather than serve wrong data.
+- **AP** — during a partition, **every node keeps answering**, accepting that some answers may be stale or that writes will need reconciling later.
+
+When there's *no* partition (99%+ of the time), you get both consistency and availability. CAP only bites during the failure.
+
+## The decision rule you can actually apply
+
+Ask one question: **"If two parts of my system can't talk to each other, would I rather return a wrong/stale answer, or no answer?"**
+
+| Your situation | Choose | Because |
+|---|---|---|
+| Money, inventory, bookings, anything where a double-spend or overselling is unacceptable | **CP** | Better to show an error than let two people buy the last seat |
+| Likes, view counts, feeds, sensor data, shopping carts, presence | **AP** | A slightly stale count is fine; downtime loses users/data |
+
+## What this maps to in real databases
+
+- **CP-leaning:** PostgreSQL/MySQL (single-primary), MongoDB (default), HBase, Zookeeper, etcd, Spanner. Reads/writes block or fail on the minority side of a partition.
+- **AP-leaning:** Cassandra, DynamoDB, Riak, CouchDB. Stay up everywhere; you resolve conflicts afterward (last-write-wins, vector clocks, CRDTs).
+
+Most of these are **tunable per-query**, which matters more than the label. Cassandra and Dynamo let you set consistency *per request* (`QUORUM` vs `ONE`). So the practical question becomes "what guarantee does *this specific operation* need," not "what camp is my database in."
+
+## The two things CAP leaves out (and you'll feel them more)
+
+1. **Latency.** The more nodes that must agree before a write is confirmed, the slower every write — even when the network is perfectly healthy. This is the **PACELC** extension: *if Partition then A-or-C, Else (normal times) Latency-or-Consistency.* For most apps, this everyday latency-vs-consistency tradeoff affects you far more often than the rare partition does.
+
+2. **"Consistency" here ≠ the C in ACID.** CAP's C means "every read sees the latest write, everywhere" (linearizability). ACID's C means "transactions respect your constraints." Same word, different concept — don't let a vendor blur them.
+
+## Bottom line for picking
+
+1. You're keeping P. Accept it.
+2. Decide per-workload: is a stale/failed answer worse? → **CP** for correctness-critical data, **AP** for availability-critical data.
+3. You can mix: many systems use a CP store for orders/payments and an AP store for analytics/feeds.
+4. Then look at **PACELC** — the normal-time latency cost is what you'll live with daily.
+
+Want me to apply this to a specific app you're building? If you tell me the data and access pattern, I'll give you a concrete recommendation.

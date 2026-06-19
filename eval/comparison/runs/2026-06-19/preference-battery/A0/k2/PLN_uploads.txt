@@ -1,0 +1,47 @@
+No problem — I'll give you the generic, codebase-agnostic plan as a starting point. It's not tied to a real app in this repo (there isn't one here), so once you point me at the actual Express project I'll tailor it to your routing, storage, and auth setup.
+
+## Plan: file uploads in Express
+
+**1. Pick a parsing library**
+- **`multer`** — the standard for `multipart/form-data`. Use this unless you have a reason not to.
+- Install: `npm i multer`
+
+**2. Decide where bytes land**
+- **Disk** (`multer.diskStorage`) — simplest; good for a single box or dev.
+- **Memory** (`multer.memoryStorage`) — buffer in RAM, then stream to **S3/GCS/R2**. Right choice for anything horizontally scaled or serverless. (Watch memory on large files.)
+- **Direct-to-cloud presigned URLs** — client uploads straight to S3; your server only signs the request. Best for large files / high throughput, keeps bytes off your app entirely.
+
+**3. Wire the route**
+```js
+const multer = require('multer');
+const upload = multer({
+  storage: multer.diskStorage({ destination: 'uploads/', filename: ... }),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },   // hard cap
+  fileFilter: (req, file, cb) => { /* check mimetype */ },
+});
+
+app.post('/upload', requireAuth, upload.single('file'), (req, res) => {
+  // req.file metadata, persist a DB record, return its id/URL
+});
+```
+
+**4. Security & validation (the part that actually matters)**
+- **Size limit** via `limits.fileSize` — reject before buffering the whole thing.
+- **Type allowlist** — check `file.mimetype` *and* sniff magic bytes (e.g. `file-type`); don't trust the client's extension or content-type.
+- **Sanitize filenames** — never use the client's filename for the path; generate your own (uuid). Prevents path traversal.
+- **Store outside the web root** (or in a bucket) so uploads can't be executed/served as code.
+- **AuthN/AuthZ** — gate the route; enforce per-user quotas.
+- Optional: AV scan (ClamAV) for user-facing untrusted uploads.
+
+**5. Error handling**
+- Catch `MulterError` (e.g. `LIMIT_FILE_SIZE`) in error middleware and return clean 4xx JSON instead of a 500.
+
+**6. Persistence & response**
+- Save a metadata row (owner, original name, stored key, size, mimetype, created_at); return an id or signed URL, not a raw disk path.
+
+**7. Tests**
+- `supertest` with `.attach()` for: happy path, oversize reject, wrong-type reject, unauthenticated reject.
+
+---
+
+To make this concrete instead of generic, tell me **the path to your Express app** (or say "scaffold a new one"), and I'll inspect the routing/auth/storage you already have and turn this into exact edits. Two questions that change the design most: **single vs. multiple files**, and **disk vs. cloud storage**?

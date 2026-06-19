@@ -1,0 +1,13 @@
+For a single instance, default to a plain in-memory cache. Reach for Redis only when a specific need pushes you there.
+
+**Why in-memory wins by default here:** the main reason Redis exists is to share state across multiple processes or machines. With one instance you don't have that problem, so Redis mostly adds a network hop (microseconds in-process vs. ~0.1–1ms over a loopback socket), a serialization step, a separate process to run and monitor, and a new failure mode. An in-process map or a small library (e.g. an LRU/TTL cache) gives you nanosecond reads and zero operational overhead.
+
+**Pick Redis anyway if one of these is true:**
+- **Cache must survive restarts/deploys.** In-memory dies with the process; Redis (with persistence) keeps the warm cache. If a cold cache after deploy is painful, that's the strongest single reason.
+- **The data is large.** A multi-GB cache competing with your app for heap is a problem (GC pressure in a managed runtime, OOM risk). Redis holds it out-of-process.
+- **You'll plausibly scale to multiple instances soon.** Writing against Redis now avoids a later migration once two instances would each hold divergent caches.
+- **You want Redis's extra structures** — pub/sub, atomic counters, sorted sets, distributed locks, native TTL/eviction policies — not just key/value caching.
+
+**The honest middle ground:** if you think you'll grow past one instance but aren't there yet, put a thin cache interface in front of an in-memory implementation. You get in-process speed now and a one-file swap to Redis later, without coupling your whole codebase to either choice.
+
+So: in-memory unless you need persistence across restarts, the working set is too big for your heap, or multi-instance is on the near horizon.

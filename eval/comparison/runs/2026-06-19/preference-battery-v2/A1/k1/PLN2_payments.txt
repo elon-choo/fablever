@@ -1,0 +1,29 @@
+No problem — I'll go with the defaults that fit most SaaS builds and flag where your situation might differ. I'm assuming **recurring subscriptions, hosted Stripe Checkout, and a Node/TypeScript-ish backend**. If any of those is wrong (e.g. you need usage-based metering, or you're on Rails/Python), tell me and I'll adjust the specifics — the shape stays the same.
+
+## The plan
+
+**1. Model your plans in Stripe first, not in code.** In the Stripe Dashboard create a Product per plan (e.g. "Pro") and a Price under each (monthly and annual are two Prices on the same Product). Do this in **test mode** first. The Price IDs (`price_…`) are what your code references — never hardcode amounts. This is the single most important decision: get the Product/Price structure right and the code is mechanical.
+
+**2. Store the Stripe customer link on your user.** Add a `stripe_customer_id` to your users table, plus a small subscription-state cache (`plan`, `status`, `current_period_end`). You create the Stripe Customer the first time a user starts checkout, and you treat Stripe as the source of truth — your DB is just a fast local cache that webhooks keep fresh.
+
+**3. Checkout = one server endpoint that creates a Checkout Session.** Your backend calls `stripe.checkout.sessions.create` with the Price ID, `mode: 'subscription'`, the customer, and `success_url`/`cancel_url`. Return the session URL; the frontend redirects to it. Stripe's hosted page handles card entry, SCA/3DS, and (if you enable it) tax. This keeps card data off your servers entirely, so your PCI burden stays minimal.
+
+**4. Webhooks are the real integration — budget the most time here.** This is where people cut corners and ship bugs. Set up one webhook endpoint that verifies the signature (`stripe.webhooks.constructEvent` with your signing secret) and handles at minimum:
+- `checkout.session.completed` — provision access
+- `customer.subscription.updated` / `…deleted` — sync plan/status changes, cancellations, downgrades
+- `invoice.paid` / `invoice.payment_failed` — handle renewals and dunning
+
+Make handlers **idempotent** (Stripe retries and can send duplicates) and return 200 fast. The `success_url` redirect is *not* a reliable signal that payment succeeded — grant access from the webhook, not the redirect.
+
+**5. Let Stripe handle plan management.** Use the **Customer Portal** (`stripe.billingPortal.sessions.create`) so users upgrade, downgrade, update cards, and cancel without you building any of that UI. One endpoint, one redirect.
+
+**6. Gate your features on subscription status,** reading from your local cache (updated by webhooks), not by calling Stripe on every request.
+
+**7. Test mode → local webhook testing → go live.** Use the Stripe CLI (`stripe listen --forward-to localhost/…` and `stripe trigger`) to exercise webhooks locally with test cards (`4242 4242 4242 4242`). Only then swap to live keys. Keep test and live keys in env vars, never committed.
+
+## What changes if my assumptions were wrong
+- **Usage-based / hybrid:** add metered Prices and report usage via the Meter Events API; webhook set is similar but billing math lives in Stripe.
+- **One-time payments:** drop subscriptions/portal/renewal webhooks entirely — it's just `mode: 'payment'` Checkout plus `checkout.session.completed`. Much smaller.
+- **Embedded Payment Element instead of hosted:** steps 4–7 are unchanged; step 3 becomes a PaymentIntent + client-side Element, which is meaningfully more frontend work.
+
+If you point me at the actual repo (or tell me the stack and billing model), I'll turn this into the concrete files and endpoints for your setup — and I can scaffold the Checkout endpoint and webhook handler directly.

@@ -1,0 +1,28 @@
+Use `-d` with a `Content-Type: application/json` header:
+
+```bash
+curl -X POST https://api.example.com/endpoint \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Ada", "role": "admin"}'
+```
+
+A few practical variants:
+
+**Body from a file** (keeps shell quoting out of the way):
+```bash
+curl -X POST https://api.example.com/endpoint \
+  -H "Content-Type: application/json" \
+  -d @payload.json
+```
+
+**With an auth header**, and `--json` shorthand (curl 7.82+, sets both the `Content-Type` and `Accept` headers for you):
+```bash
+curl -X POST https://api.example.com/endpoint \
+  -H "Authorization: Bearer $TOKEN" \
+  --json '{"name": "Ada"}'
+```
+
+Notes:
+- `-d` already implies POST, so `-X POST` is technically redundant — but harmless and clearer to read.
+- `-d` defaults to `application/x-www-form-urlencoded`, which is why the explicit JSON `Content-Type` header matters when you're not using `--json`.
+- Add `-i` to see response headers, or `-s` to silence the progress meter in scripts.

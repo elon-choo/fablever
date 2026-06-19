@@ -1,0 +1,1 @@
+No problem — just tell me in your own words where the public API lives (a path or repo), and I'll read its actual stack before proposing a rate-limiting plan. Right now I'd only be guessing, since nothing in `fable-profile` receives inbound requests.

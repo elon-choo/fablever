@@ -1,0 +1,17 @@
+You dismissed the picker — that's fine. Here's the plan I'd run for "reads hammering a database," stated as defaults you can override once you tell me the stack. The short version: **measure the hot queries first, then put a cache-aside layer (Redis) in front of just those, with short TTLs plus explicit invalidation on write, and a stampede guard.** Don't cache everything — cache the few queries doing the damage.
+
+**1. Measure before caching.** Pull the actual top offenders — `pg_stat_statements` (Postgres), the slow query log (MySQL), or your APM — ranked by `calls × mean_time`. You're looking for high-frequency, rarely-changing reads. Caching a query that's already fast, or one that changes on every read, just adds a coherency bug for no win. This step decides the whole design.
+
+**2. Default pattern: cache-aside (lazy loading).** On read, check cache → hit returns it → miss reads the DB, writes the result to cache, returns it. It's the most forgiving pattern: the cache is never authoritative, so a cache outage degrades to "slow," not "wrong." Reach for read-through/write-through only if you already run a caching library that supports it.
+
+**3. Store: Redis** for anything multi-instance or that must survive restarts. If you're a single process and the working set is small, an in-process LRU (e.g. a bounded map) is simpler and faster — but it won't share across instances and dies on deploy. Which one depends on your topology.
+
+**4. Keys and TTL.** Namespaced, deterministic keys (`user:123:profile`, `feed:v2:<hash-of-params>`). Put a version token in the prefix so you can invalidate a whole class by bumping it. Every key gets a TTL — it's your safety net against stale data from missed invalidations. Start short (30–60s) and lengthen based on measured hit rate vs. tolerable staleness.
+
+**5. Invalidation — the part that bites.** On every write that touches cached data, delete (don't update) the affected keys in the same transaction/commit path. Deleting is safer than rewriting because a failed rewrite leaves you authoritatively wrong; a delete just forces a fresh read. The keys you invalidate must be derivable from the write, which is why the key scheme in step 4 matters.
+
+**6. Stampede protection.** When a hot key expires, many requests miss at once and all hit the DB — re-hammering exactly what you fixed. Guard with a short per-key lock (single-flight) or serve-stale-while-revalidate so one request refills while others get the slightly-old value.
+
+**7. Roll out measured and reversible.** Ship behind a flag, enable for one query, watch **cache hit rate** and DB read QPS. A hit rate below ~80% on a query you expected to be hot usually means the key varies more than you thought. Expand query by query.
+
+Two things I'd pin down before turning this into code: **(a)** which datastore and deployment topology you're on (Postgres vs. MySQL vs. something else; single instance vs. many), and **(b)** your staleness tolerance for the hot reads — "can be 60s old" vs. "must be current" changes steps 4–6 substantially. Point me at the repo with the database and I'll ground each step in your actual query layer instead of these defaults.

@@ -1,0 +1,26 @@
+You skipped the scope question, so I'll commit to the most likely target and you can redirect me: **천기문 production** — that's the system where "we have no monitoring" actually bites (real users, Aurora + PostHog + Supabase, money flowing through it). The Mac automation tooling is a different, smaller problem. If you meant something else, say so and I'll re-aim.
+
+One reframe up front: you're not starting from zero. **PostHog already gives you product analytics** (events, funnels, CTA) and **Aurora emits CloudWatch metrics by default**. So the real gap is *systems/ops observability* — "would we even know if the site were down or throwing 500s right now?" Today the answer is no. Here's how I'd close that, ordered by value-per-effort.
+
+## Phase 1 — "we'd know within 2 minutes if it broke" (about a day)
+This is the 80%. Do all four before anything fancier.
+
+1. **Error tracking — Sentry.** Single highest-value install. Drop the SDK into the web app (frontend + API/server routes); you immediately get exceptions, stack traces, release regressions, and which users/routes are affected. This is the thing you're most painfully missing.
+2. **Uptime / synthetic check.** An external HTTP probe hitting your homepage + one critical API route every minute (BetterStack or UptimeRobot, free tier is fine). Catches full outages and cert expiry that internal metrics miss.
+3. **Aurora alarms.** Turn on Performance Insights, then CloudWatch alarms on the three that actually page you: CPU sustained high, connection count near max, and replica lag. These already exist as metrics — you just haven't wired alarms.
+4. **One alert channel.** Point all three of the above at a single Slack channel (or email). Without a destination, the rest is just dashboards nobody watches.
+
+## Phase 2 — diagnosis, not just detection (a few days)
+Once you can *tell* something's wrong, make it fast to find *why*.
+
+5. **Structured logging, centralized.** JSON logs with request IDs from the app into one place (CloudWatch Logs if you're on AWS; or Sentry/BetterStack logs). Replaces SSH-and-grep debugging.
+6. **Latency / throughput (APM).** Sentry Performance or OpenTelemetry traces so you see p95 latency and error rate per endpoint, and can trace a slow request app → query. If you're on Vercel, its built-in analytics covers part of this for less effort.
+
+## Phase 3 — make it durable (ongoing)
+7. **A handful of SLOs + dashboards** (e.g. checkout/payment success rate, API error rate, p95 latency) — the few numbers that define "healthy."
+8. **A short runbook per alert** so a page leads to an action, not a scramble.
+
+## What I'd need to make this exact
+The plan above is solid regardless, but three facts would let me turn it into concrete steps and config: **where the web app is hosted** (AWS ECS/EC2 vs Vercel vs other), **the app framework** (Next.js?), and **where logs go today, if anywhere**. 
+
+My recommendation: greenlight **Phase 1**, and I'll start with the Sentry install since it's the biggest single gain — point me at the repo and I'll wire it up and open the Aurora alarms.

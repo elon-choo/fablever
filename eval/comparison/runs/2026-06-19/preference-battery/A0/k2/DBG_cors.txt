@@ -1,0 +1,44 @@
+The short version: **CORS is a browser-only security mechanism. Postman isn't a browser, so it never enforces it.** Your request is almost certainly working fine at the network level — the browser is just refusing to let your JavaScript *read* the response (or even send the request) because the server didn't opt in.
+
+## Why the difference exists
+
+CORS (Cross-Origin Resource Sharing) is enforced by the **browser**, not the server and not the network. When your JS at `https://app.example.com` calls `https://api.other.com`, the browser checks whether the response carries headers that explicitly permit your origin. If they're missing, the browser blocks *your script* from seeing the result — even though the server received the request and sent a 200.
+
+Postman (and `curl`, backend code, etc.) are not bound by the same-origin policy. They send the raw HTTP request and hand you whatever comes back. So "works in Postman" tells you the endpoint is reachable and the response is valid — it tells you **nothing** about CORS.
+
+## What's actually failing
+
+There are two distinct cases people lump together as "CORS error":
+
+1. **The actual request was sent**, server responded, but the response lacks `Access-Control-Allow-Origin` matching your origin → browser blocks the JS from reading it.
+2. **A preflight `OPTIONS` request failed.** For "non-simple" requests (custom headers like `Authorization`, methods like `PUT`/`DELETE`, or `Content-Type: application/json`), the browser first sends an `OPTIONS` probe. If the server doesn't answer it correctly, the real request never even fires.
+
+Postman skips preflight entirely, which is why case #2 is invisible there.
+
+## How to pin down which one it is
+
+- Open DevTools → **Network** tab → look for an `OPTIONS` request before your call. If it's red/failed, it's a preflight problem.
+- Read the exact console message. The browser usually names the precise reason, e.g.:
+  - *"No 'Access-Control-Allow-Origin' header is present"* → server isn't sending CORS headers at all.
+  - *"...does not match the supplied origin"* → server allows a different origin.
+  - *"Response to preflight request doesn't pass... Method PUT is not allowed by Access-Control-Allow-Methods"* → preflight config gap.
+  - *"...credentials mode is 'include'"* → you're sending cookies; server must send `Access-Control-Allow-Credentials: true` **and** cannot use `Access-Control-Allow-Origin: *`.
+
+## The fix (almost always server-side)
+
+The server must return, on both the preflight and the actual response:
+
+```
+Access-Control-Allow-Origin: https://app.example.com   (your exact origin, or * if no credentials)
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Allow-Credentials: true   (only if you send cookies/auth)
+```
+
+And it must respond to `OPTIONS` with a `2xx`.
+
+**If you don't control the server:**
+- Proxy the call through your own backend (server-to-server has no CORS), or your dev server's proxy (e.g. Vite/Next/CRA `proxy` config).
+- For local dev only, a dev proxy is the clean fix. (A browser extension that injects `Access-Control-Allow-Origin: *` works but is a footgun — don't ship anything that depends on it.)
+
+If you paste the **exact console error** and tell me whether you control the API server, I'll point you at the precise fix.

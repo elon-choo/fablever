@@ -1,0 +1,14 @@
+Use `useReducer` for an 8-field form — but the field count isn't really the deciding factor. The thing that should drive the choice is how the fields *interact*.
+
+**Reach for `useReducer` when** any of these are true (and an 8-field form usually hits at least one):
+- Fields depend on each other (selecting a country filters the state/province list, "same as billing" copies one address block to another, a discount field recomputes a total).
+- You have cross-cutting state beyond the values themselves — `errors`, `touched`, `isSubmitting`, `isDirty` — and you want to update several of them in one atomic transition (e.g. on submit: set `isSubmitting`, clear `errors`, mark all `touched`).
+- You want update logic to live outside the component as a testable pure function, and to express changes as intent (`{ type: 'RESET' }`, `{ type: 'SET_FIELD', field, value }`) rather than a pile of setters.
+
+**`useState` is fine when** the fields are genuinely independent, there's little validation, and the form is mostly "type value → store value." Eight independent text inputs backed by one object in state (`setForm(f => ({ ...f, [name]: value }))` with a single change handler) is perfectly reasonable and less ceremony than a reducer.
+
+My default for a real 8-field form — one with validation and a submit lifecycle — is `useReducer`, because the `errors`/`touched`/`submitting` state is where `useState` starts to fragment into many correlated setters that are easy to get out of sync.
+
+One more option worth naming: if this form has anything nontrivial (validation rules, async submit, dirty-tracking), a form library like **React Hook Form** will save you more than either hook — it handles re-render minimization, validation, and submission state for you. Hand-rolling a reducer makes sense when you want zero dependencies or the form logic is unusual enough that a library fights you.
+
+If you tell me what the fields are and whether they validate or interact, I'll give you a definite call.

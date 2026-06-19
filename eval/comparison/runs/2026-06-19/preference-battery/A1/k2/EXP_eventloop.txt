@@ -1,0 +1,52 @@
+The Node.js event loop is the mechanism that lets a single-threaded JavaScript runtime handle many concurrent operations without blocking. The core idea: your JS code runs on one thread, but slow work (file reads, network calls, timers) is handed off to the system, and the event loop pulls completed results back into your code when that thread is free.
+
+## The basic model
+
+Node runs your JavaScript on a single thread. When it hits an asynchronous operation — reading a file, making an HTTP request, setting a timer — it doesn't wait. It registers a callback and moves on. The underlying work is done elsewhere (by the OS kernel, or by libuv's worker thread pool for things the OS can't do async). When that work finishes, its callback gets queued, and the event loop runs it once the call stack is empty.
+
+So "non-blocking" doesn't mean parallel JavaScript. Your JS still runs one piece at a time. What's parallel is the I/O happening outside the JS thread.
+
+## The phases
+
+The event loop isn't one queue — it's a cycle through several phases, each with its own callback queue. Each turn of the loop ("tick") goes through them in this order:
+
+1. **Timers** — runs callbacks scheduled by `setTimeout` and `setInterval` whose time has elapsed.
+2. **Pending callbacks** — runs certain system-level callbacks deferred from a previous loop (e.g. some TCP error callbacks).
+3. **Idle / prepare** — internal use only.
+4. **Poll** — the important one. Retrieves new I/O events (incoming data, finished file reads) and runs their callbacks. If there's nothing else to do, the loop can *block* here waiting for I/O, which is what keeps Node from spinning the CPU.
+5. **Check** — runs `setImmediate` callbacks.
+6. **Close callbacks** — runs cleanup callbacks like `socket.on('close', ...)`.
+
+After close callbacks, the loop checks whether there's any more work; if so, it ticks again.
+
+## Microtasks: the special queue
+
+Two kinds of callbacks jump the queue and run *between* phases, not in a phase of their own:
+
+- `process.nextTick()` callbacks — run first, immediately after the current operation completes.
+- Promise callbacks (`.then`, `await` continuations) — run next.
+
+These microtask queues are drained completely after each individual callback finishes, before the loop continues to the next phase. This is why a resolved promise's `.then` runs before a `setTimeout(…, 0)` — the promise is a microtask draining immediately, while the timer waits for the next timers phase.
+
+```js
+console.log('1: sync');
+setTimeout(() => console.log('4: timeout'), 0);
+setImmediate(() => console.log('5: immediate'));
+Promise.resolve().then(() => console.log('3: promise'));
+process.nextTick(() => console.log('2: nextTick'));
+console.log('1.5: sync end');
+
+// Output: 1 → 1.5 → 2 → 3 → 4/5
+```
+
+The synchronous code runs first, then `nextTick`, then the promise microtask, and only then does the loop reach its phases for the timer and immediate callbacks.
+
+## Why it matters in practice
+
+- **Don't block the thread.** A long synchronous loop, a `JSON.parse` on a huge string, or a synchronous `fs.readFileSync` freezes the *entire* event loop — every pending request waits. Break up CPU-heavy work, offload it to a worker thread, or use the async APIs.
+- **`nextTick` starvation.** Recursively scheduling `process.nextTick` can starve the loop, because the microtask queue is drained before the loop ever advances. Prefer `setImmediate` when you want to yield.
+- **The thread pool is finite.** libuv defaults to 4 worker threads (`UV_THREADPOOL_SIZE`) for file I/O, DNS, and crypto. Saturate it and those operations queue up even though network I/O (handled by the kernel) stays fast.
+
+The mental model that holds it together: synchronous code runs to completion, then all microtasks drain, then the loop advances one phase and runs that phase's callbacks — draining microtasks again after each one — cycling until there's no work left.
+
+If you want, I can go deeper on any one part — the libuv thread pool, how `await` desugars into microtasks, or the `setTimeout` vs `setImmediate` ordering quirk.

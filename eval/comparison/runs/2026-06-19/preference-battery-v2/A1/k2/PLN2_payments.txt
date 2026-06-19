@@ -1,0 +1,52 @@
+No worries — I'll give you the plan for the most common SaaS case and flag where your specifics change it. The default I'm assuming: **recurring subscriptions, Stripe-hosted Checkout + Customer Portal, webhook-driven state**. That's the fastest, most secure path and the right choice for ~80% of SaaS. Tell me your stack/billing model and I'll make the code concrete.
+
+## The core idea
+
+Stripe is the source of truth for *money*; your database is the source of truth for *access*. Webhooks are the bridge. Never grant access based on a redirect or client-side success — only based on a verified webhook event. Get that one principle right and everything else falls into place.
+
+## The plan
+
+**1. Set up the product catalog in Stripe (no code)**
+- Create your Products (e.g. Pro, Team) and a recurring **Price** for each interval (monthly, annual). Note the `price_id`s — your code references these, not amounts.
+- Do this in **test mode** first. You'll get a separate set of keys and IDs for live mode later.
+
+**2. Model it in your database**
+- On your `users`/`accounts` table (or a `subscriptions` table) store: `stripe_customer_id`, `stripe_subscription_id`, `plan`, `status` (`active`/`trialing`/`past_due`/`canceled`), and `current_period_end`.
+- These get written *by your webhook handler*, never by your frontend.
+
+**3. Create a checkout session (backend endpoint)**
+- An authenticated endpoint that creates (or reuses) a Stripe Customer for the logged-in user, then creates a Checkout Session in `subscription` mode with the chosen `price_id` and `success_url`/`cancel_url`. Return the session URL and redirect the user to it.
+- Reuse the customer: look up the user's existing `stripe_customer_id` before creating a new one, so you don't get duplicate customers.
+
+**4. Handle webhooks (the critical piece)**
+- One endpoint that **verifies the signature** with your webhook signing secret before trusting anything. Reject unverified payloads.
+- Handle at minimum: `checkout.session.completed` (provision access), `customer.subscription.updated` (plan changes, renewals, past_due), `customer.subscription.deleted` (revoke). Update your DB from these.
+- Make handlers **idempotent** — Stripe retries, so the same event may arrive twice. Key off the event/subscription ID.
+
+**5. Customer Portal for self-service**
+- A second backend endpoint that creates a Billing Portal session and redirects there. This gives you upgrades, downgrades, cancellation, and card updates *for free* — no UI to build. This is the big reason to prefer hosted Checkout.
+
+**6. Gate features on subscription status**
+- Read `status`/`plan` from your DB (not from Stripe on every request) to decide what the user can access. Treat `past_due` and `canceled` explicitly.
+
+**7. Go live**
+- Swap to live keys, register the production webhook endpoint, run one real transaction, then verify your DB row updated correctly.
+
+## Local testing
+
+Use the **Stripe CLI**: `stripe listen --forward-to localhost:.../webhook` to receive events locally, and `stripe trigger checkout.session.completed` to fire test events. Use Stripe's test cards (`4242 4242 4242 4242`). This loop is what makes webhook development sane.
+
+## How your choices change this
+
+- **Usage-based billing** adds metered Prices and usage-record reporting (or Stripe's newer meter events) — steps 1 and 6 grow.
+- **One-time payments** drop the subscription/portal pieces; Checkout runs in `payment` mode and you handle `payment_intent.succeeded`.
+- **Embedded Elements** instead of hosted Checkout replaces steps 3 and 5 with your own form using Payment Element + a PaymentIntent/SetupIntent, plus more PCI responsibility.
+
+## The mistakes that bite people
+
+1. **Granting access on the success redirect** instead of the webhook — users can land on the success page without paying.
+2. **Skipping signature verification** — anyone who finds your webhook URL can forge "paid" events.
+3. **Non-idempotent handlers** — double-provisioning or crashing on retried events.
+4. **Storing prices/amounts in code** instead of referencing `price_id`s — breaks the moment you change pricing.
+
+Want me to turn this into actual code? Send me your stack and billing model (or just confirm the subscriptions + hosted Checkout default) and I'll write the endpoints and webhook handler.

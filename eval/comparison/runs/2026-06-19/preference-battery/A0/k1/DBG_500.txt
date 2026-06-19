@@ -1,0 +1,31 @@
+Intermittent 500s with "no pattern" almost always means the pattern is in a dimension you haven't sliced yet. Here's where I'd start, in order:
+
+## 1. Get the actual exception first — don't theorize yet
+A 500 is an unhandled server-side error, so there's a stack trace somewhere. Everything downstream is guessing until you have it.
+- Check your error tracker (Sentry/Datadog/CloudWatch/etc.). **Group by stack trace** — 2% of traffic failing usually collapses into one or two distinct exceptions.
+- No error tracking? Add structured logging that captures, per request: a request ID, the route, the exception + stack, and the upstream calls made. You need to *catch one in the act*.
+
+## 2. Turn "no pattern" into a pattern — slice the failures
+Take the failing requests and group them by each dimension independently. One of these almost always lights up:
+
+| Dimension | What it points to |
+|---|---|
+| **Host / instance / pod** | One bad node behind the LB. If you have ~50 instances and one is broken, that's *exactly* 1-in-50. The classic. |
+| **Endpoint / route** | A specific code path, not the whole API |
+| **User / account / input shape** | A data-dependent path (null field, oversized payload, unusual value hit by ~2% of requests) |
+| **Time / concurrency** | Resource exhaustion — see below |
+| **Upstream call** | A flaky dependency (DB, cache, third-party) |
+
+The host dimension is the highest-value check given your ~2% rate — look there first.
+
+## 3. The usual culprits behind a steady low-percentage rate
+- **Resource exhaustion under load** — DB connection pool maxed out, file descriptors, memory, thread pool. Fails intermittently because it only tips over at peak concurrency. Correlates with traffic, *not* request content.
+- **Race conditions** — only break under a specific interleaving; inherently "random."
+- **Downstream timeouts/flakiness** — a dependency that occasionally exceeds your timeout.
+- **Rolling deploy / mixed versions** — old and new code both serving for a window.
+
+## My suggested first two moves
+1. Pull up the grouped stack trace(s) for the 500s.
+2. Plot the 500 rate **per host/instance** over the last day.
+
+If you share the stack trace, the affected route, or your stack (language/framework, DB, deployment setup), I can get specific fast — and if your API code is on this machine, point me at it and I'll dig in directly.

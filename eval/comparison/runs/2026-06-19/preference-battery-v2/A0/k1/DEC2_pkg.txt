@@ -1,0 +1,38 @@
+**pnpm.** For a fresh monorepo in 2026, it's the clear default. Quick rationale:
+
+## Why pnpm
+
+- **Built-in workspaces that actually scale.** `pnpm-workspace.yaml` + `workspace:*` protocol is first-class. No extra tooling needed for linking local packages.
+- **Disk + install speed.** Content-addressable store with hard links means one copy of each package version on disk, shared across all repos. Cold installs are fast; warm installs are very fast.
+- **Strict dependency resolution.** pnpm's non-flat `node_modules` prevents "phantom dependencies" (using a package you didn't declare because it got hoisted). This catches real bugs early — especially valuable in a monorepo where it's easy to accidentally rely on a sibling's transitive deps.
+- **Great Nx / Turborepo compatibility.** Both task runners treat pnpm as a first-class citizen.
+
+## When to pick the others
+
+- **npm** — if you want *zero* extra moving parts and the team is unfamiliar with anything else. npm workspaces work fine for small/simple monorepos, but install performance and strictness lag behind pnpm.
+- **Yarn (Berry/v4)** — powerful (PnP, constraints, great monorepo features), but PnP can cause editor/tooling friction, and the ecosystem momentum has shifted toward pnpm. Pick it only if you specifically want Yarn's constraints engine or are already invested in it.
+
+## Recommended starter
+
+```yaml
+# pnpm-workspace.yaml
+packages:
+  - "packages/*"
+  - "apps/*"
+```
+
+```jsonc
+// package.json (root)
+{
+  "name": "my-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9",          // enables Corepack pinning
+  "engines": { "node": ">=20" }
+}
+```
+
+Then pair it with **Turborepo** (simpler) or **Nx** (more features) for task orchestration and caching once you have more than a couple of packages.
+
+**TL;DR:** Start with pnpm + Turborepo. Reach for npm only if simplicity trumps everything, or Yarn Berry only if you have a specific reason to.
+
+Want me to scaffold the initial structure?

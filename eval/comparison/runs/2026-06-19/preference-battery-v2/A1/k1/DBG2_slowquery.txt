@@ -1,0 +1,16 @@
+Look at the actual SQL the endpoint runs, in this order:
+
+**1. Find the slow query first — don't guess.** Turn on slow query logging or check your APM/DB stats (`pg_stat_statements` in Postgres, the slow query log in MySQL). An endpoint can fire several queries; you want the specific one whose time blew up. The give-away is a query whose latency scales with row count — that's the one that lost its index coverage at 2M rows.
+
+**2. Run `EXPLAIN ANALYZE` on it.** This is where the answer almost always is. You're looking for a **sequential/full table scan** (`Seq Scan` in Postgres) on the big table where you expected an index. At 50k rows a seq scan is invisible; at 2M it's the whole regression. Common causes:
+- No index on the column(s) in your `WHERE`, `JOIN`, or `ORDER BY`.
+- An index exists but isn't usable — a function or cast on the column (`WHERE lower(email) = ...`), a leading wildcard (`LIKE '%foo'`), or a type mismatch.
+- A composite index whose column order doesn't match the query's filter/sort.
+
+**3. Check the shape of the access, not just the index.** Two patterns that pass "has an index" but still degrade with size:
+- **N+1 queries** — the endpoint runs one query per row in a list. Fine at 20 rows, brutal as the related set grows. Look at the query *count* per request, not just per-query time.
+- **`OFFSET`-based pagination** — `LIMIT 20 OFFSET 100000` still walks all skipped rows. Deep pages get linearly slower.
+
+Most likely outcome: one query went from index scan to seq scan, and a single well-chosen index (often a composite matching your filter + sort) fixes it. 
+
+The fastest path is `EXPLAIN ANALYZE` on the real query with real parameter values — paste that output and I can tell you exactly what's happening.

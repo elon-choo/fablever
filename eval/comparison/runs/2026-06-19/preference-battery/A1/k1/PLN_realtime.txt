@@ -1,0 +1,27 @@
+No problem — here's a stack-agnostic plan that leads with the approach I'd recommend for most web apps, with the few branch points called out so you can adjust once I know your stack.
+
+## Recommended default: Server-Sent Events (SSE) for in-app, Web Push for background
+
+For the common case — a logged-in user gets a toast/badge while the site is open — **SSE is the right default**. It's one-directional (server→client), rides plain HTTP, auto-reconnects in the browser, and needs no extra protocol. Reach for WebSockets only if the client also needs to *send* a continuous stream (chat, collaborative editing, presence). Most "notification" features don't.
+
+If notifications must arrive when the tab is **closed**, that's a separate mechanism: the **Web Push API + a service worker + VAPID keys**. It's additive — you can ship in-app first and layer push on later.
+
+## The plan, in order
+
+1. **Decide the trigger source.** What event creates a notification? (new message, job finished, someone mentioned you.) This determines where you emit from — a DB write hook, a queue worker, or an API handler.
+
+2. **Add a notifications store.** A `notifications` table (`id`, `user_id`, `type`, `payload`, `read_at`, `created_at`). You want persistence so users see what they missed and can mark-as-read — a pure live stream loses anything sent while offline.
+
+3. **Build the delivery channel.**
+   - *In-app (SSE):* one endpoint like `GET /events` that holds the connection open per authenticated user and streams new rows. Track connected users in memory (single server) or via Redis pub/sub (multiple servers — this is the main scaling gotcha).
+   - *Background (Web Push):* generate VAPID keys, register a service worker, store each browser's push subscription against the user, and POST to the push service when an event fires.
+
+4. **Wire the client.** `EventSource` for SSE (it auto-reconnects); render a toast + increment an unread badge; call a `mark-read` endpoint when opened.
+
+5. **Handle the edges that actually bite:** auth on the long-lived connection, reconnect/replay (send a `Last-Event-ID` so a reconnecting client doesn't miss events), and fan-out across multiple server instances (Redis or a managed service).
+
+## Where I'd skip the DIY
+
+If you're on serverless/edge (Vercel, Firebase, Supabase) there's no long-lived server to hold an SSE connection, so a **managed realtime service** (Supabase Realtime, Pusher, Ably, or Firebase Cloud Messaging for push) is usually less work and more reliable than rolling your own.
+
+Two things still shape this meaningfully: **your stack** (decides SSE-vs-managed and the fan-out story) and **whether "live" includes tab-closed delivery** (decides whether you also need Web Push). Tell me those — ideally point me at the actual repo — and I'll turn this into concrete steps and code for your setup.

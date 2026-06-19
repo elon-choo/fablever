@@ -1,0 +1,39 @@
+A database index is a separate data structure that the database maintains alongside your table to make lookups fast. The classic analogy is the index at the back of a book: instead of scanning every page to find where "mitochondria" is mentioned, you flip to the index, find the term, and jump straight to the right pages.
+
+## What it actually does
+
+Without an index, finding rows that match a condition (e.g. `WHERE email = 'x@y.com'`) requires a **full table scan** — the database reads every row to check. That's O(n).
+
+With an index on `email`, the database keeps a sorted/structured copy of that column plus pointers back to the rows. Lookups become roughly O(log n). Most indexes are **B-trees** (balanced trees that stay sorted and support range queries); hash indexes and specialized types (GIN/GiST for full-text/JSON/geo) exist too.
+
+## The cost (why you don't index everything)
+
+Indexes aren't free:
+
+- **Write slowdown** — every `INSERT`/`UPDATE`/`DELETE` must also update each affected index. More indexes = slower writes.
+- **Storage** — an index is extra data on disk, sometimes substantial.
+- **Maintenance** — they can bloat and occasionally need rebuilding/vacuuming.
+
+So an index is a trade: faster reads in exchange for slower writes and more space.
+
+## When to add one
+
+Add an index when:
+
+- A column is **frequently used in `WHERE`, `JOIN`, `ORDER BY`, or `GROUP BY`** clauses.
+- The column has **high selectivity** — it filters down to a small fraction of rows (e.g. `user_id`, `email`, `order_number`). Indexing a low-cardinality column like `is_active` (only true/false) often isn't worth it; the planner may just scan anyway.
+- The table is **large** — on a 500-row table a scan is instant, so an index buys nothing.
+- The query is **read-heavy** relative to writes.
+- You're enforcing **uniqueness** (a unique index does double duty).
+
+Lean *against* an index when the table is small, write-heavy with rare reads, or the column rarely appears in query predicates.
+
+## A few practical notes
+
+- **Composite indexes** cover multiple columns and are order-sensitive: an index on `(user_id, created_at)` helps queries filtering by `user_id` alone or `user_id + created_at`, but **not** `created_at` alone. Put the most-filtered column first.
+- **Don't guess — measure.** Use `EXPLAIN` / `EXPLAIN ANALYZE` to see whether a query does a "Seq Scan" (full scan) vs. an "Index Scan," and add the index only if it actually changes the plan and improves timing.
+- **Foreign keys** are a common thing people forget to index — many databases don't auto-index them, and unindexed FKs make joins and cascading deletes slow.
+
+**Rule of thumb:** start without indexes, let real query patterns and `EXPLAIN` tell you where the slow scans are, then add indexes to target those — rather than indexing speculatively up front.
+
+If you tell me which database you're using (Postgres, MySQL, etc.) and share a slow query, I can suggest a specific index and show you how to verify it helps.

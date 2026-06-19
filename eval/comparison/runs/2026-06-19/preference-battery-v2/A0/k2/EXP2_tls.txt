@@ -1,0 +1,87 @@
+# How HTTPS/TLS Actually Secures a Connection
+
+HTTPS is just HTTP running inside a **TLS** (Transport Layer Security) tunnel. TLS delivers three guarantees, and it's worth separating them because they're solved by different mechanisms:
+
+| Guarantee | Question it answers | Mechanism |
+|---|---|---|
+| **Confidentiality** | Can an eavesdropper read my data? | Symmetric encryption (AES, ChaCha20) |
+| **Authentication** | Am I really talking to `bank.com`? | Certificates + public-key signatures |
+| **Integrity** | Was the data tampered with in transit? | AEAD / MACs |
+
+The clever part is how a client and server, who have *never met*, agree on a shared secret over a wire that an attacker is watching — without ever transmitting that secret.
+
+---
+
+## 1. The core trick: asymmetric → symmetric
+
+Symmetric encryption (one shared key for both encrypt and decrypt) is fast but has a chicken-and-egg problem: how do you share the key securely before you have a secure channel?
+
+The answer is to use **slow asymmetric crypto just once**, at the start, to bootstrap a **fast symmetric key** for the actual data. TLS uses public-key math only to set up the session, then switches to symmetric for everything else.
+
+---
+
+## 2. The handshake (TLS 1.3, the modern version)
+
+```
+Client                                              Server
+  |  ClientHello                                       |
+  |  - supported ciphers                               |
+  |  - client's ephemeral DH public key  ───────────►  |
+  |                                                    |
+  |                         ServerHello                |
+  |                         - chosen cipher            |
+  |  ◄───────────────────── - server's ephemeral DH   |
+  |                           public key               |
+  |                         - Certificate (signed)     |
+  |                         - signature over handshake |
+  |                                                    |
+  | [both sides now derive the same shared secret]     |
+  |  Finished  ◄──────────────────────►  Finished      |
+  |                                                    |
+  |  ====== encrypted application data ======          |
+```
+
+**Key exchange — Diffie-Hellman (the magic).** Each side generates a temporary key pair and sends only its **public** half. Through DH math, both sides independently compute the *same* shared secret from (their own private key + the other's public key). An eavesdropper sees both public keys but **cannot derive the secret** — that's the hard math problem DH rests on. The secret itself is never transmitted.
+
+Because these DH keys are **ephemeral** (thrown away after the session), you get **forward secrecy**: even if the server's long-term private key is stolen *later*, past recorded sessions can't be decrypted.
+
+---
+
+## 3. Authentication — proving the server is who it claims
+
+DH alone gives you an *encrypted* channel, but encrypted with *whom*? Without authentication you could be doing a perfect handshake with a man-in-the-middle. This is where **certificates** come in.
+
+- The server presents a **certificate**: its public key + its domain name, **digitally signed by a Certificate Authority (CA)**.
+- Your OS/browser ships with a built-in list of **trusted root CAs**.
+- The browser verifies the signature chain back to a trusted root. This proves the CA vouched that *this public key belongs to `bank.com`*.
+- Crucially, the server then **signs the handshake transcript** with the private key matching its certificate. Only the real owner of that private key can produce a valid signature — so a MITM holding a stolen *certificate* (which is public) still can't impersonate the server, because it lacks the private key.
+
+This combination — DH for secrecy + signature for identity — is what defeats the man-in-the-middle.
+
+---
+
+## 4. Integrity — detecting tampering
+
+Once the symmetric session keys are derived, data is encrypted with an **AEAD cipher** (Authenticated Encryption with Associated Data, e.g. AES-GCM or ChaCha20-Poly1305). AEAD encrypts *and* attaches an authentication tag in one operation. If even a single bit is flipped in transit, the tag check fails and the record is rejected. Sequence numbers are mixed in too, so an attacker can't reorder, drop, or replay records undetected.
+
+---
+
+## 5. After the handshake
+
+All your real HTTP traffic (URLs, headers, cookies, body) flows as encrypted, authenticated TLS records using the symmetric keys. Note what is **and isn't** hidden:
+
+- **Encrypted:** the full URL path, headers, cookies, request/response bodies.
+- **Still visible to the network:** the destination IP, and historically the hostname via **SNI** (Server Name Indication) in the ClientHello and via DNS lookups. Encrypted SNI / ECH and DNS-over-HTTPS are closing those gaps.
+
+---
+
+## Putting it together
+
+1. Client and server negotiate a cipher and exchange **ephemeral DH public keys** → both derive a shared secret nobody on the wire can compute.
+2. The server proves its **identity** with a CA-signed certificate and a signature over the handshake → defeats impersonation/MITM.
+3. They derive **symmetric session keys** from the shared secret.
+4. All traffic is encrypted + integrity-protected with **AEAD** → confidential and tamper-evident.
+
+The elegant insight is the layering: **expensive public-key crypto runs once to authenticate and bootstrap a secret; cheap symmetric crypto does the bulk work**, and ephemeral keys ensure that compromising a long-term key doesn't retroactively break past conversations.
+
+Want me to go deeper on any piece — the Diffie-Hellman math, the certificate chain validation, the differences between TLS 1.2 and 1.3, or what attacks (downgrade, replay, MITM) each mechanism specifically prevents?

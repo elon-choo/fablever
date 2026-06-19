@@ -1,0 +1,41 @@
+Short version: this is a cross-request data leak waiting to happen. `currentUser` is module-global, so it's shared across *every* concurrent request, not scoped to one.
+
+**Why it's dangerous**
+
+The state lives outside the request. The moment anything between `setUser` and the read of `currentUser` yields the event loop, another request overwrites it:
+
+```js
+function handler(req, res) {
+  setUser(req.user);        // currentUser = A
+  const data = await load(); // ← yields; request B runs setUser(B)
+  res.send(render());        // render() reads currentUser → B's data, sent to A
+}
+```
+
+User A gets User B's data. It's not a crash — it's a silent authorization/privacy bug, the worst kind, and it only shows up under concurrency so tests usually miss it.
+
+**The one nuance**
+
+In *this exact snippet* `handler` is fully synchronous — `setUser` then `res.send(render())` with no `await` in between — so there's no interleaving point *yet*. Node being single-threaded saves you here by accident. But that's the trap: it works in dev, looks fine, and breaks the instant someone makes `render()` or any middleware async. You're one `await` away from leaking users into each other.
+
+**The fix**
+
+Don't hold request state in module scope. Pass it explicitly:
+
+```js
+function handler(req, res) { res.send(render(req.user)); }
+```
+
+If threading it through many call layers is the pain you're avoiding, use `AsyncLocalStorage` — it gives you the "ambient current user" ergonomics but scopes the value to the request, surviving `await` correctly:
+
+```js
+import { AsyncLocalStorage } from 'node:async_hooks';
+const ctx = new AsyncLocalStorage();
+
+function handler(req, res) {
+  ctx.run({ user: req.user }, () => res.send(render()));
+}
+// render() reads ctx.getStore().user — isolated per request
+```
+
+Rule of thumb: a mutable module-level variable that holds per-request (or per-user, per-tenant) data is almost always a bug. Globals are fine for things that are genuinely shared and stable — config, connection pools — not for whoever happens to be calling right now.

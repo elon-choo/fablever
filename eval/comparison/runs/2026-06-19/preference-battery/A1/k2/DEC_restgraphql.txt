@@ -1,0 +1,22 @@
+Start with REST. For most mobile backends it's the lower-risk default, and you only need GraphQL if you hit a specific set of problems it solves — which I'll lay out so you can check yourself against them.
+
+Here's the reasoning that actually matters for *mobile* specifically, as opposed to web:
+
+**Why REST is the right default**
+
+- **HTTP caching just works.** Mobile networks are slow and flaky, and REST's per-resource URLs let you lean on CDN caching, `ETag`/`If-None-Match`, and offline HTTP caches with almost no effort. GraphQL sends everything as `POST` to one endpoint, so you lose that for free and have to rebuild caching at the client (Apollo/Relay normalized cache) and server layers.
+- **Simpler to build, run, and secure.** Rate limiting, auth, logging, and monitoring are all per-endpoint and well-understood. GraphQL needs extra guardrails — query depth/complexity limits to prevent a malicious or accidental query from melting your server, plus per-field authorization.
+- **Smaller operational surface.** No resolver layer, no N+1 query problem to chase down with DataLoader-style batching.
+
+**When GraphQL genuinely pays off**
+
+Reach for it if two or more of these are true:
+
+- Your screens **aggregate data from many sources** and REST would force the app into several round-trips per screen (GraphQL collapses that into one request, which is a real win on high-latency mobile).
+- You have **multiple clients** (iOS, Android, web) that each want different shapes of the same data, and you're tired of either over-fetching or maintaining many bespoke endpoints.
+- Your **UI changes fast** and you want clients to pick fields without a backend deploy each time.
+- You want a **strongly-typed schema with codegen** into Swift/Kotlin as a first-class workflow (this is GraphQL's nicest mobile feature).
+
+**A practical middle path:** build REST, and if you find yourself making 4-5 calls to paint one screen, add purpose-built aggregate endpoints (a "backend-for-frontend") before jumping to a full GraphQL migration. That captures most of GraphQL's round-trip benefit without the operational cost.
+
+So: REST unless you can point to the aggregation/multi-client problems above — those are the things that make the extra complexity worth it. If you tell me your team size, the data shape, and whether you're targeting more than one client platform, I can make the call more concrete.

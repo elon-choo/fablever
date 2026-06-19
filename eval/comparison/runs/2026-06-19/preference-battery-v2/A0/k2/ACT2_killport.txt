@@ -1,0 +1,30 @@
+On macOS, the quick one-liner:
+
+```bash
+lsof -ti :8080 | xargs kill
+```
+
+If something is holding on and won't die, force it:
+
+```bash
+lsof -ti :8080 | xargs kill -9
+```
+
+**How it works:**
+- `lsof -ti :8080` — lists *only* the PIDs (`-t` = terse/PID-only, `-i :8080` = anything on port 8080)
+- `xargs kill` — passes those PIDs to `kill`
+
+**Handy variants:**
+
+```bash
+# See what it is BEFORE killing (recommended)
+lsof -i :8080
+
+# Kill only the process listening (not clients connected to it)
+lsof -ti :8080 -sTCP:LISTEN | xargs kill
+
+# If no process is found, xargs may run kill with no args — guard against it:
+lsof -ti :8080 | xargs -r kill    # GNU xargs (-r = don't run if empty)
+```
+
+⚠️ Note: macOS's `xargs` doesn't support `-r`, so if the port is empty you'll get a harmless `usage: kill` error — safe to ignore. Run `lsof -i :8080` first if you want to check before pulling the trigger.

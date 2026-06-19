@@ -1,0 +1,25 @@
+The pattern "one day off for *some* users but not others" is the signature of a timezone boundary bug. The split between affected and unaffected users almost always lines up with their UTC offset, not anything random.
+
+Here's the mechanism. A date that's conceptually date-only — a birthday, a due date, "2026-06-19" with no real time-of-day — gets stored or parsed as an *instant* pinned to midnight UTC. When you then render that instant in the user's *local* time:
+
+- Users **west of UTC** (the Americas, negative offset) see midnight UTC as the *previous evening* local, so it displays as the day before.
+- Users **at or east of UTC** (UTC+0 and positive) see it as the same calendar day.
+
+So the bug cleanly partitions your users by timezone — exactly "some but not others." The reverse direction happens too: local midnight converted *to* UTC for storage shifts forward for users east of UTC.
+
+The usual concrete culprit in JavaScript is inconsistent parsing:
+- `new Date("2026-06-19")` → parsed as **UTC** midnight.
+- `new Date("2026-06-19T00:00:00")` (no `Z`) → parsed as **local** midnight.
+- `new Date(2026, 5, 19)` → **local** midnight.
+
+Mix any of these across your write path, read path, and display path and you get a shift at the midnight boundary. DST is a subtler variant of the same thing — it'll affect only some users *and* only part of the year.
+
+**To confirm it:** correlate the affected accounts with their timezone offset. If the affected set is "everyone with a negative UTC offset" (or some clean cut like that), it's this. Also check whether a value that's wrong on display is actually *stored* correctly — if storage is fine and only rendering is off, the bug is in the display conversion.
+
+**To fix it:** stop sending date-only values through timezone conversion. Pick one of these per field and be consistent end to end:
+- If the value is a real calendar date with no time component, carry it as a plain `'YYYY-MM-DD'` string (or a SQL `DATE` type) and format it without ever constructing a zoned `Date` — or format with an explicit `timeZone: 'UTC'` so both ends agree.
+- If the value is a real instant (a "this happened at" timestamp), store full UTC with offset and let local conversion happen — that's correct behavior, not a bug.
+
+The trap is treating date-only data as an instant. Decide which kind each field is; the off-by-one disappears once the write, store, and display sides all agree.
+
+If you point me at the code — the storage column type, the parse, and the formatting call — I can tell you exactly where the conversion goes wrong.

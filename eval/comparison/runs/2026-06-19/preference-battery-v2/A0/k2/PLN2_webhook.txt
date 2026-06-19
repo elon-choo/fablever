@@ -1,0 +1,47 @@
+No problem — I'll give you a concrete default you can adapt.
+
+## Recommended default architecture
+
+If you have no strong constraints yet, this is the lowest-risk starting point:
+
+- **Receiver:** a thin HTTP handler (whatever your web framework is) that verifies signature → inserts a row into a `webhook_events` table → returns `200`.
+- **Buffer:** start with **the DB table as the queue** (`status` column: `received → processing → done → dead`). It's the simplest thing that's fully durable, gives you free replay/audit, and you can graduate to a managed queue (SQS/Pub/Sub) only if volume forces it. Don't reach for Kafka/SQS on day one unless you already run them.
+- **Worker:** a separate process that `SELECT ... FOR UPDATE SKIP LOCKED` (Postgres) the oldest `received` rows, processes with retries, and marks `done` or `dead`.
+
+### The events table that does most of the work
+
+```sql
+CREATE TABLE webhook_events (
+  id            BIGSERIAL PRIMARY KEY,
+  event_id      TEXT NOT NULL UNIQUE,        -- provider's id → dedup
+  event_type    TEXT NOT NULL,
+  payload       JSONB NOT NULL,              -- raw body, for replay
+  signature_ok  BOOLEAN NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'received',
+  attempts      INT NOT NULL DEFAULT 0,
+  received_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  processed_at  TIMESTAMPTZ
+);
+```
+
+The `UNIQUE(event_id)` constraint *is* your dedup: insert on arrival, and a duplicate delivery fails the insert harmlessly (`ON CONFLICT DO NOTHING`).
+
+### The receiver flow, concretely
+
+```
+raw_body  = read exact bytes (no parsing yet)
+expected  = HMAC_SHA256(secret, timestamp + "." + raw_body)
+if not constant_time_equal(expected, header_signature):  return 401
+if now - timestamp > 5min:                                return 401   # replay guard
+INSERT ... ON CONFLICT (event_id) DO NOTHING              # dedup + persist
+return 200                                                # ack fast, process later
+```
+
+Three failure modes people hit, in order of frequency:
+1. **Hashing the parsed/re-serialized body** instead of raw bytes → signature never matches. Capture raw bytes before any middleware touches them.
+2. **Doing the work in the handler** → provider times out at ~5s, retries, you get duplicates and a thundering herd.
+3. **No reconciliation job** → silent gaps during your next deploy or their next incident, discovered weeks later. Add the polling backstop early.
+
+---
+
+This stands on its own, but if you tell me **the language/framework**, **the provider** (Stripe, GitHub, Shopify, Twilio… each has signature quirks), and **rough volume**, I'll turn this into actual code for your receiver + worker + the reconciliation job.

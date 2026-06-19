@@ -1,0 +1,33 @@
+No problem — I'll give you the standard plan since I couldn't locate the app here; adapt the paths to wherever it actually lives.
+
+The core decision is which multipart parser and where files land. For an Express app, **`multer`** is the near-universal choice for handling `multipart/form-data`. The plan breaks into four decisions and the wiring:
+
+**1. Storage target — pick one:**
+- **Disk** (`multer.diskStorage`) — simplest, fine for a single server or dev. Files go to a local folder you control the filename for.
+- **Memory** (`multer.memoryStorage`) — buffer in RAM, then forward to cloud storage (S3, GCS, R2). Right choice if you're horizontally scaled or don't want files on the app server.
+- **Direct-to-cloud** (presigned URLs, no multer) — the browser uploads straight to S3 and your server only issues the signed URL. Best for large files or high volume, but more moving parts.
+
+For most apps starting out, disk or memory→S3 is the pragmatic pick.
+
+**2. Install and wire the middleware:**
+```js
+const multer = require('multer');
+const upload = multer({
+  storage: multer.diskStorage({ destination: 'uploads/', filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`) }),
+  limits: { fileSize: 5 * 1024 * 1024 },        // hard cap — set to your real ceiling
+  fileFilter: (req, file, cb) => cb(null, ['image/png','image/jpeg'].includes(file.mimetype)),
+});
+app.post('/upload', upload.single('file'), (req, res) => res.json({ path: req.file.path }));
+```
+Use `upload.single('field')`, `upload.array('field', n)`, or `upload.fields([...])` depending on the form.
+
+**3. Validation and safety — the parts that actually bite:**
+- Enforce `limits.fileSize` (and `limits.files`) so a huge upload can't exhaust disk/RAM.
+- Validate type by `mimetype` *and*, for anything security-sensitive, sniff the magic bytes — clients can lie about MIME.
+- Never trust `originalname` for the saved path (directory traversal); generate your own filename as above.
+- If files are served back, serve from a non-executable directory and set `Content-Disposition`.
+
+**4. Error handling:**
+Multer throws a `MulterError` (e.g. `LIMIT_FILE_SIZE`) — add an error middleware so an oversized upload returns a clean 4xx instead of a 500.
+
+Two things I'd want before writing real code into your repo: where the app lives, and whether files should sit on disk or go to cloud storage — that choice drives steps 1–3. Point me at the project and tell me the storage target, and I'll implement it against your actual routes and middleware setup.

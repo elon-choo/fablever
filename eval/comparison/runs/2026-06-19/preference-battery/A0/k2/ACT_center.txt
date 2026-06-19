@@ -1,0 +1,48 @@
+The most reliable modern way is **flexbox** on the parent:
+
+```css
+.parent {
+  display: flex;
+  justify-content: center; /* horizontal */
+  align-items: center;     /* vertical */
+}
+```
+
+The child div will be centered both ways. The parent needs a defined height for vertical centering to be visible (e.g. `height: 100vh` for full viewport).
+
+## Other options
+
+**Grid (shortest):**
+```css
+.parent {
+  display: grid;
+  place-items: center;
+}
+```
+
+**Absolute positioning + transform** (when you can't change the parent's layout context much):
+```css
+.child {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.parent { position: relative; }
+```
+
+**Margin auto** (horizontal only, needs a width):
+```css
+.child {
+  width: 300px;
+  margin: 0 auto;
+}
+```
+
+## Which to use
+
+- **Grid `place-items: center`** — cleanest if you're centering a single item.
+- **Flexbox** — best when you may add more children or want to control their flow/spacing.
+- **Absolute + transform** — handy for overlays, modals, or centering relative to a positioned ancestor regardless of sibling content.
+
+The `transform: translate(-50%, -50%)` trick works because `top/left: 50%` positions the child's top-left corner at the center, then the transform pulls it back by half its own size — so it works without knowing the child's dimensions.

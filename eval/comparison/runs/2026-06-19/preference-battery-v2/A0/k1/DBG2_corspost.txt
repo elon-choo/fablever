@@ -1,0 +1,46 @@
+Almost certainly because your POST triggers a **CORS preflight** and your server isn't answering it — not because POST is treated differently per se.
+
+## The mechanism
+
+The browser splits cross-origin requests into two categories:
+
+**Simple requests** — sent directly, no preflight. To qualify, *all* of these must hold:
+- Method is `GET`, `HEAD`, or `POST`
+- No non-safelisted headers (custom headers like `Authorization`, `X-*`, etc. disqualify it)
+- `Content-Type` is one of: `application/x-www-form-urlencoded`, `multipart/form-data`, or `text/plain`
+
+**Preflighted requests** — the browser first sends an `OPTIONS` request to ask permission, then sends the real request only if the server approves.
+
+## Why your GET passes but POST fails
+
+Your GET meets the "simple" criteria, so it's sent straight through. Your POST almost certainly does **one** of these:
+
+- Sends `Content-Type: application/json` ← the most common cause
+- Sends a custom header (`Authorization`, `X-API-Key`, etc.)
+
+Either one disqualifies it from "simple" and forces a preflight `OPTIONS`. If your server doesn't respond to `OPTIONS` with the right CORS headers, the browser blocks the POST before the real request is ever sent.
+
+So it's not "POST is blocked" — it's "the preflight for this POST isn't being answered."
+
+## How to confirm
+
+In DevTools → Network, look for an `OPTIONS` request to the same URL right before your POST. If it's missing the headers below (or returns 404/405), that's your culprit.
+
+## The fix
+
+Your server must answer the `OPTIONS` request with:
+
+```
+Access-Control-Allow-Origin: https://your-frontend.example
+Access-Control-Allow-Methods: POST, GET, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+```
+
+Key points:
+- Handle the `OPTIONS` method explicitly — many frameworks/routes only define `POST` and let `OPTIONS` 404 or 405, which fails the preflight.
+- `Access-Control-Allow-Headers` must list every non-safelisted header you actually send (e.g. `Content-Type` when you send JSON).
+- If you send cookies/credentials, add `Access-Control-Allow-Credentials: true` and you **cannot** use `*` for the origin — echo the specific origin.
+
+**Quick test:** if you change the POST to send `Content-Type: text/plain` (or form-encoded) with no custom headers and it suddenly works, that confirms it was the preflight. (Don't keep that as the real fix — fix the server's `OPTIONS` handling instead.)
+
+Want to share your server framework (Express, FastAPI, nginx, etc.) and the request code? I can give you the exact config.

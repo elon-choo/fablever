@@ -1,0 +1,31 @@
+For a new TypeScript project, go with **Vitest**. Here's the reasoning:
+
+## Recommendation: Vitest
+
+**Why Vitest wins for new projects:**
+
+- **Native ESM + TypeScript** — Vitest runs your TS/ESM code directly via esbuild, no `ts-jest`/`babel-jest` transform config or `experimental-vm-modules` gymnastics. This is the single biggest pain point Jest still has.
+- **Speed** — esbuild transforms + a smart watch mode that re-runs only affected tests. Noticeably faster on most suites.
+- **Jest-compatible API** — `describe/it/expect`, mocking, snapshots all mostly drop-in. Migration knowledge transfers; you're not learning a new paradigm.
+- **One config** — shares `vite.config.ts`. If you already use Vite (React, Vue, Svelte, etc.), it's essentially zero extra setup.
+- **Built-in goodies** — TS types out of the box, in-source testing, `vi.fn()`, coverage via v8/istanbul, UI mode.
+
+## When to pick Jest instead
+
+- **React Native / Expo** — the ecosystem is still Jest-centric.
+- **Large existing Jest investment** — but that's not "new project."
+- **Maximum ecosystem stability/maturity** — Jest has more Stack Overflow answers and battle-tested edge cases, if that matters to your team.
+
+## Bottom line
+
+| | Vitest | Jest |
+|---|---|---|
+| TS/ESM setup | ✅ zero-config | ⚠️ needs transform config |
+| Speed | ✅ faster | slower |
+| Vite projects | ✅ native | extra setup |
+| Ecosystem maturity | good, growing | ✅ largest |
+| React Native | ⚠️ limited | ✅ standard |
+
+**For a greenfield TS project in 2026, default to Vitest** unless you're targeting React Native. The TypeScript/ESM experience alone justifies it.
+
+Want a starter `vitest.config.ts` + `package.json` scripts?

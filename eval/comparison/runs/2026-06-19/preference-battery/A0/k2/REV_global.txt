@@ -1,0 +1,41 @@
+Short version: this is a request-scoped value stored in module-global state, and that's a bug waiting to happen — specifically a cross-user data leak.
+
+**Why it's dangerous**
+
+`currentUser` is a single shared variable for the whole process. It happens to "work" here only because `handler` is fully synchronous — `setUser` → `render` → `send` runs to completion with no yield point. The moment anything becomes async, it breaks:
+
+```js
+async function handler(req, res) {
+  setUser(req.user);
+  const data = await db.load();   // ← yields the event loop here
+  res.send(render());             // currentUser may now be a DIFFERENT user
+}
+```
+
+While request A is awaiting, request B enters, calls `setUser(req.user)`, and overwrites the global. When A resumes, `render()` reads B's user. That's not a crash — it's silently serving one user's data to another. Worst kind of bug: invisible in dev/single-user testing, shows up as a security incident under concurrent load.
+
+Even synchronous-but-correct-today, it's fragile: it only stays correct as long as nobody adds an `await`, and `render()` depends on a global it doesn't declare (action at a distance — hard to test, hard to reason about).
+
+**The fix — pass it explicitly:**
+
+```js
+function handler(req, res) {
+  res.send(render(req.user));
+}
+```
+
+State that belongs to a request should live on the request, not in a module global. Thread it through as a parameter.
+
+**If threading it everywhere is painful** (deep call stacks), use `AsyncLocalStorage`, which is purpose-built for request-scoped context and survives `await` boundaries correctly:
+
+```js
+import { AsyncLocalStorage } from 'node:async_hooks';
+const ctx = new AsyncLocalStorage();
+
+function handler(req, res) {
+  ctx.run({ user: req.user }, () => res.send(render()));
+}
+// render() reads ctx.getStore().user — isolated per async call chain
+```
+
+Rule of thumb: a mutable module-level variable holding per-request (or per-user, per-session) data is almost always wrong in a server. Globals are fine for things that are genuinely process-wide and immutable-ish (config, a DB pool); they're a trap for anything that varies per request.

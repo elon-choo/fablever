@@ -1,0 +1,24 @@
+On macOS, `du`/`sort`/`head` is the most reliable combo (BSD `find` lacks `-printf`). Run from the directory you care about, or pass the path.
+
+**Files only, recursive, human-readable sizes:**
+```bash
+find /path/to/dir -type f -exec du -h {} + | sort -rh | head -10
+```
+
+- `-type f` — files only (skip directories)
+- `du -h` — size of each file, human-readable (K/M/G)
+- `sort -rh` — sort by human-readable size, descending
+- `head -10` — top 10
+
+**Faster / more precise on huge trees** (sorts on exact byte counts via `stat`, avoids `du`'s block-rounding):
+```bash
+find /path/to/dir -type f -exec stat -f '%z %N' {} + | sort -rn | head -10
+```
+`%z` = size in bytes, `%N` = filename. This is BSD `stat` syntax (macOS-native).
+
+A few notes:
+- Both descend into **subdirectories**. To stay in one directory only, add `-maxdepth 1` right after the path.
+- To skip symlinked files being double-counted or permission-denied noise, append `2>/dev/null`.
+- If you want **largest directories** (cumulative) rather than individual files, use `du -h -d 1 /path/to/dir | sort -rh | head -10` instead.
+
+Want me to run one of these against a specific directory?

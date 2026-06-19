@@ -1,0 +1,18 @@
+The function is correct but fetches **serially** — that's the one real bug worth fixing. Each `await fetch(id)` blocks the loop until it resolves, so N ids take N round-trips end-to-end instead of running concurrently.
+
+Rewrite to fire them in parallel:
+
+```js
+async function loadAll(ids) {
+  return Promise.all(ids.map(id => fetch(id)));
+}
+```
+
+For an array of, say, 50 ids against a ~100ms endpoint, that's ~5s versus ~100ms.
+
+Two things to decide based on your intent, not strictly bugs:
+
+- **Failure behavior.** Both your version and `Promise.all` reject as soon as any single fetch fails, discarding the rest. If you want partial results, use `Promise.allSettled(ids.map(id => fetch(id)))` and filter for `status === 'fulfilled'`.
+- **Unbounded concurrency.** `Promise.all` launches *all* requests at once. Fine for dozens; with thousands of ids you'll want a concurrency cap (e.g. p-limit or chunking) so you don't exhaust sockets or get rate-limited.
+
+One note regardless of approach: `fetch` only rejects on network failure, not on HTTP 4xx/5xx, and it returns `Response` objects — not parsed bodies. If callers expect data, you still need a `.ok` check and `.json()`/`.text()`.

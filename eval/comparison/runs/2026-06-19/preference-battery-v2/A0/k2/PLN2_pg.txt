@@ -1,0 +1,69 @@
+No problem — I'll lay out the plan so it branches on the decisions that matter, and you can tell me where you land.
+
+# SQLite → Postgres migration plan
+
+## 0. The three questions that pick your path
+- **Downtime budget** → simple offline cutover vs. logical-replication/dual-write.
+- **Data size** → single dump/restore vs. chunked/streaming copy.
+- **DB access layer** (ORM vs. raw SQL) → how much app code and how many SQLite-isms you have to fix.
+
+Most of the plan below is the same regardless; the **cutover step (Phase 4)** is where they diverge.
+
+## Phase 1 — Provision & prep (no production impact)
+1. Stand up Postgres (managed — RDS/Aurora/Cloud SQL/Supabase — strongly preferred over self-hosting for prod).
+2. Decide version (default to latest stable, e.g. PG 16/17) and lock it.
+3. Set up roles, a dedicated app user with least privilege, TLS, and connection pooling (**PgBouncer** or the managed equivalent — Postgres connections are far heavier than SQLite's in-process model; this bites people immediately).
+4. Create a throwaway staging Postgres to rehearse the entire migration end-to-end before touching prod.
+
+## Phase 2 — Schema translation (the real work)
+SQLite is dynamically typed and permissive; Postgres is strict. Watch for:
+- **Type affinity** — SQLite columns hold anything. Audit real data for each column and pick concrete Postgres types (`INTEGER`, `BIGINT`, `TEXT`, `NUMERIC`, `BOOLEAN`, `TIMESTAMPTZ`).
+- **Booleans** — SQLite stores `0/1`; Postgres wants real `boolean`.
+- **Dates/times** — SQLite keeps them as TEXT/INTEGER. Normalize to `TIMESTAMPTZ` and decide a timezone policy.
+- **Autoincrement** — `INTEGER PRIMARY KEY AUTOINCREMENT` → `BIGINT GENERATED ALWAYS AS IDENTITY` (or `BIGSERIAL`). After loading data, **reset sequences** to `max(id)+1` or you'll get duplicate-key errors on first insert.
+- **`AUTOINCREMENT`/`rowid`, `WITHOUT ROWID`, dynamic `PRAGMA`s** — no Postgres equivalent; redesign.
+- **Concurrency model** — SQLite serializes writes; you may have code that assumes single-writer behavior. Postgres gives you real concurrency + transactions, but also real lock contention and isolation semantics.
+- **Collation / `LIKE` case sensitivity** — SQLite `LIKE` is case-insensitive by default; Postgres `LIKE` is case-sensitive (use `ILICE`/`citext`).
+- **Booleans in queries, `||` concat, `strftime`, `IFNULL` vs `COALESCE`, `||` vs `+`** — dialect differences in raw SQL.
+
+If you use an ORM with migrations (Prisma/Alembic/ActiveRecord/etc.), regenerate the schema against Postgres and let the migration framework own DDL — don't hand-translate. If you have raw SQL, this phase needs a careful grep-and-audit of every query.
+
+## Phase 3 — Data migration tooling
+- **Recommended:** `pgloader` — purpose-built for exactly SQLite→Postgres, handles type coercion and sequence resets automatically. Best default for one-shot copies.
+- Alternative: ORM-level export/import or a small script that reads SQLite and bulk-`COPY`s into Postgres (fastest for large tables; use `COPY`, never row-by-row `INSERT`).
+- **Order of operations for big data:** load data first → then create indexes and constraints → then `ANALYZE`. Building indexes after the bulk load is dramatically faster.
+
+## Phase 4 — Cutover (pick by downtime budget)
+
+**A. Maintenance window OK (simplest, recommended if you can):**
+1. Announce window → put app in read-only/maintenance mode.
+2. Final `pgloader` run.
+3. Reset sequences, create indexes, `ANALYZE`.
+4. Run verification (Phase 5).
+5. Flip the connection string / env to Postgres → deploy → smoke test → resume traffic.
+6. Keep SQLite file as a frozen rollback for N days.
+
+**B. Near-zero downtime:**
+1. Initial bulk load to Postgres while app still on SQLite.
+2. **Dual-write** from the app (write to both) *or* a change-capture/replay process to keep Postgres caught up.
+3. Backfill + tail-sync until lag ≈ 0.
+4. Brief write-freeze (seconds) → final sync → flip reads+writes to Postgres → unfreeze.
+5. Keep dual-write running one-directional briefly as a safety net, then retire SQLite.
+
+This path is materially more complex and is only worth it if a maintenance window is genuinely unacceptable.
+
+## Phase 5 — Verification (don't skip)
+- **Row counts** per table match source vs. target.
+- **Checksums/aggregates** on key columns (sums, min/max ids, `md5` of sorted critical columns).
+- Spot-check a sample of rows for type fidelity (dates, booleans, NULLs vs empty strings).
+- Run the app's test suite against Postgres.
+- Smoke-test the hot paths and anything with raw SQL.
+
+## Phase 6 — Cutover hardening & rollback
+- Have a written **rollback plan**: keep the SQLite file, and keep the old connection path deployable for a few days.
+- Add Postgres-specific ops: connection-pool sizing, `statement_timeout`, monitoring/alerting, automated backups + PITR, and a `VACUUM`/`autovacuum` sanity check.
+- Load-test the connection pool — the #1 post-migration surprise is connection exhaustion under concurrency that SQLite never exposed.
+
+---
+
+To turn this into a concrete, step-by-step runbook with exact commands, tell me: **your downtime budget, rough DB size, and the language/ORM** (or point me at the repo and I'll read the schema and query layer directly). If you'd like, I can also run a short adversarial review of the final cutover plan before you execute it.

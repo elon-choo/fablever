@@ -1,0 +1,21 @@
+Go with **Tailwind** for this case. For a small team starting fresh, it's the safer default — the reasons below.
+
+**Why Tailwind wins for a small new team**
+- **Shared vocabulary out of the box.** Spacing, color, and type scales come from one config. A small team avoids the slow drift where everyone invents their own class names and the stylesheet grows unbounded. With CSS modules, that consistency is something *you* have to design and enforce.
+- **No naming or file-juggling tax.** You style inline in the JSX. No flipping between `Button.tsx` and `Button.module.css`, no thinking up class names for one-off elements. For a small team shipping features, that friction adds up.
+- **Dead styles can't accumulate.** Delete a component, its styles go with it. CSS modules are better than global CSS here, but unused classes still linger inside module files.
+- **Ecosystem.** shadcn/ui, Headless UI, and most modern component libraries assume Tailwind. You get well-built, accessible, unstyled components you restyle with your own tokens — a big head start for a team without a dedicated designer.
+
+**The real cost to accept**
+- Markup gets verbose — long `className` strings. You manage this by extracting components (not by reaching for `@apply`, which mostly recreates CSS-modules problems).
+- There's a learning curve on the utility names, but it's days, not weeks.
+- Set up Prettier with `prettier-plugin-tailwindcss` from day one so class order is automatic and diffs stay clean.
+
+**When I'd pick CSS modules instead**
+- The team has strong CSS expertise and genuinely dislikes utility classes — fighting the tool costs more than it saves.
+- You're doing heavily art-directed, animation-rich, or unusual layouts where hand-written CSS is clearer than utility chains.
+- You want zero build-time dependency on a styling framework and value plain-CSS portability.
+
+One thing not to do: don't mix both as your primary approach. Pick one as the default so the codebase stays coherent — a small team can't afford two parallel styling systems. If you adopt Tailwind, CSS modules are still fine to drop in for the occasional complex component that's awkward in utilities.
+
+If your team already knows and prefers hand-written CSS, tell me — that's the main factor that would flip my recommendation.

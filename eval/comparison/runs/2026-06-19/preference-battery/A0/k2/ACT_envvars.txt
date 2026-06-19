@@ -1,0 +1,68 @@
+Here's the approach that holds up well in practice.
+
+## Core principle: config comes from the environment, secrets never get committed
+
+**1. Use `.env` files for local, real env vars for prod**
+
+```
+.env                 # local defaults — gitignored, never committed
+.env.example         # committed — documents required keys with dummy values
+```
+
+In `.gitignore`:
+```
+.env
+.env.*
+!.env.example
+```
+
+Locally, load the file. In prod (Heroku, Vercel, ECS, Railway, k8s, etc.) you **don't** ship a `.env` — the platform injects real env vars, and your code reads `process.env` identically. Same code, different source.
+
+**2. Loading the file**
+
+Node 20.6+ has this built in, no dependency:
+```bash
+node --env-file=.env app.js
+```
+
+Or `dotenv` if you need broader support / programmatic control:
+```js
+import 'dotenv/config'   // at the very top of your entry file
+```
+
+**3. Validate and centralize — don't sprinkle `process.env` everywhere**
+
+This is the part people skip and regret. Parse + validate once at startup so a missing var fails loud immediately instead of becoming `undefined` deep in a request handler:
+
+```js
+// config.js
+import { z } from 'zod';
+
+const schema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().default(3000),
+  DATABASE_URL: z.string().url(),
+  API_KEY: z.string().min(1),
+});
+
+export const config = schema.parse(process.env);
+```
+
+Then import `config` everywhere instead of touching `process.env` directly. You get types, defaults, coercion (env vars are always strings), and a fail-fast guarantee.
+
+## Key rules
+
+- **Never commit real secrets.** If one leaks into git history, rotate it — deleting the file isn't enough.
+- **Don't switch behavior on `NODE_ENV` for secrets/URLs** — feed those as separate vars per environment. `NODE_ENV` is for `development`/`production`/`test` mode only (it affects framework optimizations, logging verbosity, etc.).
+- **Production secrets belong in a secret manager** (AWS Secrets Manager, Doppler, Vault, or your host's env UI), not in any file on disk.
+- **Multiple local envs?** Use `.env.development`, `.env.test`, etc., and pick with `--env-file`. Avoid the older auto-cascade conventions unless your framework already imposes one.
+
+## What I'd recommend by stack
+
+| Setup | Loader | Validation |
+|---|---|---|
+| Node 20.6+, no framework | `--env-file` (built-in) | `zod` or `envalid` |
+| Older Node / programmatic | `dotenv` | `zod` or `envalid` |
+| Next.js / Vite | built-in `.env` handling | still validate at startup |
+
+If you tell me your specific host (Vercel, AWS, Docker, etc.) and framework, I can give you the exact wiring — the prod injection mechanism differs a bit per platform.

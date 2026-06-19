@@ -1,0 +1,46 @@
+Yes — this is a textbook **N+1 query** problem. You run 1 query for the orders, then N more (one per order), and they're `await`ed sequentially so it's also serial round-trips. With 1000 orders that's 1001 queries.
+
+## Fix 1 — Eager load with a join (best, if there's an association)
+
+This looks like Sequelize. If `Order` belongs to `User`, let the ORM do a single JOIN:
+
+```js
+const orders = await Order.findAll({
+  include: [{ model: User, as: 'user' }],
+});
+// each order.user is already populated — zero extra queries
+```
+
+## Fix 2 — Batch-fetch in one query (if you can't/don't want a join)
+
+Collect the IDs, fetch all users at once, then map in memory:
+
+```js
+const orders = await Order.findAll();
+
+const userIds = [...new Set(orders.map(o => o.userId))]; // dedupe
+const users = await User.findAll({ where: { id: userIds } });
+const byId = new Map(users.map(u => [u.id, u]));
+
+for (const o of orders) o.user = byId.get(o.userId);
+```
+
+Two queries total, regardless of order count.
+
+## If you must keep separate queries
+
+At minimum don't await serially — `Promise.all` parallelizes (still N queries, but concurrent rather than one-at-a-time):
+
+```js
+await Promise.all(
+  orders.map(async o => { o.user = await User.findById(o.userId); })
+);
+```
+
+But this hammers the DB with N connections; **prefer Fix 1 or 2.**
+
+---
+
+**Recommendation:** Fix 1 if the association exists, otherwise Fix 2. Both turn O(N) queries into O(1). The deduping in Fix 2 also avoids refetching the same user when multiple orders share a `userId`.
+
+One note: assigning `o.user` onto a Sequelize model instance works but is a bit unusual — if these are model instances you may want `.get({ plain: true })` first, or just use the `include` approach which sets it up cleanly.

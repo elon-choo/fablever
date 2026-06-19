@@ -1,0 +1,13 @@
+Most likely one of two things, and the server's token-rejection error tells you which:
+
+**The single most useful check:** look at what your backend logs when it rejects a request. With the common libraries it's either `TokenExpiredError` ("jwt expired") or `invalid signature` (`JsonWebTokenError`). That one word splits the whole diagnosis.
+
+**If it says "expired" → your access token TTL is just short and refresh isn't working.** "A few minutes" is a giveaway that `exp` is set to something like 5–15m. Decode the token (paste it into jwt.io, or base64-decode the middle segment) and compute `exp - iat`. If that's your "few minutes," then either you have no refresh-token flow at all, or you have one and it's silently failing (refresh endpoint erroring, refresh token not being sent, or a rotation race where two tabs/requests both spend the same refresh token and the loser gets logged out). The logouts will line up almost exactly with the TTL rather than being truly random.
+
+**If it says "invalid signature" → your signing secret isn't stable across the servers verifying it.** This is what "random" usually points to. Two classic forms:
+- **Multiple instances behind a load balancer with different `JWT_SECRET`s.** A token signed by instance A fails on instance B. You stay logged in while you happen to hit A, get kicked when the LB sends you to B — looks random, and "a few minutes" is just how long sticky sessions or luck held. Check that every instance reads the *same* secret from shared config/env, not a per-process value.
+- **Secret regenerated on restart/deploy.** If the secret is generated at boot (e.g. `crypto.randomBytes` with no env fallback) instead of read from a fixed env var, every redeploy or crash-restart invalidates every live token. Frequent deploys or autoscaling makes this feel random.
+
+Lower-probability but worth ruling out if neither fits: server clock skew between signer and verifier (strict `exp`/`nbf` checks reject otherwise-valid tokens), or the token being stored somewhere volatile on the client (in-memory / `sessionStorage`) that gets cleared.
+
+Start with the log message — it'll tell you whether you're chasing expiry/refresh or a secret mismatch, and the rest follows from there. If you can share the rejection error and the decoded token's `iat`/`exp`, I can narrow it to one.

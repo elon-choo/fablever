@@ -1,0 +1,54 @@
+No worries — I'll give you the plan for the most common setup and flag where it branches. You can tell me if your stack differs.
+
+## The headline: 100k rows is small. Don't add new infrastructure.
+
+100k records fits comfortably in a single database index. A dedicated search engine (Elasticsearch/OpenSearch) is operational overhead you almost certainly don't need at this scale. The decision is only: **built-in DB search** vs. **a lightweight dedicated engine** — and that's driven by *how search should feel*, not by row count.
+
+## Default plan (assuming PostgreSQL + keyword search with ranking)
+
+**1. Add a generated `tsvector` column + GIN index**
+```sql
+ALTER TABLE items ADD COLUMN search_doc tsvector
+  GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce(title,'')), 'A') ||
+    setweight(to_tsvector('english', coalesce(body,'')),  'B')
+  ) STORED;
+
+CREATE INDEX items_search_idx ON items USING GIN (search_doc);
+```
+`setweight` lets title matches outrank body matches. The `STORED` generated column keeps the index in sync automatically — no triggers to maintain.
+
+**2. Query with ranking**
+```sql
+SELECT id, title,
+       ts_rank(search_doc, websearch_to_tsquery('english', $1)) AS rank
+FROM items
+WHERE search_doc @@ websearch_to_tsquery('english', $1)
+ORDER BY rank DESC
+LIMIT 20;
+```
+`websearch_to_tsquery` accepts Google-style input (`"quoted phrase" -excluded foo`) so you don't hand-parse user queries.
+
+**3. Add trigram fuzzy as a fallback** (typo tolerance / partial words):
+```sql
+CREATE EXTENSION pg_trgm;
+CREATE INDEX items_title_trgm ON items USING GIN (title gin_trgm_ops);
+```
+Use FTS for the main query; fall back to trigram similarity when FTS returns too few hits. This gets you ~80% of "fancy search" feel with zero new services.
+
+At 100k rows this is **single-digit-millisecond** territory. Build/backfill is seconds.
+
+## Where this plan changes
+
+| If your situation is… | Change the plan to… |
+|---|---|
+| **MySQL/MariaDB** | `FULLTEXT` index + `MATCH…AGAINST` (NL mode). Same idea, weaker ranking. |
+| **SQLite** | FTS5 virtual table — genuinely excellent and trivial at this scale. |
+| **Need typo-tolerant, search-as-you-type, <50ms** | **Meilisearch or Typesense** — single binary, dead-simple, sync 100k rows in one pass. *Don't* reach for Elasticsearch. |
+| **Content is Korean/CJK** | This is the big one. Standard `to_tsvector` tokenizes on whitespace and **mangles Korean**. Use `pg_bigm` (bigram) or a Mecab-based tokenizer — or just use Meilisearch/Typesense, which handle CJK well out of the box. |
+| **Need facets/filters + custom ranking** | Dedicated engine (Typesense/Meilisearch) earns its keep here. |
+
+## What I'd need to firm this up
+The two answers that actually matter: **(1) which database you're on**, and **(2) is the content English or Korean/CJK** — the CJK case is the one place the naive plan silently produces bad results.
+
+Want me to write the concrete migration + query code for your stack? Tell me the database and language and I'll make it real.

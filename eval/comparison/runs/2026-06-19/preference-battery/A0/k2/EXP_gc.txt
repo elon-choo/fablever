@@ -1,0 +1,70 @@
+Garbage collection (GC) is the runtime's way of automatically reclaiming memory that your program allocated but can no longer reach. You never call `free()`; the GC figures out what's dead and recycles it. Both JS and Go use **tracing** collectors (not reference counting), but they're tuned for very different goals.
+
+## The core idea: reachability
+
+The fundamental question a tracing GC answers is: *"Which objects can the program still possibly use?"*
+
+It starts from a set of **roots** — things definitely alive right now:
+- Global variables
+- Local variables on the call stack
+- CPU registers
+
+Then it traces every pointer from the roots, then every pointer from *those* objects, and so on. Anything it can reach is **live**. Everything else is **garbage**, and its memory gets reclaimed. This is the "mark" in mark-and-sweep.
+
+```
+roots → A → B → C        (live)
+        D ⇄ E            (garbage: D and E point to each other,
+                          but nothing reachable points to them)
+```
+
+Note that last point: **circular references are not a problem** for tracing GCs. D and E reference each other, but since no root can reach them, they're collected. (This is exactly the case where naive reference counting fails.)
+
+## JavaScript (V8, the engine in Chrome and Node)
+
+V8 uses a **generational** collector built on a key empirical observation — *the generational hypothesis*: **most objects die young.** A temporary object in a function call usually becomes garbage almost immediately; objects that survive a while tend to stick around.
+
+So the heap is split:
+
+- **Young generation (nursery)** — where new objects are born. It's small and collected very frequently with a fast **Scavenge** algorithm (a copying collector). It copies the few survivors to a "to-space" and wipes the rest in one shot. Cheap because most objects are already dead.
+- **Old generation** — objects that survived a couple of young-gen collections get **promoted** here. Collected less often using **mark-sweep-compact**.
+
+V8 does serious engineering to avoid pausing your program (important — JS is single-threaded, so a GC pause freezes the UI):
+- **Incremental marking** — marking is broken into small chunks interleaved with execution.
+- **Concurrent/parallel marking and sweeping** — work happens on background threads while your code runs.
+
+You don't control any of this directly. You influence it by managing reachability — common leak sources in JS are things that stay reachable longer than you think: forgotten timers, event listeners not removed, closures capturing large objects, and entries in long-lived `Map`/array caches. (`WeakMap`/`WeakRef` exist precisely so you can hold a reference that *doesn't* keep an object alive.)
+
+## Go
+
+Go's collector is a **concurrent, tri-color mark-and-sweep** collector, and it is **non-generational and non-compacting**. Its overriding design goal is **low latency** — keeping GC pause times very short (sub-millisecond stop-the-world phases), even at some cost to raw throughput.
+
+**Tri-color marking** is the algorithm that lets it mark while your program keeps running:
+- **White** — not yet visited (presumed garbage).
+- **Grey** — reached, but its children haven't been scanned yet.
+- **Black** — reached and fully scanned.
+
+It moves objects white → grey → black. When no grey objects remain, anything still white is garbage. The tricky part: your program (the "mutator") is *changing pointers while this runs*. Go uses a **write barrier** — a small hook on pointer writes — to catch cases where a black object gets a new pointer to a white one, preventing live objects from being wrongly collected.
+
+A big reason Go's GC has less work to do than JS's: Go's **escape analysis**. The compiler proves when a value's lifetime doesn't outlive its function and puts it **on the stack** instead of the heap. Stack memory is freed for free when the function returns — the GC never sees it. Combined with value types (structs aren't always pointers), Go programs simply generate less garbage.
+
+You tune Go's GC with:
+- **`GOGC`** (default 100) — collect when the heap grows 100% since the last collection. Higher = less frequent GC, more memory used; lower = more frequent, less memory.
+- **`GOMEMLIMIT`** (Go 1.19+) — a soft memory ceiling, useful in containers.
+
+## Side-by-side
+
+| | JavaScript (V8) | Go |
+|---|---|---|
+| Strategy | Generational | Non-generational |
+| Algorithm | Scavenge (young) + mark-sweep-compact (old) | Concurrent tri-color mark-sweep |
+| Compaction | Yes (old gen) | No |
+| Primary goal | Throughput + responsiveness | Low latency (short pauses) |
+| Reduces garbage via | (engine-managed) | Escape analysis, value types, stack allocation |
+| Your knobs | Essentially none | `GOGC`, `GOMEMLIMIT` |
+
+## Two concepts worth internalizing
+
+1. **Tracing beats reference counting** for general-purpose languages mainly because it handles cycles and amortizes cost into batches — which is why both these languages chose it.
+2. **"Memory leak" in a GC'd language means unintended reachability**, not forgetting to `free`. If something is still pointed to from a root, the GC *must* assume you might use it and keeps it forever. Fixing leaks = breaking those references.
+
+Want me to go deeper on any one piece — e.g., how the tri-color write barrier actually works, V8's hidden classes and how they interact with the heap, or how to diagnose a real leak with heap snapshots / pprof?

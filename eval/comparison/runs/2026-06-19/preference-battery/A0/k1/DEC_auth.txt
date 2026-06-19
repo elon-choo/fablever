@@ -1,0 +1,34 @@
+For a small startup: **use a managed auth provider, don't roll your own.** That's the default, and you'd need a specific reason to deviate.
+
+## Why not roll your own
+
+Auth looks simple (email + password, right?) but the real scope is large and unforgiving:
+
+- Password hashing, reset flows, email verification, session/token management, rate limiting, account lockout
+- OAuth/social login, SSO (SAML/OIDC) the moment you sell to a business
+- MFA, device management, audit logs
+- Staying current on attacks (credential stuffing, token theft, session fixation)
+
+A bug here isn't a feature regression — it's a breach. As a small team, every hour spent on auth is an hour not spent on the thing that actually differentiates you. Auth is undifferentiated heavy lifting.
+
+## But Auth0 specifically?
+
+Auth0 is solid but **gets expensive fast** as you scale, and pricing has a history of jumps at the tier boundaries. Before defaulting to it, look at the alternatives — the landscape is much better than it was a few years ago:
+
+| Option | Good fit when |
+|---|---|
+| **Clerk** | You want the fastest path, great React/Next.js DX, prebuilt UI components |
+| **Supabase Auth** | You're already using Postgres/Supabase; cheap, you own the user data |
+| **WorkOS** | You're B2B and SSO/SAML/SCIM for enterprise customers is the priority |
+| **Auth0/Okta** | You need maturity, breadth of features, compliance certs out of the box |
+| **AWS Cognito** | You're deep in AWS and willing to trade DX for cost |
+
+## My recommendation
+
+1. **Use a provider.** The custom-auth math almost never works out for a small startup.
+2. **Pick based on your stack and customer type**, not brand name. B2C consumer app → Clerk or Supabase. Selling to businesses → WorkOS or Auth0. Already on Supabase → its built-in auth.
+3. **Check the lock-in / export story** before committing — can you export users and password hashes if you leave? This is the main risk of going managed, and it's how you avoid being trapped when pricing changes.
+
+The one legitimate reason to build your own is if auth *is* your product (you're an identity company) or you have hard regulatory/data-residency constraints no vendor meets. For a typical small startup, neither applies.
+
+Want me to dig into a specific comparison — say Clerk vs. Supabase vs. Auth0 pricing and lock-in for your stack? If you tell me whether you're B2C or B2B and what framework you're on, I can narrow it down.

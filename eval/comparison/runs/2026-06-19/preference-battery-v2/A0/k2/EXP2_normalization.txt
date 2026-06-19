@@ -1,0 +1,54 @@
+# Database Normalization
+
+**Normalization** is the process of structuring relational tables to eliminate redundancy and prevent anomalies, by decomposing tables and enforcing dependencies through keys. The goal: each fact lives in exactly one place.
+
+The progression through "normal forms," in plain terms:
+
+| Form | Rule | Fixes |
+|------|------|-------|
+| **1NF** | Atomic column values; no repeating groups or arrays-in-a-cell | Unqueryable mush like `"red,green,blue"` in one column |
+| **2NF** | 1NF + every non-key column depends on the *whole* composite key, not part of it | Partial dependencies |
+| **3NF** | 2NF + no non-key column depends on another non-key column (no transitive dependencies) | Redundant derived data |
+| **BCNF** | Stricter 3NF: every determinant is a candidate key | Edge cases 3NF misses |
+
+In practice, **3NF/BCNF is the default target** for transactional (OLTP) systems.
+
+### The anomalies it prevents
+
+Imagine an `orders` table that repeats the customer's address on every row:
+
+- **Update anomaly** — customer moves; you must update hundreds of rows, and if you miss one, the data now contradicts itself.
+- **Insertion anomaly** — you can't store a new customer until they place an order (no row to hang the data on).
+- **Deletion anomaly** — deleting their last order erases the only copy of their address.
+
+Splitting `customer` into its own table, referenced by a foreign key, makes each fact authoritative and single-sourced.
+
+---
+
+# When You'd Deliberately Denormalize
+
+Normalization optimizes for **write integrity**; denormalization trades some of that away for **read performance or simplicity**. You do it consciously, after measuring, when the normalized form costs more than it's worth.
+
+**Common, justified cases:**
+
+1. **Killing expensive joins on hot read paths.** A dashboard that joins 6 tables on every page load may justify a pre-joined/flattened table — especially in analytics/OLAP and star-schema warehouses, where denormalization is the *norm*, not the exception.
+
+2. **Precomputed aggregates.** Storing `comment_count` on a `post` row instead of `COUNT(*)`-ing a million comments each render. The count is derived data you've chosen to cache.
+
+3. **Read-heavy, write-light ratios.** If a value is read 10,000× for every time it changes, paying a small write cost to maintain a copy is a good trade.
+
+4. **Historical snapshots / immutability.** An invoice should store the price and address *as they were at purchase time*, not join to the live `product` table whose price changed since. Here the "redundant" copy is actually the correct semantics — it's a point-in-time fact, not a denormalization at all.
+
+5. **Avoiding cross-service joins** in distributed/microservice systems where the data lives in separate stores and a join isn't even possible.
+
+### The cost you take on
+
+Every denormalization means **you now own consistency in application code** (or triggers, materialized views, CDC pipelines). The redundant copies *will* drift unless something keeps them in sync, which reintroduces exactly the update anomalies normalization removed. So the discipline is:
+
+> **Normalize until it hurts, then denormalize until it works** — and only with a measured reason, a clear owner of the duplicated data, and a sync mechanism.
+
+A few good middle-ground tools that get you read speed without hand-maintaining copies: **materialized views**, **covering indexes**, **generated/computed columns**, and **caching layers** — reach for these before you hand-roll redundant columns.
+
+---
+
+**Rule of thumb:** Default to 3NF for systems of record (correctness first). Denormalize as a targeted optimization driven by an actual profiled bottleneck — never preemptively, because "joins feel slow."

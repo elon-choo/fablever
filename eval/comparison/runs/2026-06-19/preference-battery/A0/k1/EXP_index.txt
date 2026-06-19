@@ -1,0 +1,37 @@
+## What a database index is
+
+An index is a separate data structure the database maintains alongside your table that lets it find rows **without scanning every row**. The classic analogy is the index at the back of a book: instead of reading all 500 pages to find "mitochondria," you jump to the I-section and get the exact page numbers.
+
+Most indexes are **B-trees** (balanced sorted trees). Because the keys are kept sorted, the database can find a value in roughly `log(N)` steps instead of `N`. On a million-row table that's the difference between ~20 comparisons and 1,000,000.
+
+The cost: the index is a copy of the indexed column(s) plus pointers back to the rows. So it **takes disk space**, and every `INSERT`/`UPDATE`/`DELETE` must update the index too — writes get slower. **An index trades write speed and storage for read speed.**
+
+## When you SHOULD add one
+
+- **Columns in `WHERE` clauses** that filter a lot — `WHERE email = ?`, `WHERE status = 'active'`.
+- **Join columns** — foreign keys are queried constantly; index both sides.
+- **`ORDER BY` / `GROUP BY` columns** — a sorted index can skip the sort step entirely.
+- **Unique constraints** — `UNIQUE` indexes both enforce correctness and speed lookups (primary keys get this automatically).
+- **High-selectivity columns** — ones where a value matches few rows (user ID, email). The pickier the filter, the more an index helps.
+
+## When you should NOT (or it won't help)
+
+- **Small tables** — a full scan is already cheap; the planner may ignore the index anyway.
+- **Low-selectivity columns** — indexing a boolean or `gender` column rarely helps, since a value still matches ~half the table.
+- **Write-heavy, read-light tables** — you pay the write cost without recouping it on reads.
+- **Columns wrapped in functions** — `WHERE LOWER(email) = ?` won't use a plain index on `email` (you'd need an expression/functional index instead).
+- **Over-indexing** — every redundant index is dead weight on writes and storage.
+
+## A few things that trip people up
+
+- **Composite index column order matters.** An index on `(a, b)` helps `WHERE a = ?` and `WHERE a = ? AND b = ?`, but generally **not** `WHERE b = ?` alone — like a phone book sorted by last-then-first name is useless if you only know the first name.
+- **Leading wildcards kill indexes.** `LIKE 'smith%'` can use an index; `LIKE '%smith'` cannot.
+- **Covering indexes** — if the index contains every column a query needs, the database answers from the index alone and never touches the table. Very fast.
+
+## How to decide in practice
+
+Don't guess — **measure**. Run `EXPLAIN` (or `EXPLAIN ANALYZE` in Postgres) on your slow query. If you see a **sequential/full table scan** on a large table for a selective filter, that's your signal to add an index. Add it, re-run `EXPLAIN`, and confirm the planner actually switched to an index scan and the query got faster.
+
+Rule of thumb: **start with no indexes beyond your keys, let real queries reveal the pain points, then index deliberately** — rather than indexing every column up front.
+
+Want me to look at a specific slow query or schema? If you point me at it I can suggest concrete indexes and check the query plan.

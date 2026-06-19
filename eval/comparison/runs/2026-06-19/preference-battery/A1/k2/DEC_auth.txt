@@ -1,0 +1,21 @@
+Use Auth0 (or an equivalent managed provider). For a small startup, rolling your own auth is almost always the wrong place to spend your limited engineering time.
+
+The core reason: authentication looks simple — email, password, done — but the long tail is enormous and every item in it is security-critical. Password hashing and rotation, secure session/token handling, email verification, password reset flows, rate limiting and brute-force protection, account lockout, breach detection, MFA, OAuth social logins, and eventually SSO/SAML when you sell to your first business customer. Each of these is a place to get it subtly wrong, and getting auth wrong is the kind of bug that leaks your entire user base rather than breaking one feature.
+
+When a managed provider wins (your situation):
+- You're small and every hour spent on auth plumbing is an hour not spent on the product that differentiates you.
+- You'll want social login, MFA, and SSO eventually — providers give you these as config rather than projects.
+- The free/cheap tiers cover early-stage volume, so cost isn't a real factor yet.
+
+When writing your own is defensible:
+- Auth is genuinely core to your product (you *are* an identity company).
+- You have specific requirements no provider supports, or hard data-residency/compliance constraints that forbid a third party holding credentials.
+- You have in-house security expertise and the appetite to own it forever — it's not a one-time build, it's permanent maintenance.
+
+Two practical notes on the decision:
+
+Vendor lock-in is the real tradeoff to weigh, not build-vs-buy difficulty. Migrating off an auth provider later is painful because user identities and password hashes are entangled with it. Mitigate by keeping your own `users` table as the source of truth and treating the provider as the authentication layer on top — store your own user IDs and map provider identities to them.
+
+Auth0 specifically is solid but gets expensive as you scale, and its pricing tiers have sharp jumps. Worth comparing against alternatives before committing: Clerk and Supabase Auth are popular for startups (Clerk especially if you want polished pre-built UI components), AWS Cognito if you're already on AWS and want lower cost at the expense of developer experience, and self-hostable options like Keycloak or Ory if you want managed-style features without the per-user SaaS bill.
+
+My recommendation: start with a managed provider, keep your own user table as the system of record, and revisit only if pricing or a hard requirement forces it. The default for a small team should be to buy this, not build it.

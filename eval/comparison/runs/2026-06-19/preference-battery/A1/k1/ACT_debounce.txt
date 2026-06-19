@@ -1,0 +1,36 @@
+The simplest way is a small `useDebounce` hook — debounce the *value*, not the event handler, so it plays nicely with React's render model:
+
+```jsx
+import { useState, useEffect } from "react";
+
+function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id); // cancel if value changes before delay
+  }, [value, delay]);
+
+  return debounced;
+}
+```
+
+Use it like this:
+
+```jsx
+function Search() {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (!debouncedQuery) return;
+    fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`);
+  }, [debouncedQuery]);
+
+  return <input value={query} onChange={(e) => setQuery(e.target.value)} />;
+}
+```
+
+The input stays fully controlled and responsive (updates on every keystroke), but `debouncedQuery` only changes after the user pauses for 300ms, so your fetch fires once instead of on every character. The cleanup function cancels the pending timer on each keystroke, which is what actually produces the debounce.
+
+If you'd rather not write the hook, `useDebounce` from the `usehooks-ts` package is the same thing pre-packaged. I'd reach for that only if you already have the dependency — for a single input the hook above is less overhead than adding a library.

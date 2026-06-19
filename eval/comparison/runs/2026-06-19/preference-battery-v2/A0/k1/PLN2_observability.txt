@@ -1,0 +1,45 @@
+No worries — I'll lay out a plan with sensible defaults and flag my assumptions so you can correct me where I'm off.
+
+## Assumptions (correct me if wrong)
+Based on your stack, I'm assuming: a Next.js-ish web app, **Aurora PostgreSQL** + **Supabase** for data, **PostHog** already wired for product analytics, and a fleet of **long-running batch/render/sim/backfill jobs** (you already have `jobreg`, the `long-job` skill, and the `ops-monitor` agent). "No monitoring" = no error tracking, no uptime/alerting, no job-failure paging. Small team, so **managed SaaS** is the default — fastest to value, generous free tiers, ~zero ops burden.
+
+## The 4 gaps, mapped to your stack
+
+| Pillar | Today | Add |
+|---|---|---|
+| **Errors** (crashes, exceptions) | none | Sentry |
+| **Uptime / health** (is it up?) | none | Better Stack (or UptimeRobot) |
+| **Infra & DB** (latency, slow queries, cost) | partial (CloudWatch/Supabase exist but unwatched) | CloudWatch alarms + Supabase dashboards |
+| **Jobs** (did the batch run & succeed?) | `jobreg` logs, no alerting | Healthchecks.io heartbeats |
+| **Business** (revenue/signups drop) | PostHog (no alerts) | PostHog insights + alerts |
+
+## Phased rollout
+
+**Phase 0 — Decide the alert destination (30 min).** Everything below routes to one place. Recommend a dedicated `#alerts` Slack channel + one email. Without this, you add tools and still miss the page.
+
+**Phase 1 — Stop flying blind (Week 1, highest ROI):**
+- **Sentry** — add the SDK to the web app + Node services. Catches unhandled exceptions with stack traces, release, and user/session context. This alone usually surfaces issues you don't know you have. Free tier is fine to start.
+- **Better Stack / UptimeRobot** — synthetic checks on your key URLs (homepage, login, the saju/premium-v2 flow, payment callback) + an API health endpoint. External "is it up" + latency. → Slack.
+- **Healthchecks.io heartbeats for jobs** — each `jobreg`-registered job pings a URL on success; a missed ping pages you. This is the cleanest fix for *silent* batch/render failures, and it slots right into your existing `long-job` / `ops-monitor` flow. (One curl at job end.)
+
+**Phase 2 — Infra & DB (Week 2):**
+- **CloudWatch alarms** on Aurora: CPU, connections, freeable memory, replica lag, and **`pg_stat_statements`** for slow queries. Set a billing/cost alarm too.
+- **Supabase** built-in logs + DB health dashboards; alert on connection-pool saturation and auth errors.
+- A **`/health` endpoint** that checks DB connectivity + critical deps, hit by the Phase-1 uptime monitor.
+
+**Phase 3 — Make it usable & proactive (Week 3+):**
+- Define **SLOs / golden signals** for the top 1–2 user journeys (latency, error rate, traffic, saturation) so alerts mean something instead of being noise.
+- **PostHog alerts** on business metrics: signups/revenue/premium-conversion dropping vs. baseline — a silent funnel break is as bad as a 500.
+- **Structured logging** (JSON, request IDs) so logs are queryable; ship to Better Stack Logs or CloudWatch Logs if/when you need correlation.
+- Tune alert thresholds to kill false pages — the fastest way to make people ignore monitoring is to over-page in week 1.
+
+## Why this order
+Phase 1 is ~a day of work and converts "we find out when a user complains" → "we find out first," across all three blind spots (app errors, uptime, job failures). Phases 2–3 add depth and reduce noise once the basics page you.
+
+---
+
+Two things would sharpen this into a concrete task list:
+1. **Where the prod app actually runs** (Vercel/serverless vs. AWS EC2/ECS vs. the Mac bridge) — changes the infra-metrics layer.
+2. **Which is the most painful gap right now** — if it's the batch jobs, I'd lead with Healthchecks.io heartbeats wired into `jobreg`/`ops-monitor` instead of Sentry.
+
+Want me to turn this into a checklist with the actual SDK snippets and `jobreg` ping integration for your stack?

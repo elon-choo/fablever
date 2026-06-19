@@ -1,0 +1,29 @@
+No problem — I'll give you the plan directly with sensible defaults, and flag the one branch that actually changes the work.
+
+The headline: for the overwhelming majority of SQLite→Postgres moves, the data transfer is the easy part — the risk lives in SQLite's loose typing and your app's SQLite-specific SQL. Plan around validation and cutover, not around copying rows. The default path below assumes a short maintenance window (a few minutes read-only); I note the zero-downtime variant at the end since that's the one decision that materially expands scope.
+
+## The plan
+
+**1. Inventory what depends on SQLite's behavior.** This is where migrations break, so do it first:
+- **Type affinity.** SQLite stores anything in any column. Booleans live as `0/1`, dates and JSON as `TEXT`, numbers sometimes as strings. Postgres is strict and will reject mismatches. This is the #1 source of surprises.
+- **Loose foreign keys.** SQLite doesn't enforce FKs by default, so prod data often has orphan rows. Postgres *will* enforce them and reject the load. Plan to find and clean these.
+- **Autoincrement → sequences.** `INTEGER PRIMARY KEY`/`AUTOINCREMENT` becomes a Postgres `IDENTITY`/sequence; after load you must set each sequence to `max(id)+1` or the first insert collides.
+- **SQL dialect in app code.** `||` concat, `strftime`, `json_extract`, `NOCASE` collation (→ `CITEXT` or explicit collation), `LIKE` case-sensitivity, and `?` placeholders (→ `$1` or let the ORM handle it).
+
+**2. Stand up Postgres in a staging environment that mirrors prod.** Pin the major version, use a managed service if you can (RDS/Aurora/Cloud SQL/Neon/Supabase), and put a pooler in front (PgBouncer) — Postgres connections are heavier than SQLite's in-process model, and a connection-per-request app will exhaust them.
+
+**3. Create the schema on Postgres.** If you have an ORM with migrations (Django/Rails/Prisma/Alembic/etc.), point it at Postgres and let it build the schema — that keeps one source of truth and avoids hand-translation. If you're on raw SQL, use `pgloader`, which auto-translates the schema, then review every column type by hand.
+
+**4. Move the data with `pgloader`.** It's the standard workhorse and handles the type coercions (booleans, dates, blobs) that a naive dump won't. For an ORM-built schema, run pgloader in data-only mode into the existing tables.
+
+**5. Validate — don't trust "it ran."** Compare row counts per table, spot-check a sample of rows (especially dates, booleans, JSON, decimals for precision loss), confirm every sequence is reset, and confirm FK/unique constraints all hold. This step catches the silent corruption.
+
+**6. Point the app at Postgres and run the full test suite against it**, not just SQLite. Then a load test, since concurrency behavior is genuinely different — SQLite is single-writer, so code that quietly relied on that can surface races under real Postgres concurrency.
+
+**7. Cutover (maintenance window).** Put the app read-only or down, run a final `pgloader` sync, flip the connection string, smoke-test, open it back up. Keep the SQLite file intact and the ability to flip the connection string back — that's your rollback for the first 24–48h.
+
+## The one branch that changes scope
+
+If you **can't take any downtime**, steps 4 and 7 become a real project instead of a window: you either dual-write to both databases during a transition, or set up a CDC/replication stream from SQLite, then cut over once Postgres is caught up. That roughly doubles the effort and the testing surface. If you can possibly negotiate even a few minutes of read-only time, take the simple path above — it's far less risky.
+
+If you tell me your stack (ORM vs raw SQL) and rough DB size, I'll turn the relevant steps into concrete commands.

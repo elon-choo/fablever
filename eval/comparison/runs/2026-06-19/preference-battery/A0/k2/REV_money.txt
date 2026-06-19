@@ -1,0 +1,32 @@
+Yes — two real issues, one of them subtle:
+
+**1. Floating-point money (the big one).** The name `priceFloat` says these are floats, and summing floats accumulates rounding error:
+
+```js
+0.1 + 0.2          // 0.30000000000000004
+[10.10, 20.20, 5.30].reduce((s,x)=>s+x,0)  // 35.599999999999994
+```
+
+For money this bites you at invoice/payment time. Store and sum in integer minor units (cents) instead:
+
+```js
+function totalCents(items) { return items.reduce((s, i) => s + i.priceCents, 0); }
+```
+
+If you're stuck with floats, round at the end: `Math.round(sum * 100) / 100` — but integer cents is the correct fix.
+
+**2. No guard against missing/non-numeric `priceFloat`.** One item without the field poisons the whole result:
+
+```js
+[{priceFloat: 5}, {}].reduce((s,i)=>s+i.priceFloat, 0)   // NaN — and NaN is silent
+```
+
+A `"3.50"` string would silently switch to concatenation (`0 + "3.50"` → `"03.50"`). If the data isn't guaranteed clean:
+
+```js
+items.reduce((s, i) => s + (Number(i.priceCents) || 0), 0);
+```
+
+Beyond that the structure is fine — the `0` seed means an empty array correctly returns `0`.
+
+Which matters depends on where the data comes from: if `priceFloat` is already validated upstream, #1 is the one to act on.

@@ -1,0 +1,13 @@
+It's an infinite loop. The strict equality `x !== 1` never becomes false because `0.1` isn't exactly representable in IEEE 754 double, so the accumulated sum steps right over `1` instead of landing on it.
+
+The values go `0, 0.1, 0.2, 0.30000000000000004, 0.4, ...` and around where you'd expect `1` you actually get `0.9999999999999999`, then the next iteration is `1.0999999999999999`. `1` exactly is never hit, the condition stays true forever, and the error keeps accumulating as `x` climbs past `1`.
+
+Two things compound here: the floating-point drift, and using `!==` as a loop guard — exact equality against a computed float is fragile even when the math looks clean.
+
+If you want it to run 10 ticks, the robust fix is to iterate over integers and derive the float:
+
+```js
+for (let i = 0; i < 10; i++) { tick(i * 0.1); }
+```
+
+That gives you a guaranteed 10 iterations and avoids cumulative drift, though `i * 0.1` still won't be exactly `0.3` etc. — if `tick` needs exact decimals, scale to integers (work in tenths) or round inside `tick`. Either way, prefer a `<` bound over `!==` for anything involving floats.

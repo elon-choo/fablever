@@ -1,0 +1,53 @@
+A Docker **image** and a **container** are related but distinct concepts. The simplest analogy: an **image is like a class, a container is like an instance** of that class. Or: image = recipe, container = the dish you cooked from it.
+
+## Docker Image
+
+An image is a **read-only template** — a frozen, packaged snapshot of everything needed to run an application:
+
+- Application code, runtime, libraries, dependencies, environment variables, and config
+- Built up in **layers** (each instruction in a `Dockerfile` adds a layer), which are cached and shared
+- **Immutable** — once built, it doesn't change
+- Static; it just sits there on disk or in a registry (like Docker Hub). It's not "running."
+
+```bash
+docker build -t myapp:1.0 .   # create an image
+docker pull nginx             # download an image
+docker images                 # list images
+```
+
+## Docker Container
+
+A container is a **running (or stoppable) instance** of an image:
+
+- Created by taking an image and adding a thin **writable layer** on top
+- A live, isolated process with its own filesystem view, network, and PID space
+- **Mutable and ephemeral** — you can start, stop, modify, and delete it; changes live in its writable layer and vanish when the container is removed (unless persisted to a volume)
+- You can run **many containers from one image**, each independent
+
+```bash
+docker run -d --name web nginx   # create + start a container from the nginx image
+docker ps                        # list running containers
+docker stop web / docker rm web  # stop / remove the container
+```
+
+## Key Differences
+
+| | Image | Container |
+|---|---|---|
+| **State** | Static template | Running/runnable instance |
+| **Mutability** | Read-only, immutable | Writable layer on top |
+| **Lifecycle** | Built once, reused | Created, started, stopped, destroyed |
+| **Quantity** | One image | Many containers from it |
+| **Analogy** | Class / recipe / blueprint | Object / dish / building |
+| **Storage** | Lives in registry or on disk | Runs in memory as a process |
+
+## The relationship
+
+```
+Dockerfile  --build-->  Image  --run-->  Container
+ (source)              (template)        (instance)
+```
+
+When you `docker run` an image, Docker adds a writable layer and starts the process — that's the container. Stop and remove it, and the underlying image remains untouched, ready to spawn new containers.
+
+A useful mental check: if you change something inside a running container and then delete it, your changes are gone — but the image is exactly as it was. That immutability of images is what makes Docker reproducible across machines.

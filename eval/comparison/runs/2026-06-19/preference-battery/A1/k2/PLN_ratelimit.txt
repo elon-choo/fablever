@@ -1,0 +1,17 @@
+No problem — I'll give you the plan in the general form, and we can make it concrete the moment you point me at the actual API code.
+
+A rate limiter is really five decisions. Here's each one with the default I'd recommend for a typical public API:
+
+**1. Algorithm — use a token bucket (or sliding-window counter).** Token bucket allows short bursts while holding a steady average; fixed-window counters are simplest but let users double up at the window boundary. Default: token bucket, e.g. 60 req/min sustained with a burst of 100.
+
+**2. Key — what you count per.** API key for authenticated traffic, client IP for anonymous. Plan for both, and be careful with IP behind proxies/CDNs (read the real client IP from `X-Forwarded-For`, trusting only your own proxy hop). Tiered limits per plan tier if you have paying customers.
+
+**3. Storage — where counters live.** Single instance: in-memory is fine. More than one instance (the usual case for a public API): **Redis**, so the limit is shared across nodes. Don't use in-memory if you run multiple replicas — each gets its own allowance and the real limit becomes N× what you set.
+
+**4. Placement — do it as early as possible.** Best at the edge (API gateway / CDN / nginx / Cloudflare) so abusive traffic never reaches your app. If it has to be in-app, make it the first middleware, before auth does expensive work — though you'll often want *both* (cheap edge limit + per-key app limit after auth).
+
+**5. Response contract.** Return **HTTP 429** with a `Retry-After` header, and on every response include `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` so clients can self-throttle. Fail **open**, not closed: if your Redis is down, log and allow rather than taking the whole API offline.
+
+Rollout: ship it in **observe-only mode** first (count and log what *would* be blocked) for a few days, check the numbers against real traffic so you don't throttle legitimate users, then flip to enforcing.
+
+To turn this into actual code and PRs I need the repo and stack — point me at the API (path + framework, e.g. Express/Fastify/FastAPI/Go), and I'll wire in the specific middleware, limits, and tests against your endpoints. If "public API" meant the MCP server or outbound Anthropic throttling in this repo instead, say the word and I'll plan that one — it's a different design.

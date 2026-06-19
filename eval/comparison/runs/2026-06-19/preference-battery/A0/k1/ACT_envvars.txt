@@ -1,0 +1,73 @@
+The short version: **load from `.env` files locally, read from real environment variables in prod, validate everything at startup, and never scatter `process.env` across your code.** Here's how that breaks down.
+
+## 1. Don't commit secrets, do commit a template
+```
+# .gitignore
+.env
+.env.*.local
+```
+```bash
+# .env.example  (committed — documents what's needed, no real values)
+DATABASE_URL=
+STRIPE_KEY=
+PORT=3000
+```
+
+## 2. Load `.env` locally only — prod uses the platform's env
+In prod (Heroku, Railway, ECS, k8s, Vercel, etc.) you set real environment variables in the platform; you don't ship a `.env` file. So loading is a local-only concern.
+
+**Node 20.6+ has this built in — you often don't need `dotenv` anymore:**
+```jsonc
+// package.json
+"scripts": {
+  "dev": "node --env-file=.env server.js",
+  "start": "node server.js"   // prod: vars come from the environment
+}
+```
+If you're on older Node or want conditional loading, `dotenv` still works:
+```js
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+```
+
+## 3. Validate and centralize — this is the part most people skip
+Read `process.env` in exactly **one** module, validate it, and export a typed config object. Everything else imports from there. This makes the app fail fast at boot (not at 2am on the code path that needs `STRIPE_KEY`) and gives you autocomplete instead of stringly-typed `process.env.X` everywhere.
+
+```js
+// config.js
+import { z } from 'zod';
+
+const schema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().default(3000),
+  DATABASE_URL: z.string().url(),
+  STRIPE_KEY: z.string().min(1),
+});
+
+const parsed = schema.safeParse(process.env);
+if (!parsed.success) {
+  console.error('❌ Invalid environment:', parsed.error.flatten().fieldErrors);
+  process.exit(1);
+}
+
+export const config = parsed.data;
+```
+```js
+// anywhere else
+import { config } from './config.js';
+app.listen(config.PORT);
+```
+(`envalid` is a popular alternative to zod if you want something env-specific.)
+
+## File layout convention
+- `.env` — local defaults, gitignored
+- `.env.local` — personal local overrides, gitignored
+- `.env.example` — committed template
+- **prod** — no file; set vars in the deployment platform / a secrets manager (AWS Secrets Manager, Doppler, Vault) for sensitive values
+
+---
+
+**The one rule that matters most:** select environment *per deployment*, not via a giant `if (prod)` ladder in your code. Code should just read `config.DATABASE_URL` — whether that points at localhost or prod is decided entirely by which env vars are present, set outside the app.
+
+Want me to wire this up for your actual project? I can check what you're using now (dotenv? a config module? what Node version?) and set it up to match.

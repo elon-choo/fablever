@@ -1,0 +1,52 @@
+The cleanest modern way is **Flexbox** on the parent:
+
+```css
+.parent {
+  display: flex;
+  justify-content: center;  /* horizontal */
+  align-items: center;      /* vertical */
+}
+```
+
+That centers any child inside `.parent`. For this to be meaningful vertically, the parent needs a height (e.g. `height: 100vh` to fill the viewport).
+
+```html
+<div class="parent">
+  <div class="child">I'm centered</div>
+</div>
+```
+
+## Other good options
+
+**Grid — the shortest version:**
+
+```css
+.parent {
+  display: grid;
+  place-items: center;   /* shorthand for align-items + justify-items */
+  height: 100vh;
+}
+```
+
+**Absolute positioning + transform** (useful when you can't make the parent a flex/grid container):
+
+```css
+.parent { position: relative; }
+
+.child {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+```
+
+The `translate(-50%, -50%)` shifts the child back by half its *own* size, so its center—not its top-left corner—lands at the midpoint.
+
+## Which to use
+
+- **Flexbox** — the default choice; centers one or many children, great browser support.
+- **Grid (`place-items: center`)** — least code if you're already using Grid.
+- **Absolute + transform** — when the centered element must be taken out of normal flow (overlays, modals).
+
+For most cases, reach for Flexbox. Want me to adapt one of these to your actual markup?

@@ -1,0 +1,32 @@
+The headline issue: **the fetches run sequentially**, not in parallel.
+
+Because `await` is inside the loop, each `fetch(id)` waits for the previous one to fully resolve before starting the next. For N independent requests, total time becomes the *sum* of all latencies instead of the *max*. This is almost certainly not what you want.
+
+## Fix
+
+```js
+async function loadAll(ids) {
+  return Promise.all(ids.map(id => fetch(id)));
+}
+```
+
+This fires all requests concurrently and preserves input order in the result array.
+
+## Secondary points
+
+1. **Error handling** — both the original and `Promise.all` reject as soon as *any* request fails, discarding successful results. If you want partial results, use `Promise.allSettled`:
+   ```js
+   const results = await Promise.allSettled(ids.map(id => fetch(id)));
+   ```
+
+2. **Unbounded concurrency** — if `ids` can be large, `Promise.all` will open *all* connections at once, which can overwhelm the server or trip rate limits. For big inputs, cap concurrency (e.g. `p-limit`, or a chunked batch loop). The original sequential code accidentally avoided this, so confirm which behavior you actually need.
+
+3. **`fetch` returns a `Response`, not data** — if this is the global `fetch`, callers get `Response` objects, not bodies. You probably want `r => fetch(id).then(r => r.json())` (and a status check). If `fetch` here is your own wrapper, ignore this.
+
+4. **No input guard** — `loadAll(undefined)` throws on iteration. Minor, but worth a default (`ids = []`) if the caller can pass nullish.
+
+## Verdict
+
+Functionally correct, but the sequential I/O is a real performance bug for the common "load these independently" case. The one-line `Promise.all` rewrite is the change to make — then decide consciously on error semantics and concurrency limits based on how large `ids` gets.
+
+One note: your global config routes diff reviews through the `adversarial-review` skill. I reviewed this inline since it's a single pasted snippet with no repo/diff (this dir isn't a git repo) — running the full red→blue→purple gate on a one-liner would be disproportionate. Say the word if you want me to run it through that pipeline anyway.

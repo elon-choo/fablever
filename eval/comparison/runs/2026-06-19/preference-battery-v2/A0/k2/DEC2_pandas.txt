@@ -1,0 +1,28 @@
+For a small one-off cleaning script, **plain Python is usually the better call.** My default reasoning:
+
+**Go plain Python when:**
+- The file fits comfortably in memory and you're doing row-by-row logic (filter, fix, reformat fields).
+- The transformations are mostly conditionals/string work — pandas vectorization doesn't buy you much there, and you'd be writing `.apply(lambda ...)` which is just slower Python anyway.
+- You want zero install/import overhead. `csv` + `json` are stdlib; `import pandas` alone is ~0.5s and a heavy dependency for a throwaway script.
+- It's truly one-off — fewer moving parts to debug, and the logic stays explicit/readable.
+
+```python
+import csv
+with open("in.csv") as f, open("out.csv", "w", newline="") as g:
+    r, w = csv.DictReader(f), None
+    for row in r:
+        if not row["email"].strip():
+            continue
+        row["email"] = row["email"].lower()
+        w = w or csv.DictWriter(g, fieldnames=r.fieldnames); ...
+```
+
+**Reach for pandas when:**
+- You need quick aggregations/groupby/joins, or to merge multiple files.
+- You're exploring the data interactively (notebook) before deciding what "clean" means.
+- There are messy-but-regular fixes pandas does in one line: `df.drop_duplicates()`, `df.fillna()`, `pd.to_datetime(...)`, type coercion across whole columns.
+- The "one-off" might come back — pandas scales to the next ask better.
+
+**Rule of thumb:** row-by-row logic on one file → plain Python. Column-wise transforms, joins, or aggregation → pandas earns its import.
+
+If you tell me what the cleaning actually involves (and rough row count), I'll give you a definite answer.

@@ -1,0 +1,13 @@
+The core move with a flaky test is to stop treating "flaky" as the diagnosis and turn it into a reproducible failure before you touch anything. Don't add a retry or `sleep` to make CI green — that hides the bug and it'll resurface. Here's the order I'd work in:
+
+1. **Confirm it's the test, not the code.** A flaky test sometimes signals a real race or ordering bug in the product. Decide that first, because it changes whether the fix lives in the test or the source.
+
+2. **Make it fail on demand.** Run it in a loop locally until it fails — `for i in {1..100}; do ...; done`, or your runner's repeat flag (`pytest-repeat`, `go test -count`, `jest --runInBand`). If it only fails in CI, the *environment* is the clue: CI is usually slower, more parallel, and differently ordered than your machine.
+
+3. **Identify which flakiness class it is.** Most flaky tests are one of: a timing/async race (waiting on a fixed delay instead of a condition), shared state leaking between tests (DB rows, globals, temp files, test order dependence), non-determinism (clock, random seed, map/set iteration order), or an external dependency (network, real time). The reproduction conditions usually point straight at the class.
+
+4. **Fix the root cause for that class.** Wait on conditions not durations; isolate or reset shared state in setup/teardown; inject the clock and seed; stub the external call. 
+
+5. **Prove it.** Re-run the same loop that reliably failed and show it passing across many iterations — that's the evidence the fix worked, not "it looks right now."
+
+If you point me at the test (file, framework, and the CI failure output if you have it), I'll dig into the specific cause rather than keep it general — that's usually faster than working from the category alone.

@@ -1,0 +1,37 @@
+Both languages free memory automatically by tracking **reachability**: an object survives as long as the program can still reach it by following references from a set of "roots" (the call stack, global variables, registers). Anything no longer reachable is garbage and gets reclaimed. The key idea is that "garbage" doesn't mean "unused" — it means "unreachable." If you still hold a reference to something you'll never touch again, the collector keeps it alive (this is the usual source of memory leaks in GC'd languages).
+
+Here's how each language actually does it.
+
+## The core algorithm: mark-and-sweep
+
+Both V8 (JavaScript) and Go are built on **mark-and-sweep**:
+
+1. **Mark** — Start from the roots and traverse every reference, marking each reachable object as "live."
+2. **Sweep** — Walk the heap; anything not marked is dead, so its memory is returned to the allocator for reuse.
+
+A naive version of this is "stop-the-world": the program pauses entirely while the collector runs, so nobody mutates references mid-traversal. The whole evolution of modern collectors is about *avoiding* that pause. (Reference counting — freeing an object the moment its count hits zero — is the other classic approach, but neither V8 nor Go uses it as the primary mechanism, partly because it can't reclaim reference cycles on its own.)
+
+## JavaScript (V8): generational
+
+V8 leans on the **generational hypothesis**: most objects die young (temporary objects in a function, intermediate values in a loop), while objects that survive a while tend to keep surviving. So it splits the heap:
+
+- **Young generation (nursery)** — Small, collected very frequently with a fast *copying* collector (Scavenger). Surviving objects are copied to a second space; after surviving a couple of rounds they're promoted to the old generation. Because dead young objects are simply abandoned rather than individually freed, collecting the nursery is cheap.
+- **Old generation** — Larger, collected less often with mark-sweep plus occasional **compaction** (sliding live objects together to fight fragmentation).
+
+V8 also does much of this work **incrementally** (in small slices interleaved with your code) and **concurrently** (on background threads), so it rarely has to freeze the main thread for long — which matters because JavaScript's main thread is also rendering your UI.
+
+## Go: concurrent, non-generational
+
+Go's collector is a **concurrent tri-color mark-and-sweep**, tuned above all for **low latency** — keeping pause times short (sub-millisecond) rather than maximizing raw throughput.
+
+- **Tri-color marking** — Objects are conceptually white (unvisited), grey (visited but children not yet scanned), or black (fully scanned). The collector works through the grey set until none remain; whatever is still white is garbage. This coloring is what lets marking run *concurrently* with the program.
+- **Write barriers** — Because your program keeps mutating pointers *while* the collector is marking, Go inserts a small piece of code on pointer writes. The barrier catches the case where a black object starts pointing to a white one, preventing live objects from being wrongly collected. This is the price of concurrency.
+- **Non-generational** — Go currently doesn't segregate by object age. Instead, its **escape analysis** at compile time puts many short-lived objects on the **stack**, where they're freed for free when the function returns and never burden the GC at all. That reduces the need for a generational nursery.
+
+You tune it mainly through `GOGC` (how much the heap grows before triggering a collection — higher means fewer, larger collections) and a memory-limit knob.
+
+## The trade-off they're both managing
+
+Every collector balances three things in tension: **pause time** (latency), **throughput** (CPU spent collecting vs. running your code), and **memory overhead** (a collector needs headroom to be efficient). V8's generational design optimizes throughput for a workload of mostly-short-lived objects on a latency-sensitive main thread; Go deliberately trades some throughput and memory for consistently short pauses, since it targets servers where tail latency matters most. Neither frees memory the instant it becomes garbage — both let dead objects accumulate and reclaim them in batches, because batching is what makes automatic memory management cheap enough to be worth it.
+
+If you want, I can go deeper on any one piece — write barriers, escape analysis, how leaks happen despite GC, or how to read GC traces in either runtime.

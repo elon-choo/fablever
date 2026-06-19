@@ -1,0 +1,28 @@
+Three real problems, roughly in order of severity:
+
+**1. No authorization — IDOR.** `/u/:id` hands back any user by raw id with no check that the caller is allowed to see them. Sequential or guessable ids mean anyone can enumerate your whole user table. This is the one I'd fix first.
+
+**2. Leaks the whole record.** `res.json(u)` serializes whatever `getUser` returns — password hash, email, reset tokens, internal flags, all of it. You want to whitelist fields (`{ id, name, avatar }`), not spread the row.
+
+**3. No error or not-found handling.** Two failure modes here:
+- If `getUser` rejects (DB down, bad id type), the async handler's rejection isn't caught. On Express 4 it becomes an unhandled rejection and the request hangs until timeout; only Express 5 auto-forwards it to the error middleware. Either way you want a `try/catch` with `next(err)` or an async wrapper.
+- If the user doesn't exist, `getUser` likely returns `null` and you reply `200` with body `null`. Should be `404`.
+
+A version addressing all three:
+
+```js
+app.get('/u/:id', async (req, res, next) => {
+  try {
+    if (!req.user || !canView(req.user, req.params.id)) return res.sendStatus(403);
+    const u = await getUser(req.params.id);
+    if (!u) return res.sendStatus(404);
+    res.json({ id: u.id, name: u.name, avatar: u.avatar });
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+One thing I can't judge from the snippet: whether `req.params.id` is safe where `getUser` consumes it. If that function builds SQL by string concatenation, this is also an injection point — worth a look, but it's a property of `getUser`, not the route.
+
+Want me to adjust any of this to your actual auth setup and data layer?

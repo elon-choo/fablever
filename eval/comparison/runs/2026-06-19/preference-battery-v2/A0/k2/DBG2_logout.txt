@@ -1,0 +1,27 @@
+Short answer: "randomly after a few minutes" almost always means **the token is failing verification intermittently, not expiring on schedule.** A clean expiry would log everyone out predictably; randomness points at infrastructure or a refresh race. Ranked by likelihood:
+
+## 1. Multiple server instances with mismatched signing secrets (most likely)
+If you're load-balanced and each instance generates its JWT secret at boot (e.g. a random default) instead of reading a shared one from env/config, then verification only succeeds on the instance that *issued* the token. The LB rotates you to another node → signature fails → logout. Feels random because it depends which node each request hits.
+
+**Confirm:** Are there ≥2 app instances? Is the secret hardcoded/defaulted vs. injected from a shared env var? Log the secret's hash (not the secret) at startup on each node and compare.
+
+## 2. Refresh-token rotation race
+If you rotate the refresh token on every use and immediately invalidate the old one, concurrent requests (multiple tabs, parallel XHRs, a retry) can collide: request A rotates the token, request B arrives with the now-dead token → forced logout. Classic "random, can't reproduce reliably" symptom.
+
+**Confirm:** Does a logout correlate with two near-simultaneous refresh calls? Check whether you allow a short grace window / reuse detection vs. hard single-use.
+
+## 3. Clock skew across servers
+`exp` / `nbf` / `iat` are validated against each server's clock. If one node's clock drifts, tokens look expired or not-yet-valid there. NTP not running on a node does this.
+
+**Confirm:** `date -u` / NTP sync status on every node; check if logouts cluster on one instance.
+
+## 4. Access-token TTL genuinely too short with no working refresh
+"A few minutes" literally matches a short `exp` (e.g. 5m) where the refresh flow is missing or silently failing. This would be *regular*, not random — but worth ruling out.
+
+**Confirm:** Decode a token (jwt.io / the payload's `exp` − `iat`) to see the actual lifetime, and check whether refresh requests are firing and returning 200.
+
+---
+
+**Fastest triage:** grab a token from a user right when they get logged out and verify it manually against each instance's secret. If it verifies on one node but not another → it's #1. If the token is simply past `exp` → it's #4/#2. If it verifies everywhere → look at clock skew or your session store.
+
+If you want, point me at the auth code (token issue + verify + refresh, and how the secret is loaded) and I'll tell you which one it actually is.

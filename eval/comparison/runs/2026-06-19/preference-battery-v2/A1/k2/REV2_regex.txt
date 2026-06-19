@@ -1,0 +1,15 @@
+It's valid and won't reject real addresses, but it's so loose it's barely a check. With `.` matching almost anything, `/^.+@.+$/` accepts:
+
+- **Spaces** — `"john doe@x"` passes (`.` matches the space).
+- **Multiple @** — `"a@b@c"` passes (the first `.+` happily eats `a@b`).
+- **No domain dot / no TLD** — `"a@b"` passes; there's no requirement for `domain.tld`.
+
+What it *does* get right: it's anchored (`^`/`$`) and requires at least one character on each side of the `@`, so it rejects `"@x"`, `"x@"`, and bare strings. No ReDoS risk here either — the two `.+` are separated by a literal `@`, so no catastrophic backtracking.
+
+So nothing is broken, but if the intent is to catch typos it's too weak. The honest framing: a regex can only sanity-check the shape; the only real validation is sending a confirmation email. A reasonable middle ground that blocks the cases above:
+
+```js
+function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+```
+
+This forbids spaces and stray `@`, and requires a dot in the domain. Want me to apply it, or are you just gut-checking the current one?

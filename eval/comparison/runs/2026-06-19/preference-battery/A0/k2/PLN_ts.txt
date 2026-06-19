@@ -1,0 +1,64 @@
+Your working dir (`fable-profile`) is ~11.5k lines of mixed `.js`/`.mjs`/`.cjs`, so I'm treating this as a general strategy question for a different 30k-line codebase. Here's the plan I'd run. It's built around one principle: **never rewrite, only annotate-then-rename, leaf-first, with a CI ratchet that makes backsliding impossible.**
+
+## The core idea
+
+TypeScript can compile JS and TS side-by-side (`allowJs`). So you never have a "big bang." You flip the build to TS-aware *first* while 100% of your code is still `.js`, get green, then convert files one at a time. At every commit the app builds and ships.
+
+## Phase 0 — Make the build TS-aware (no renames yet)
+
+1. `npm i -D typescript` and add a `tsconfig.json`:
+   ```jsonc
+   {
+     "compilerOptions": {
+       "allowJs": true,        // compile existing .js
+       "checkJs": false,       // don't type-check JS yet — just compile
+       "strict": true,         // strict applies to .ts files you add
+       "noEmit": true,         // let your bundler emit; tsc is the type gate
+       "moduleResolution": "bundler", // or "node16" if raw Node
+       "esModuleInterop": true,
+       "skipLibCheck": true
+     },
+     "include": ["src/**/*"]
+   }
+   ```
+2. Add `tsc --noEmit` to CI as a **separate, non-blocking** check first, then make it blocking once green.
+3. **Decide who emits JS** — this is the one fork that changes everything downstream (see below). Get a green build with zero `.ts` files. This validates tooling before you've touched a single line.
+
+## Phase 1 — Establish the ratchet (the part most migrations skip)
+
+Add a CI gate that enforces two monotonic numbers:
+- **`.js` file count must not increase** (no new untyped files)
+- **`any` / `@ts-ignore` / `@ts-expect-error` count must not increase**
+
+A 20-line script (`grep -c` + compare to a committed baseline) is enough. This is what actually finishes migrations — without it, conversion stalls at ~60% forever and new JS keeps getting added.
+
+## Phase 2 — Convert leaf-first
+
+Order matters: convert files with **no internal dependencies first**, working up the import graph. If a typed file imports an untyped one, everything from it is `any` — so going leaf→root means each file gets real types from its imports immediately.
+
+- Find the order: `npx madge --orphans src` and `npx dependency-cruiser` to see the dependency graph; leaves are utils/constants/pure helpers.
+- Per file: rename `.js`→`.ts`, fix what `tsc` flags, commit. Keep PRs small (one subtree each).
+- For the grind, **`ts-migrate`** (Airbnb's tool) auto-renames and inserts `// @ts-expect-error` / `any` so it compiles immediately — gets you to "all TS, weakly typed" fast, then you tighten by deleting the suppressions the ratchet is watching.
+
+## Phase 3 — Type the boundaries, then tighten
+
+- Third-party deps: install `@types/*`; for untyped ones add a `declarations.d.ts` with `declare module 'foo';` stubs and improve later.
+- Once most files are `.ts`, turn on the strict sub-flags you deferred (`noImplicitAny`, `strictNullChecks` are the big ones) repo-wide and clean up the fallout.
+
+## Phase 4 — Finish line
+
+Remove `allowJs`, delete `.d.ts` shims that are now real, make `tsc --noEmit` fully blocking, convert test files too (vitest/ts-jest or just `tsx`).
+
+---
+
+**The one decision that drives your concrete tooling** — who turns TS into runnable JS:
+
+| Your setup | What to do |
+|---|---|
+| Already bundling (Vite/esbuild/webpack/Next) | Add TS support there; **but bundlers strip types without checking them** — `tsc --noEmit` in CI is mandatory as the real gate |
+| Raw `node` execution | Use `tsx` (or `ts-node`) in dev; add a `tsc`/`esbuild` build step for prod |
+| Publishing a library | `tsc` emits both JS *and* `.d.ts` declarations — it's your emitter, not just the checker |
+
+For 30k lines this is realistically a **few weeks of background effort**, not a sprint — the ratchet lets you interleave it with feature work indefinitely.
+
+If you tell me **(a)** your module system (ESM vs CommonJS), **(b)** whether you bundle or run raw Node / it's a library, and **(c)** React or not, I'll write you the exact `tsconfig.json`, the CI ratchet script, and the leaf-first conversion order for your actual graph. Want me to do that?

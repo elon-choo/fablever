@@ -1,0 +1,37 @@
+The simplest way is `jq`:
+
+```bash
+jq . file.json
+```
+
+Or via a pipe:
+
+```bash
+cat file.json | jq
+```
+
+## Common alternatives
+
+**Python** (no extra install needed on most systems):
+```bash
+python3 -m json.tool file.json
+```
+
+**jq writing to a new file** (don't redirect to the same file — it'll truncate it to empty):
+```bash
+jq . file.json > pretty.json
+```
+
+**Edit in place** with `sponge` (from `moreutils`):
+```bash
+jq . file.json | sponge file.json
+```
+
+## Handy `jq` tips
+
+- **Sort keys:** `jq -S . file.json`
+- **Compact/minify** (the reverse): `jq -c . file.json`
+- **Custom indent** (e.g. 4 spaces): `jq --indent 4 . file.json`
+- **Tabs:** `jq --tab . file.json`
+
+`jq` is the best choice if you have it — it validates the JSON, colorizes output in a terminal, and lets you filter/transform too. Install with `brew install jq` (macOS) or `apt install jq` (Debian/Ubuntu). If you can't install anything, `python3 -m json.tool` is always available.

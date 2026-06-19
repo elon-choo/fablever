@@ -1,0 +1,43 @@
+This is a textbook **SQL injection** vulnerability. The code concatenates untrusted `email` directly into the query string, so anything in `email` is executed as SQL.
+
+## The problem
+
+```js
+const q = "SELECT * FROM users WHERE email = '" + email + "'"; db.query(q);
+```
+
+If `email` is `' OR '1'='1`, the query becomes:
+
+```sql
+SELECT * FROM users WHERE email = '' OR '1'='1'
+```
+
+…which returns **every user**. Worse payloads can read other tables, bypass auth, or destroy data:
+
+- `'; DROP TABLE users; --` → drops the table (if the driver allows stacked queries)
+- `' UNION SELECT password_hash, ... FROM users --` → exfiltrate secrets
+- `' OR SLEEP(5) --` → blind/time-based extraction
+
+## The fix — parameterized query
+
+Never build SQL by string concatenation. Pass user input as a bound parameter so the driver sends it as *data*, never *code*.
+
+```js
+// node-postgres ($1 placeholder)
+const q = "SELECT * FROM users WHERE email = $1";
+const { rows } = await db.query(q, [email]);
+```
+
+```js
+// mysql2 / sqlite (? placeholder)
+const q = "SELECT * FROM users WHERE email = ?";
+const [rows] = await db.query(q, [email]);
+```
+
+## Secondary notes
+
+- **`SELECT *`** — select only the columns you need. Returning everything (including `password_hash`, tokens, etc.) risks over-exposing data and breaks when the schema changes.
+- **Looking up a unique row** — if `email` is unique, add `LIMIT 1` and handle the not-found case.
+- **The real defense is parameterization**, not input sanitization/escaping. Don't try to strip quotes manually — use bound parameters everywhere, no exceptions.
+
+The single most important takeaway: **use bound parameters (`$1` / `?`), never concatenate input into SQL.**

@@ -1,0 +1,15 @@
+Postman isn't subject to CORS — browsers are. That's the whole difference.
+
+CORS (Cross-Origin Resource Sharing) is a rule the **browser** enforces, not the server. When your JavaScript calls `fetch()` to a different origin (different scheme, host, or port than the page it's running on), the browser checks whether the server explicitly opted in by returning the right `Access-Control-Allow-Origin` header. If that header is missing or doesn't match your page's origin, the browser blocks your JS from reading the response — even though the request often *did* reach the server and *did* come back fine.
+
+Postman (and curl, and your backend) are not browsers and don't implement the same-origin policy, so they never check for those headers. The request goes out, the response comes back, done. This is why "works in Postman, fails in browser" is the classic signature of a CORS problem rather than a server bug — the server is genuinely responding; the browser is refusing to hand the result to your code.
+
+A few things worth knowing as you debug:
+
+**The fix lives on the server, not the client.** You cannot make a CORS error go away with client-side code (no `fetch` option, no header you set on the request fixes it). The server that owns the endpoint has to send `Access-Control-Allow-Origin` matching your page's origin (or `*` for fully public APIs). If it's an API you don't control, you need a proxy on your own backend instead.
+
+**Watch for the preflight.** If your request uses a method other than GET/POST/HEAD, sends `Content-Type: application/json`, or sets custom headers, the browser first fires an `OPTIONS` "preflight" request. The server must answer that with `Access-Control-Allow-Methods` and `Access-Control-Allow-Headers`. A very common failure is the GET working but the preflight failing — Postman never sends a preflight, so you'd never see it there.
+
+**Credentials add a stricter rule.** If you send cookies or auth via `credentials: 'include'`, the server must return `Access-Control-Allow-Credentials: true` *and* a specific origin — `*` is rejected in that case.
+
+To pin down which it is: open your browser's DevTools Network tab, find the failed request, and read the console error and response headers. The exact wording ("No 'Access-Control-Allow-Origin' header" vs. "method not allowed by Access-Control-Allow-Methods" vs. a credentials complaint) tells you precisely which header the server is missing. If you paste that error and tell me what server framework you're using, I can give you the exact config to add.

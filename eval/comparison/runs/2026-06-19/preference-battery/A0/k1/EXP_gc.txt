@@ -1,0 +1,66 @@
+Garbage collection (GC) is automatic memory management: the runtime reclaims memory that your program allocated but can no longer use, so you don't call `free()` manually. Both JavaScript and Go use GC, but with different designs. Here's how it works.
+
+## The core idea: reachability
+
+GC doesn't actually track "garbage" — it tracks what's still **reachable**. The collector starts from a set of **roots** (global variables, the current call stack, CPU registers) and follows every pointer/reference it can reach. Anything reachable is live; everything else is garbage and can be freed.
+
+This is why reference-counting alone (just counting how many things point at an object) is insufficient in the general case: two objects pointing at each other form a cycle that keeps a non-zero count forever, even when nothing else references them. Reachability-based ("tracing") collectors handle cycles naturally because an unreachable cycle is simply never visited from the roots.
+
+## Mark-and-sweep, the baseline algorithm
+
+Both languages are fundamentally tracing collectors:
+
+1. **Mark** — walk the object graph from the roots, marking every object you can reach.
+2. **Sweep** — scan the heap; reclaim anything not marked.
+
+The naive version requires a **stop-the-world (STW)** pause — all program threads halt while the collector runs, so the object graph doesn't change underneath it. The entire history of GC engineering is about shrinking that pause.
+
+## JavaScript (V8, the engine in Chrome/Node)
+
+V8 uses a **generational** collector, built on a key empirical observation (the "generational hypothesis"): **most objects die young**. So it splits the heap:
+
+- **Young generation (nursery)** — small, where new objects are allocated. Collected very frequently by a copying collector called the **Scavenger** (a Cheney-style semi-space algorithm). It copies surviving objects from one half ("from-space") to the other ("to-space"); whatever wasn't copied is dead and the whole from-space is reclaimed at once. Objects that survive a couple of scavenges get **promoted** to the old generation.
+- **Old generation** — larger, collected less often with **mark-sweep-compact**. Compaction moves live objects together to fight fragmentation (gaps left by freed objects).
+
+To avoid long pauses, V8 (its GC is called **Orinoco**) makes this work:
+- **Incremental** — marking is broken into small chunks interleaved with program execution.
+- **Concurrent** — marking and sweeping run on background threads while JS keeps executing.
+- **Parallel** — multiple GC threads share the work.
+
+Because the program mutates objects *while* concurrent marking runs, V8 uses **write barriers**: small bookkeeping snippets the compiler inserts around pointer writes, so the GC learns when you create a reference to an already-scanned object and doesn't miss it.
+
+## Go
+
+Go uses a **concurrent, tri-color, mark-and-sweep** collector that is **non-generational** and **non-moving** (objects don't get relocated, partly because Go has interior pointers and wants to keep it simple and low-latency).
+
+The **tri-color abstraction** is how it marks safely while the program runs:
+- **White** — not yet visited (candidate garbage).
+- **Grey** — reached, but its children not yet scanned.
+- **Black** — reached and fully scanned.
+
+The collector moves objects white → grey → black. The invariant it must preserve: **no black object may point to a white object** without that white object also being reachable via some grey one. Go enforces this with a **write barrier** during marking. When the marking is done, anything still white is garbage and gets swept (sweeping happens lazily/concurrently too).
+
+Go's design priority is **low latency** — it targets sub-millisecond STW pauses. It only briefly stops the world twice (to turn the write barrier on, and to finish marking), doing the bulk of marking concurrently. The trade-off is that it spends more CPU and doesn't compact memory.
+
+Tuning knobs:
+- **`GOGC`** (default 100) — triggers the next GC when the heap has grown 100% since the last collection. Higher = less frequent GC, more memory used; lower = more frequent, less memory.
+- **`GOMEMLIMIT`** — a soft memory cap that makes the GC run harder as you approach it.
+
+## JavaScript vs. Go, side by side
+
+| | JavaScript (V8) | Go |
+|---|---|---|
+| Algorithm | Generational + mark-sweep-compact | Tri-color mark-and-sweep |
+| Generational? | Yes | No (single heap) |
+| Moves objects? | Yes (copy + compact) | No |
+| Main goal | Throughput + responsiveness | Low latency (short pauses) |
+| Concurrent/incremental | Yes | Yes |
+| Write barriers | Yes | Yes |
+
+## Practical takeaways
+
+- **You don't control *when* GC runs**, but you influence *how much work* it does. Allocating fewer, longer-lived objects and avoiding unnecessary garbage reduces GC pressure in both languages.
+- **"Memory leaks" still happen** — not from forgotten `free()`, but from accidental reachability: a global cache, an event listener never removed, or a closure that captures more than you intended keeps objects alive. GC can't free what's still reachable.
+- **In Go**, choices like reusing buffers (`sync.Pool`), preferring values over pointers, and pre-sizing slices reduce allocations. **In JS**, reusing objects in hot loops and not holding references in long-lived structures (or using `WeakMap`/`WeakRef` when you want GC-friendly references) helps.
+
+Want me to go deeper on any one of these — e.g., V8's Scavenger internals, Go's GC pacer, or how to diagnose a real-world leak?

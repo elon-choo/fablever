@@ -1,0 +1,18 @@
+Start by making the errors *legible*, not by hunting for a pattern in the requests. At ~2% with "no pattern," the usual reason you can't see one is that you're looking at request attributes (which endpoint, which user) instead of the **error signature** (the exception + stack trace). Group by that first — intermittent 500s almost always collapse to one or two root causes once you do.
+
+Concretely, where to start:
+
+1. **Get the actual stack trace for a failing request.** Whatever you have — APM (Sentry/Datadog/etc.), structured logs, or just the raw app logs — find the 500s and read the exception and line they throw from. If you don't have request IDs flowing through your logs yet, that's the real first task; you can't correlate anything without them.
+
+2. **Group the failures by exception type + top stack frame.** Count them. "Random" usually becomes "85% are the same `TimeoutError` from the same DB call."
+
+3. **Then correlate that group against time-series signals**, in roughly this order of likelihood for intermittent 500s:
+   - **Connection pool / DB exhaustion** — errors cluster when pool is saturated, looks random because it tracks concurrency, not endpoint.
+   - **Upstream dependency timeouts** — a downstream API or DB that's slow on the tail (p99), not the median.
+   - **A single bad instance** — if you're behind a load balancer with N nodes, 1 unhealthy node produces a steady fraction of failures. Check whether errors map to one host/pod.
+   - **Deploys/restarts** — in-flight requests dropped during rolling restarts.
+   - **Race conditions / resource leaks** — memory growth, GC pauses, unclosed handles that fail only under specific interleavings.
+
+The fastest disambiguator: pull 20–30 of the failing requests and check whether they share a **timestamp cluster**, a **single host**, or a **single code path**. Whichever lights up tells you which branch above to chase.
+
+If you tell me your stack (language/framework, where it's hosted, what observability you have) and paste a sample of the 500 logs, I can point you at the specific thing to check.

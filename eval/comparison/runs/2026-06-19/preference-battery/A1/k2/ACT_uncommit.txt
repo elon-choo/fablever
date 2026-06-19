@@ -1,0 +1,3 @@
+`git reset --soft HEAD~1`
+
+That moves your branch back by one commit while leaving the index untouched, so all the changes from that commit stay staged and ready to re-commit. The default `--mixed` reset would unstage them; `--hard` would discard them entirely — `--soft` is the one that keeps everything staged.

@@ -1,0 +1,18 @@
+Postgres, for an analytics dashboard with heavy aggregate reads. It's the better fit on almost every axis that matters here, and MongoDB only pulls ahead in cases your description doesn't suggest.
+
+Why Postgres wins for this workload:
+
+- **Aggregation is its home turf.** `GROUP BY`, window functions, `ROLLUP`/`CUBE`, CTEs, and multi-table JOINs are first-class and the query planner is built to optimize them. MongoDB's aggregation pipeline can do a lot, but multi-collection joins (`$lookup`) and complex grouping get awkward and slow compared to SQL.
+- **Tooling ecosystem.** Every BI/dashboard tool (Metabase, Superset, Looker, Grafana, Tableau) speaks SQL natively. You'll spend less time fighting connectors.
+- **Scales into real OLAP cheaply.** When plain Postgres starts to strain, you have a clean upgrade path without leaving the ecosystem: TimescaleDB for time-series, Citus for distributed/columnar, materialized views for precomputed rollups, and partitioning for large fact tables.
+- **Materialized views** specifically are a big lever for dashboards — precompute the expensive aggregates, refresh on a schedule, serve reads instantly.
+
+When MongoDB would actually be the right call:
+
+- Your data is genuinely schemaless or deeply nested per-document and varies a lot between records.
+- You're write-heavy on semi-structured documents and reads are mostly single-document lookups, not cross-cutting aggregates.
+- You're already storing event blobs as documents and aggregation is secondary.
+
+Your stated profile — "heavy aggregate reads" — points squarely at the relational/columnar side, so Postgres.
+
+One thing worth deciding early: if this is high-volume time-series/event data (millions of rows, time-bucketed queries), start with **Postgres + TimescaleDB** rather than vanilla Postgres. If it's moderate volume with mixed dimensions, vanilla Postgres with good indexing and materialized views is plenty. Happy to sketch a schema or the rollup strategy if you tell me the data shape and rough volume.

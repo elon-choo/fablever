@@ -1,0 +1,21 @@
+On macOS the cleanest way is:
+
+```bash
+find /path/to/dir -type f -exec du -h {} + | sort -rh | head -10
+```
+
+This recurses through every file under the directory, prints each with a human-readable size, sorts largest-first, and keeps the top 10.
+
+A few notes specific to macOS (BSD tools, not GNU):
+
+- `sort -rh` (the `-h` flag for human-readable sizes like `2.1G`) exists in macOS's `sort`, so this works out of the box.
+- `du -h {} +` batches files into few `du` calls, so it's fast even on large trees.
+- Sizes are **apparent per-file** disk usage; for very large trees this is what you want.
+
+If you'd rather see exact byte counts (more precise sorting, e.g. when many files round to the same human-readable size):
+
+```bash
+find /path/to/dir -type f -exec stat -f '%z %N' {} + | sort -rn | head -10
+```
+
+`stat -f '%z %N'` is the BSD/macOS syntax (GNU's `stat -c` won't work here). To restrict to the current directory level only, add `-maxdepth 1` to `find`.

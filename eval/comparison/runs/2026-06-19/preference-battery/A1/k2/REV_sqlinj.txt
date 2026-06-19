@@ -1,0 +1,24 @@
+This has a SQL injection vulnerability — it's the textbook case. The user-supplied `email` is concatenated directly into the query string, so anyone can inject SQL.
+
+With input like `' OR '1'='1`, the query becomes:
+
+```sql
+SELECT * FROM users WHERE email = '' OR '1'='1'
+```
+
+That returns every user. Worse payloads (`'; DROP TABLE users; --`, `' UNION SELECT password FROM ...`) let an attacker dump or destroy data depending on the driver and permissions.
+
+The fix is a parameterized query — let the driver handle escaping instead of building the string yourself:
+
+```js
+const q = "SELECT * FROM users WHERE email = ?";
+db.query(q, [email]);
+```
+
+(Exact placeholder syntax depends on your driver: `?` for mysql/mysql2, `$1` for node-postgres — `"... WHERE email = $1"` with `db.query(q, [email])`.)
+
+Two smaller points while you're here:
+- `SELECT *` pulls every column, including `password`/`password_hash` and other sensitive fields you probably don't want flowing through the app. Select only the columns you need.
+- If `email` can be absent, decide whether a missing value should error early rather than reaching the query at all.
+
+The injection is the only thing that must change; the other two are worth doing but aren't security-critical.
