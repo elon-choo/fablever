@@ -1,0 +1,362 @@
+{
+  "DBG_dockerslow": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV2_await": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP_gc": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV_trycatch": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DEC2_test": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG2_doublepost": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP2_bigo": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "EXP2_rest": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT2_squash": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG2_logout": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT2_truncate": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG2_slowquery": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DBG_loop": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN_realtime": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "REV_nplus1": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV2_floatloop": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "PLN2_auth": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "ACT_uncommit": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "REV_global": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV2_secret": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP2_hoisting": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "ACT2_jsonpretty": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT_port": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "ACT_gitignore": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT2_killport": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN_caching": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT2_rename": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV_getuser": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT2_dockerprune": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG_pool": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DEC2_css": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DEC2_pkg": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP_index": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN2_apiversion": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "PLN_ratelimit": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV_money": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "PLN_ts": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "EXP2_tls": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT_debounce": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "ACT_envvars": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DBG_500": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN_uploads": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DEC2_deploy": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "EXP_cap": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT2_findbig": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN2_webhook": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DEC2_pandas": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN2_offline": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "PLN_i18n": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DEC_restgraphql": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP2_imgcontainer": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "EXP_closure": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DEC_auth": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "ACT_rollback": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "PLN2_backups": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG_npaccess": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "REV2_eqeq": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DEC2_orm": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT_center": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG2_hydration": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "REV2_parseint": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN_flaky": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP_acid": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG_memleak": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP_jwt": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV_syncfs": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "REV_passwd": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN_search": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DBG2_eaddr": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DEC_monorepo": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DBG2_tz": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DEC_rendering": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DEC_queue": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG_race": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "REV2_regex": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV2_mutate": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT_promisify": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DBG2_corspost": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DBG2_modnotfound": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN2_payments": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "PLN2_pg": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "EXP2_oauth": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "DEC2_cache": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "PLN2_observability": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "REV_sqlinj": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "REV2_unhandled": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "EXP2_normalization": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "EXP2_idempotency": {
+    "A": "A0",
+    "B": "A1"
+  },
+  "ACT2_curljson": {
+    "A": "A1",
+    "B": "A0"
+  },
+  "DEC_db": {
+    "A": "A0",
+    "B": "A1"
+  }
+}
