@@ -4,7 +4,9 @@
 // strangers, use label.html + the separately-held key.json instead (see README).
 import fs from 'node:fs'; import path from 'node:path';
 const HERE = '/Users/elon/work/fable-profile/eval/comparison/human-anchor';
-const pairs = JSON.parse(fs.readFileSync(path.join(HERE, 'pairs.json'), 'utf8'));
+const PAIRS = process.env.PAIRS || path.join(HERE, 'pairs.json');
+const OUTHTML = process.env.OUTHTML || 'label-portable.html';
+const pairs = JSON.parse(fs.readFileSync(PAIRS, 'utf8'));
 const key = JSON.parse(fs.readFileSync(path.join(HERE, 'key.json'), 'utf8'));
 const keyB64 = Buffer.from(JSON.stringify(key), 'utf8').toString('base64');
 const DATA = pairs.map(p => ({ item: p.item, id: p.id, cat: p.cat, question: p.question, A: p.A, B: p.B }));
@@ -92,5 +94,5 @@ document.getElementById('results-btn').onclick=()=>{save();const key=JSON.parse(
 };
 render();
 </script></body></html>`;
-fs.writeFileSync(path.join(HERE, 'label-portable.html'), html);
-console.log(`wrote label-portable.html (${(html.length/1024).toFixed(0)} KB, ${DATA.length} items, self-scoring)`);
+fs.writeFileSync(path.join(HERE, OUTHTML), html);
+console.log(`wrote ${OUTHTML} (${(html.length/1024).toFixed(0)} KB, ${DATA.length} items, self-scoring) from ${path.basename(PAIRS)}`);
