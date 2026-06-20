@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT2_killport__FB.json",
+  "id": "ACT2_killport",
+  "stratum": "trivial",
+  "arm": "FB",
+  "text": "On macOS:\n\n```bash\nlsof -ti tcp:8080 | xargs kill\n```\n\n`lsof -ti tcp:8080` prints just the PIDs listening on that port, and `xargs kill` sends them SIGTERM. If something refuses to die, escalate to `kill -9`:\n\n```bash\nlsof -ti tcp:8080 | xargs kill -9\n```\n\nA couple of notes: if nothing is on the port, `xargs` runs `kill` with no args (harmless — it just errors). And `-ti` can return multiple PIDs, which `xargs` handles fine. This is a one-liner I haven't run against your machine, so verify the PID first with `lsof -i tcp:8080` if you want to see what you're about to kill.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "What's the command to kill whatever is listening on port 8080?"
+}

@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.98,
+  "why": "The briefing explicitly identifies a fixed two-level flatten that leaves deeper nested arrays intact, while the task requires arbitrary-depth flattening with deep tests."
+}

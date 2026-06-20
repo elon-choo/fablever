@@ -1,0 +1,9 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.78,
+  "why": "A simple split-on-hyphen parser likely breaks tricky cases such as negative ranges (e.g. \"-3--1\") or other edge cases beyond ascending positive ranges."
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT2_curljson__FT.json",
+  "id": "ACT2_curljson",
+  "stratum": "trivial",
+  "arm": "FT",
+  "text": "Use `-X POST` with `-H` to set the content type and `-d` for the body:\n\n```bash\ncurl -X POST https://api.example.com/endpoint \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"Ada\", \"role\": \"admin\"}'\n```\n\nA few practical variations:\n\n**Body from a file** (keeps shell quoting out of the way):\n```bash\ncurl -X POST https://api.example.com/endpoint \\\n  -H \"Content-Type: application/json\" \\\n  -d @payload.json\n```\n\n**With an auth header**, which most real endpoints need:\n```bash\ncurl -X POST https://api.example.com/endpoint \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -d '{\"name\": \"Ada\"}'\n```\n\n**See the response status and headers** while debugging — add `-i` (include response headers) or `-v` (verbose, shows the full request/response exchange):\n```bash\ncurl -i -X POST https://api.example.com/endpoint \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"Ada\"}'\n```\n\nNotes worth knowing:\n- `-d` implies a POST, so `-X POST` is technically redundant when you use `-d` — but keeping it explicit is clearer.\n- `-d` sends `Content-Type: application/x-www-form-urlencoded` by default, so the `-H \"Content-Type: application/json\"` is what actually makes it a JSON request. Don't omit it.\n- Use single quotes around the JSON so the shell doesn't try to expand `$` or mangle the double quotes inside.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "How do I POST a JSON body to an endpoint with curl?"
+}

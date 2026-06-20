@@ -1,0 +1,9 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.99,
+  "why": "The implementation is still a naive semicolon split and lacks quote-state handling or doubled-quote unescaping, so quoted delimiters and escaped quotes will fail."
+}

@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The recursive approach described is vulnerable to stack overflow errors on very deeply nested arrays, a likely edge case."
+}

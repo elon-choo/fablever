@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT2_squash__FT.json",
+  "id": "ACT2_squash",
+  "stratum": "trivial",
+  "arm": "FT",
+  "text": "Use an interactive rebase going back 3 commits:\n\n```bash\ngit rebase -i HEAD~3\n```\n\nThis opens an editor listing the 3 commits, oldest first:\n\n```\npick a1b2c3d First commit\npick d4e5f6g Second commit\npick h7i8j9k Third commit\n```\n\nChange `pick` to `squash` (or `s`) on the **lower two** lines, keeping `pick` on the first:\n\n```\npick a1b2c3d First commit\nsquash d4e5f6g Second commit\nsquash h7i8j9k Third commit\n```\n\nSave and close. Git then opens a second editor to write the combined commit message. Edit it, save, and you're left with one commit.\n\nA faster alternative if you just want to collapse them without the interactive menu — soft-reset and recommit:\n\n```bash\ngit reset --soft HEAD~3\ngit commit -m \"Your combined message\"\n```\n\nThis moves the branch pointer back 3 commits but keeps all the changes staged, so the single new commit contains everything.\n\nTwo cautions: if you've already pushed these commits, you'll need `git push --force-with-lease` afterward, which rewrites shared history — only do that if no one else is building on the branch. And `HEAD~3` must not reach past the start of your branch or a merge commit, or the rebase will pull in more than you intend.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "How do I squash my last 3 commits into one?"
+}

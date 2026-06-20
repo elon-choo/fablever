@@ -1,0 +1,9 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.72,
+  "why": "The parser treats quotes as state toggles anywhere in a field, so hidden edge cases with literal mid-field or unquoted quotes are likely to be parsed incorrectly."
+}

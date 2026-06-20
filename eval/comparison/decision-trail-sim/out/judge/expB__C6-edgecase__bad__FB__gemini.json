@@ -1,0 +1,9 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The code uses a naive string split that does not handle delimiters inside quoted fields or escaped quotes as required."
+}

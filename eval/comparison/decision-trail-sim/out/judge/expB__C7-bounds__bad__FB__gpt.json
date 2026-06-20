@@ -1,0 +1,9 @@
+{
+  "tid": "C7-bounds",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.98,
+  "why": "The briefing identifies a concrete off-by-one bug in overflow handling that corrupts order and pinned head/tail state."
+}

@@ -1,0 +1,9 @@
+{
+  "tid": "C9-parse",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The briefing explicitly states the implementation does not respect operator precedence and evaluates strictly left-to-right, which is the exact defect the task was meant to fix."
+}

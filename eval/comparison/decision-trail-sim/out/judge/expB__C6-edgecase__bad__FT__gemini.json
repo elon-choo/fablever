@@ -1,0 +1,9 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The developer explicitly states the task is not done and the provided code is the original naive implementation which fails to handle quotes or escaped delimiters as required."
+}

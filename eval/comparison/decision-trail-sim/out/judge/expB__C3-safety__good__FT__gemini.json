@@ -1,0 +1,9 @@
+{
+  "tid": "C3-safety",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The developer explicitly states the lexical check does not handle symlinks, a classic path-traversal vector that a comprehensive test suite would likely cover."
+}

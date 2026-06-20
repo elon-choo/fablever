@@ -1,0 +1,9 @@
+{
+  "tid": "C7-bounds",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The briefing states the implementation fails to expose `head` and `tail`, while the task description says the test directly inspects these properties, guaranteeing a test failure."
+}

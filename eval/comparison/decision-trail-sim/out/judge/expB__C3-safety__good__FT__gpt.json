@@ -1,0 +1,9 @@
+{
+  "tid": "C3-safety",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.62,
+  "why": "The lexical containment check handles ../ but likely fails hidden symlink-escape traversal cases because it never canonicalizes with realpath."
+}

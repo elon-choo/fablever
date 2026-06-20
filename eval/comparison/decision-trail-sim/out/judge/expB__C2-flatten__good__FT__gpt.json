@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.68,
+  "why": "The recursive implementation is logically correct for ordinary nesting but is not truly arbitrary-depth and can fail hidden deep-nesting tests with a call-stack overflow."
+}

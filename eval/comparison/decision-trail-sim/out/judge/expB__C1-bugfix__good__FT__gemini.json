@@ -1,0 +1,9 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The developer explicitly states the code fails on common edge cases like negative numbers, descending ranges, and single-number inputs."
+}

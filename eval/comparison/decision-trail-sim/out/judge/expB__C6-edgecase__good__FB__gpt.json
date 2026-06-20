@@ -1,0 +1,9 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "PASS",
+  "confidence": 0.72,
+  "why": "The described parser covers the likely required semicolon delimiter, quoted fields, doubled quotes, empty fields, and trailing fields; the flagged non-RFC behaviors are plausible unless hidden tests demand stricter CSV rules."
+}

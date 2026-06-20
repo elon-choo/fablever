@@ -1,0 +1,9 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.98,
+  "why": "The briefing states the submitted code still uses the off-by-one loop bound `i <= b + 1`, so even basic ranges overshoot."
+}

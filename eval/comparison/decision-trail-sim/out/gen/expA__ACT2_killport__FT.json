@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT2_killport__FT.json",
+  "id": "ACT2_killport",
+  "stratum": "trivial",
+  "arm": "FT",
+  "text": "```bash\nkill $(lsof -ti :8080)\n```\n\n`lsof -ti :8080` prints just the PID(s) listening on port 8080, and `kill` terminates them. If a process won't die, escalate to `kill -9 $(lsof -ti :8080)`.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "What's the command to kill whatever is listening on port 8080?"
+}

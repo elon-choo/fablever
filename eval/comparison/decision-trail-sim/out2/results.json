@@ -1,0 +1,42 @@
+{
+  "FB/work": {
+    "n": 6,
+    "trail_present_pct": 0,
+    "grounded_pct": null,
+    "bloat_pct": null,
+    "trail_lint_pass_pct": null,
+    "median_answer_words": 202,
+    "median_total_words": 202,
+    "oracle_pass_pct": 100
+  },
+  "FB/trivial": {
+    "n": 6,
+    "trail_present_pct": 0,
+    "grounded_pct": null,
+    "bloat_pct": null,
+    "trail_lint_pass_pct": null,
+    "median_answer_words": 156,
+    "median_total_words": 156,
+    "oracle_pass_pct": null
+  },
+  "FT/work": {
+    "n": 6,
+    "trail_present_pct": 66.7,
+    "grounded_pct": 100,
+    "bloat_pct": 0,
+    "trail_lint_pass_pct": 50,
+    "median_answer_words": 195,
+    "median_total_words": 294,
+    "oracle_pass_pct": 100
+  },
+  "FT/trivial": {
+    "n": 6,
+    "trail_present_pct": 0,
+    "grounded_pct": null,
+    "bloat_pct": null,
+    "trail_lint_pass_pct": null,
+    "median_answer_words": 125.5,
+    "median_total_words": 125.5,
+    "oracle_pass_pct": null
+  }
+}

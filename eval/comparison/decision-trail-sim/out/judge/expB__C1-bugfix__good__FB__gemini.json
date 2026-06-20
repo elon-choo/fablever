@@ -1,0 +1,9 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The described `split('-')` approach will fail on edge cases like single numbers or negative numbers."
+}

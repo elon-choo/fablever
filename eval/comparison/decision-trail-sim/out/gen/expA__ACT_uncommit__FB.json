@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT_uncommit__FB.json",
+  "id": "ACT_uncommit",
+  "stratum": "trivial",
+  "arm": "FB",
+  "text": "`git reset --soft HEAD~1`\n\nThat undoes the last commit while leaving all its changes staged, exactly as they were just before you committed. Your working tree is untouched.\n\nA couple of related variants in case you want something slightly different:\n\n- `git reset HEAD~1` (mixed, the default) — undoes the commit and unstages the changes, so they stay in your working tree but you'd need to `git add` again.\n- `git reset --hard HEAD~1` — undoes the commit and discards the changes entirely. Destructive, so only use it if you're sure.\n\nIf the commit was already pushed, undoing it rewrites history, so you'd need a force-push (`git push --force-with-lease`) and should coordinate with anyone else on the branch.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "How do I undo my last git commit but keep the changes staged?"
+}

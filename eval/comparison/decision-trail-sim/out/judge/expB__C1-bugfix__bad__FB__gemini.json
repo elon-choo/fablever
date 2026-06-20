@@ -1,0 +1,9 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The briefing overlooks edge cases like single-number inputs (e.g., \"5\") or descending ranges (e.g., \"5-2\"), which the described logic would fail to handle correctly."
+}

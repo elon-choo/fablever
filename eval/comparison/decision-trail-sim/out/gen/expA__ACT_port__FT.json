@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT_port__FT.json",
+  "id": "ACT_port",
+  "stratum": "trivial",
+  "arm": "FT",
+  "text": "`lsof -i :3000` is the quickest way.\n\nIf you just want the PID alone (handy for scripting or killing it):\n\n```bash\nlsof -ti :3000\n```\n\nOn macOS that's the standard approach. A couple of follow-ons you might want:\n\n- Kill whatever's on the port: `kill -9 $(lsof -ti :3000)`\n- More detail (state, command): `lsof -nP -i :3000`",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "What's the quickest way to find which process is using port 3000?"
+}

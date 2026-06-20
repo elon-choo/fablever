@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The briefing states the code uses a fixed number of nested loops, which by definition cannot handle the arbitrarily deep nesting required by the task."
+}

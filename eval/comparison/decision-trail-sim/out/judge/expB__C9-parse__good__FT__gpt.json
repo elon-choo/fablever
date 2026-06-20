@@ -1,0 +1,9 @@
+{
+  "tid": "C9-parse",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.72,
+  "why": "The briefing is empty, so there is no evidence that precedence or edge cases were actually handled."
+}

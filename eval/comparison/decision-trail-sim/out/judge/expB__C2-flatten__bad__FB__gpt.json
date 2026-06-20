@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.97,
+  "why": "The briefing identifies a fixed-depth loop that leaves deeper nested arrays unflattened, directly violating the arbitrary-depth requirement."
+}

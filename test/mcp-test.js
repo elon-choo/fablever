@@ -75,6 +75,26 @@ function check(name, cond, detail) {
   const report2 = lint2.result ? JSON.parse(lint2.result.content[0].text) : null;
   check('fable_lint passes a clean draft', report2 && report2.passed === true, JSON.stringify(report2));
 
+  // --- Decision-trail rules (additive; fire ONLY when a 'Decision trail' block is present) ---
+  async function lintReport(text) { const r = await rpc('tools/call', { name: 'fable_lint', arguments: { text } }); return r.result ? JSON.parse(r.result.content[0].text) : null; }
+  const ruleNames = rep => ((rep && rep.violations) || []).map(v => v.rule);
+
+  const goodTrail = 'Fixed the intermittent 500s. The Postgres connection pool was leaking clients on the error path, so under load it ran out of connections and roughly one request in fifty failed once traffic climbed. The release call only ran on the success path, which is why nothing showed up in light testing. I moved the release into a finally block so every request returns its client, and I added a regression test that drives the failing path under concurrency to prove the pool no longer drains.\n\nDecision trail:\n- Released the client in a finally block instead of wrapping each query, because db/pool.js:42 showed the leak was only on the throw path.\n- Left the pool size unchanged rather than raising it, since test/pool.test.js now passes with the leak fixed.\n- Not verified / where to look: a real production traffic spike; the test only simulates fifty concurrent calls.';
+  const rGood = await lintReport(goodTrail);
+  check('fable_lint passes a well-formed grounded decision trail', rGood && rGood.passed === true && !ruleNames(rGood).some(n => n.startsWith('trail') || n === 'ungrounded-trail-line'), JSON.stringify(rGood && { passed: rGood.passed, v: ruleNames(rGood) }));
+
+  const ungroundedTrail = 'Refactored the report builder so the totals are computed once and reused across the three sections, which removes the duplicated aggregation pass and keeps the per-section formatting untouched as before.\n\nDecision trail:\n- I decided the cleaner approach was clearly better and went with it because it felt right at the time.\n- Not verified / where to look: the rounding on the subtotal rows.';
+  const rUng = await lintReport(ungroundedTrail);
+  check('fable_lint flags an ungrounded trail line', ruleNames(rUng).includes('ungrounded-trail-line'), JSON.stringify(ruleNames(rUng)));
+
+  const bloatTrail = 'Patched the leak.\n\nDecision trail:\n- pool leak -> finally block -> test passes, see db/pool.js:42 and test/pool.test.js for the change and the regression that now guards it under concurrency in CI.';
+  const rBloat = await lintReport(bloatTrail);
+  check('fable_lint flags a bloated/arrow-chain trail', ruleNames(rBloat).includes('trail-bloat'), JSON.stringify(ruleNames(rBloat)));
+
+  const trivialTrail = 'Use git reset --soft HEAD~1 to undo the commit but keep the changes staged.\n\nDecision trail:\n- Chose a soft reset over a mixed reset because it keeps the changes staged, per `git reset`.';
+  const rTriv = await lintReport(trivialTrail);
+  check('fable_lint flags a trail on a trivial turn', ruleNames(rTriv).includes('trail-on-trivial'), JSON.stringify(ruleNames(rTriv)));
+
   const prompts = await rpc('prompts/list', {});
   check('prompts/list has fable-mode', prompts.result && prompts.result.prompts.some(p => p.name === 'fable-mode'), JSON.stringify(prompts.result));
 

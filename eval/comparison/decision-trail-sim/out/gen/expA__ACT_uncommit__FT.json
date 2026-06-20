@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT_uncommit__FT.json",
+  "id": "ACT_uncommit",
+  "stratum": "trivial",
+  "arm": "FT",
+  "text": "`git reset --soft HEAD~1`\n\nThat moves the branch back by one commit but leaves the index untouched, so all the changes from that commit stay staged — ready to re-commit. The commit message is gone, though; use `git commit -c ORIG_HEAD` if you want to reuse it.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "How do I undo my last git commit but keep the changes staged?"
+}

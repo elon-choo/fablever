@@ -1,0 +1,9 @@
+{
+  "tid": "C9-parse",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The empty briefing provides zero evidence that the developer implemented any logic, let alone the correct and non-trivial logic required for operator precedence."
+}

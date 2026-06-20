@@ -1,0 +1,9 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.99,
+  "why": "The briefing says the implementation is still a naive line.split(';') with no quote handling or added tests, so quoted delimiters and doubled quotes will fail."
+}

@@ -114,6 +114,40 @@ function fableLint(text) {
       'If you are weighing choices, give a recommendation, not an exhaustive survey.');
   }
 
+  // 9-11. Decision-trail rules. These fire ONLY when a 'Decision trail' block is present; absent it, none
+  // fire and the linter behaves exactly as before. They grade STRUCTURE / PRESENCE / GROUNDING only —
+  // never semantic correctness — so a well-formed trail passes here, but the truth of each line still
+  // rests on the artifact it cites, not on this check.
+  const trailM = t.match(/(^|\n)[ \t]*(?:\*\*|#{1,6}\s*)?decision trail\b[*: \t]*\r?\n([\s\S]*)$/i);
+  if (trailM) {
+    const before = t.slice(0, trailM.index);                 // the outcome answer above the trail
+    const body = trailM[2] || '';
+    const bodyLines = body.split(/\r?\n/).map(s => s.replace(/^\s*[-*]\s+/, '').trim()).filter(Boolean);
+    const wcount = s => (String(s).match(/\S+/g) || []).length;
+    // an evidence token = a `command`, a filename.ext, a file:line, a test/spec mention, or the literal 'unverified'.
+    const EVID = /`[^`]+`|\b[\w./-]+\.(?:js|ts|jsx|tsx|mjs|cjs|py|go|rs|java|rb|php|md|json|ya?ml|sh|sql|css|html?|c|cc|cpp|h|hpp)\b|\b[\w./-]+:\d+\b|\btests?\b|\bspec\b|\bunverified\b|\bnot verified\b/i;
+    const isPointer = s => /not verified|where to look|unverified/i.test(s);
+    // (9) ungrounded-trail-line: a decision line that cites no checkable artifact (file, file:line, `command`, test, or 'unverified').
+    const ungrounded = bodyLines.filter(l => !isPointer(l) && !EVID.test(l));
+    if (ungrounded.length) {
+      add('ungrounded-trail-line', 'high', ungrounded.slice(0, 3).join(' | '),
+        'Every decision-trail line must anchor to something the reader can check — a file:line, a `command`, a test name, or the explicit word "unverified". A trail of unanchored claims is self-narration, which is not trustworthy evidence.');
+    }
+    // (10) trail-bloat: the trail outweighs the outcome it appends to, or uses arrow-chains/headers (the CoT-dump guard).
+    const trailWords = wcount(body), answerWords = wcount(before);
+    const trailArrows = (body.match(/\S+\s*(?:→|->|⟶)\s*\S+/g) || []).length;
+    const trailHeaders = (body.match(/^\s*#{1,6}\s/gm) || []).length;
+    if ((answerWords > 0 && trailWords > answerWords) || trailArrows >= 1 || trailHeaders >= 1) {
+      add('trail-bloat', 'high', `trailWords=${trailWords} answerWords=${answerWords} arrows=${trailArrows} headers=${trailHeaders}`,
+        'The decision trail is an appendix BELOW the outcome: keep it shorter than the answer, plain prose, no arrow-chains or headers. A trail longer than the answer is a chain-of-thought dump in disguise.');
+    }
+    // (11) trail-on-trivial: a trail emitted on a short/single-step message (the trail is for multi-step/irreversible work only).
+    if (words > 0 && words < 120) {
+      add('trail-on-trivial', 'low', `total words=${words} with a Decision trail block present`,
+        'Omit the decision trail on trivial or single-step turns — it is for multi-step or irreversible work. On a short answer it is just token overhead.');
+    }
+  }
+
   const weight = { high: 25, medium: 10, low: 4 };
   const penalty = violations.reduce((s, v) => s + (weight[v.severity] || 0), 0);
   const score = Math.max(0, 100 - penalty);

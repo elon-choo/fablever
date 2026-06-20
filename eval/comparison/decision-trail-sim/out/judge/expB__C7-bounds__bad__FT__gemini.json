@@ -1,0 +1,9 @@
+{
+  "tid": "C7-bounds",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "PASS",
+  "confidence": 0.9,
+  "why": "The developer correctly identified a classic off-by-one error in the ring buffer's head pointer advancement on overflow and proposed the standard, correct fix."
+}

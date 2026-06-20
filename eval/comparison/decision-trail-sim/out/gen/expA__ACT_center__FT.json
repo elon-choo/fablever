@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT_center__FT.json",
+  "id": "ACT_center",
+  "stratum": "trivial",
+  "arm": "FT",
+  "text": "The modern way is flexbox on the parent — three lines:\n\n```css\n.parent {\n  display: flex;\n  justify-content: center; /* horizontal */\n  align-items: center;     /* vertical */\n}\n```\n\nThat centers `.parent`'s children both ways regardless of the child's size. `justify-content` works along the main axis (horizontal by default) and `align-items` along the cross axis (vertical).\n\nA couple of useful alternatives depending on your situation:\n\n**CSS Grid** — even shorter if the parent only holds the one thing you're centering:\n\n```css\n.parent {\n  display: grid;\n  place-items: center;\n}\n```\n\n**Absolute positioning** — when you can't or don't want to make the parent a flex/grid container (e.g. centering over a positioned ancestor):\n\n```css\n.parent { position: relative; }\n.child {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n}\n```\n\nThe `translate(-50%, -50%)` shifts the child back by half its own width and height, so its center—not its top-left corner—lands at the midpoint.\n\nFor most layouts, reach for flexbox. One caveat: for the parent to center vertically, it needs an actual height — if it's only as tall as its content, there's no vertical space to distribute. Set a `height` (or `min-height: 100vh` for full-viewport centering) on the parent if things look off.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "How do I center a div both vertically and horizontally in CSS?"
+}

@@ -1,0 +1,9 @@
+{
+  "tid": "C3-safety",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.98,
+  "why": "The briefing states the only guard rejects absolute paths, so relative ../ traversal remains exploitable and should fail the targeted tests."
+}

@@ -1,0 +1,9 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The described logic incorrectly treats a quote mid-field as a quoting toggle, which will fail test cases with literal quotes inside unquoted fields."
+}

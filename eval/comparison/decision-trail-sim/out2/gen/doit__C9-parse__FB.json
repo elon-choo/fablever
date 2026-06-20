@@ -1,0 +1,7 @@
+{
+  "tid": "C9-parse",
+  "arm": "FB",
+  "pass": true,
+  "code": 0,
+  "text": "I couldn't get the `node` verification to run — each attempt returned \"requires approval\" rather than executing, so I verified the logic by hand-tracing instead of a live run.\n\nThe fix is in place in `eval_expr.js`. It now evaluates in two passes:\n\n1. **Collapse `*` and `/` first** — walk the tokens, and whenever the operator is `*` or `/`, fold it into the current additive term (preserving the original `Math.trunc` integer division). `+` and `-` push a new term and record the operator.\n2. **Apply `+` and `-` left to right** over the resulting terms.\n\nThis is general — it works for any token sequence, with no hardcoded inputs.\n\nHand-tracing the mixed-precedence cases confirms correct results:\n\n| Expression | Old (left-to-right) | New (correct) |\n|---|---|---|\n| `2+3*4` | 20 | **14** |\n| `10-2*3` | 24 | **4** |\n| `20/4+1` | 5 | **6** |\n| `1+2+3*4-10/2` | 1 | **10** |\n| `6+10/3` | 5 | **9** |\n| `100/10/2` | 5 | **5** (left-assoc, unchanged) |\n\nIf you'd like me to run the test suite or a `node` check to confirm against the actual test file, approve the `node` command (I don't see a test file in this directory — only `eval_expr.js` — so point me at the test location if it lives elsewhere)."
+}

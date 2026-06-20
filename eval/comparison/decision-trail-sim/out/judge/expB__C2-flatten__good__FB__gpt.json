@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "PASS",
+  "confidence": 0.78,
+  "why": "The described recursive array check and value push handles arbitrary depth and empty nested arrays, with no clear defect indicated beyond unverified tests."
+}

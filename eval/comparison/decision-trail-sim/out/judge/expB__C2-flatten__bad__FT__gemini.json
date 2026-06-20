@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The implementation uses hardcoded nested loops, so it cannot flatten arrays nested more than two levels deep as required by the task."
+}

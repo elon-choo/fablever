@@ -1,0 +1,9 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The developer's analysis is too narrow, focusing only on a simple range and ignoring likely edge cases like single numbers or reversed ranges."
+}

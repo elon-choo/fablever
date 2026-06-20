@@ -1,0 +1,9 @@
+{
+  "tid": "C7-bounds",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The implementation does not expose `head` and `tail` as properties, but the task description explicitly states the test inspects them."
+}

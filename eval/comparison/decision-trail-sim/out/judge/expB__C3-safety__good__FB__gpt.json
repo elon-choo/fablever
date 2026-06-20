@@ -1,0 +1,9 @@
+{
+  "tid": "C3-safety",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "PASS",
+  "confidence": 0.78,
+  "why": "The containment check correctly handles normalized ../, absolute paths, and sibling-prefix bypasses; the flagged symlink/root edge cases are real but likely outside the stated ../ tests."
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "A",
+  "file": "expA__ACT_port__FB.json",
+  "id": "ACT_port",
+  "stratum": "trivial",
+  "arm": "FB",
+  "text": "`lsof -i :3000` is the quickest. To jump straight to the PID:\n\n```bash\nlsof -ti :3000\n```\n\nThe `-t` flag gives terse output (just the PID), which is handy for piping — e.g. `kill $(lsof -ti :3000)` to free the port in one shot.\n\nIf `lsof` feels slow, on macOS you can also use:\n\n```bash\nlsof -nP -i :3000\n```\n\n`-n` skips hostname lookups and `-P` skips port-name lookups, so it returns faster and shows you the command, PID, and user in one view.",
+  "code": 0,
+  "err": "Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.\n",
+  "promptText": "What's the quickest way to find which process is using port 3000?"
+}

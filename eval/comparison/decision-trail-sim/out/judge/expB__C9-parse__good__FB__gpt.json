@@ -1,0 +1,9 @@
+{
+  "tid": "C9-parse",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.82,
+  "why": "Division is implemented with Math.trunc, so non-even division cases like 7/2 or 10/4*2 will likely fail if tests expect normal JavaScript division."
+}

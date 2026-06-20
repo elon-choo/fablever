@@ -1,0 +1,9 @@
+{
+  "tid": "C7-bounds",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.99,
+  "why": "The briefing explicitly says the overflow branch still advances head by 2 instead of 1, producing wrong order and pinned head/tail values."
+}

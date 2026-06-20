@@ -1,0 +1,9 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.98,
+  "why": "The loop condition `i <= b + 1` still emits one extra value for normal inclusive ranges like `1-3`."
+}

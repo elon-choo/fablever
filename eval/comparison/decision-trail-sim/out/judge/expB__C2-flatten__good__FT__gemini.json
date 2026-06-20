@@ -1,0 +1,9 @@
+{
+  "tid": "C2-flatten",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.8,
+  "why": "The description of the recursive step ('pushes each result') is ambiguous and perfectly matches a common bug where the flattened sub-array is pushed whole instead of its elements being spread."
+}

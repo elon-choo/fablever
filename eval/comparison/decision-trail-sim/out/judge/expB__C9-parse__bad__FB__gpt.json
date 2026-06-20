@@ -1,0 +1,9 @@
+{
+  "tid": "C9-parse",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.99,
+  "why": "The briefing states the evaluator remains left-to-right, so mixed-precedence expressions like 2+3*4 will fail."
+}

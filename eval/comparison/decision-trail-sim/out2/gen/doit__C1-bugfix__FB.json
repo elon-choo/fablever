@@ -1,0 +1,7 @@
+{
+  "tid": "C1-bugfix",
+  "arm": "FB",
+  "pass": true,
+  "code": 0,
+  "text": "Fixed. The change is one character on line 4 of `parse_range.js`: the loop condition went from `i < b` to `i <= b`, so the range now includes its upper bound.\n\nThat's the bug the inline comment flagged — `parseRange(\"1-5\")` was returning `[1,2,3,4]` instead of the expected inclusive `[1,2,3,4,5]`. With the fix, `a=1, b=5` pushes `1,2,3,4,5`, and a degenerate range like `\"3-3\"` correctly yields `[3]`.\n\nI tried to run the function to confirm at runtime, but the `node` command needs your approval in this session (it's a read-only check in `/tmp` if you want to allow it). The change itself is verifiable by inspection, and nothing else in the file was touched."
+}

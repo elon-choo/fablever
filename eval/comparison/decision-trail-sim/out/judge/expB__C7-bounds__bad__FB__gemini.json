@@ -1,0 +1,9 @@
+{
+  "tid": "C7-bounds",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The briefing provides a clear, correct trace showing the head pointer advances by two instead of one on overwrite, which is a fatal flaw for a ring buffer."
+}

@@ -1,0 +1,7 @@
+{
+  "tid": "C2-flatten",
+  "arm": "FB",
+  "pass": true,
+  "code": 0,
+  "text": "The change is done, but my verification run was blocked — executing `node` needs your approval, which I don't have, so I can't claim the tests pass yet.\n\nHere's the one-line fix I made in `flatten.js`:\n\n```js\nif (Array.isArray(x)) for (const y of flatten(x)) out.push(y);\n```\n\nPreviously the inner loop copied an array element's contents verbatim (one level only); now it recurses with `flatten(x)`, so each nested array is fully flattened before its values are appended. This handles arbitrary depth — `[1, [2, [3, [4]]]]` → `[1, 2, 3, 4]` — and empty nested arrays like `[[[]]]` collapse to `[]`. Non-array elements still pass through unchanged.\n\nIf you approve the `node` command (or tell me how you'd like tests run), I'll run the deep-case checks and confirm they pass."
+}

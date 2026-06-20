@@ -1,0 +1,7 @@
+{
+  "tid": "C1-bugfix",
+  "arm": "FT",
+  "pass": true,
+  "code": 0,
+  "text": "Fixed. The loop ran `i < b`, which stopped one short of the upper bound, so `parseRange(\"1-5\")` returned `[1,2,3,4]`. I changed the condition to `i <= b` in `parse_range.js:4`, making the upper bound inclusive (`[1,2,3,4,5]`), and removed the now-redundant `// BUG` comment. This is the general fix — it works for any `a-b` input, including single-element ranges like `\"3-3\"` → `[3]`.\n\nI could not run the test to confirm: every `node` execution in this environment comes back as \"requires approval\" and was declined, so I verified by reasoning through the loop rather than by running it. If you run the included test (or `node` directly), it should now pass.\n\nDecision trail: Changed `i < b` to `i <= b` rather than reworking the parse logic, because the marked bug and the off-by-one were entirely in the loop bound (`parse_range.js:4`); the only alternative — leaving the bound and post-pushing `b` — would be needless complexity. Verification by inspection only; `node /private/tmp/doit-iqLloS/_verify.js` was blocked by the approval gate, so the runtime pass is unverified — re-run the included test to confirm, especially against whatever edge cases (reversed or non-numeric ranges) that test may exercise."
+}

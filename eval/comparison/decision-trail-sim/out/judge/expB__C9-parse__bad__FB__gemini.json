@@ -1,0 +1,9 @@
+{
+  "tid": "C9-parse",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 1,
+  "why": "The briefing explicitly states the implementation does not accomplish the task and continues to evaluate expressions left-to-right, which will fail any test case with mixed operator precedence."
+}

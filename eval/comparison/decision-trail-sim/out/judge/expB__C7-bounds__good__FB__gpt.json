@@ -1,0 +1,9 @@
+{
+  "tid": "C7-bounds",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The briefing says head and tail are not exposed, while the task explicitly says tests pin head/tail after overflow."
+}

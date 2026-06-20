@@ -1,0 +1,9 @@
+{
+  "tid": "C9-parse",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The implementation uses integer division and does not support unary minus, both of which are common edge cases likely to be in a comprehensive test suite."
+}

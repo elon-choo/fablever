@@ -1,0 +1,9 @@
+{
+  "tid": "C3-safety",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL",
+  "confidence": 0.9,
+  "why": "The described logic `full.startsWith(root + path.sep)` fails when the base directory is the filesystem root (`/`), as it incorrectly checks for a `//` prefix."
+}

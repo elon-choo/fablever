@@ -1,0 +1,85 @@
+{
+  "generated_at": "2026-06-20T07:13:14.090Z",
+  "expA": {
+    "FB/work": {
+      "n": 12,
+      "trail_present_pct": 0,
+      "grounding_ok_pct": null,
+      "bloat_pct": null,
+      "trail_lint_pass_pct": null,
+      "median_answer_words": 261.5,
+      "median_total_words": 261.5
+    },
+    "FB/trivial": {
+      "n": 6,
+      "trail_present_pct": 0,
+      "grounding_ok_pct": null,
+      "bloat_pct": null,
+      "trail_lint_pass_pct": null,
+      "median_answer_words": 156,
+      "median_total_words": 156
+    },
+    "FT/work": {
+      "n": 12,
+      "trail_present_pct": 0,
+      "grounding_ok_pct": null,
+      "bloat_pct": null,
+      "trail_lint_pass_pct": null,
+      "median_answer_words": 258,
+      "median_total_words": 258
+    },
+    "FT/trivial": {
+      "n": 6,
+      "trail_present_pct": 0,
+      "grounding_ok_pct": null,
+      "bloat_pct": null,
+      "trail_lint_pass_pct": null,
+      "median_answer_words": 125.5,
+      "median_total_words": 125.5
+    }
+  },
+  "expB_discrimination": {
+    "FB/gpt": {
+      "n_good": 6,
+      "n_bad": 6,
+      "accept_good_pct": 50,
+      "accept_bad_pct": 0,
+      "discrimination_pts": 50
+    },
+    "FB/gemini": {
+      "n_good": 5,
+      "n_bad": 6,
+      "accept_good_pct": 0,
+      "accept_bad_pct": 0,
+      "discrimination_pts": 0
+    },
+    "FB/pooled": {
+      "n_good": 11,
+      "n_bad": 12,
+      "accept_good_pct": 27.3,
+      "accept_bad_pct": 0,
+      "discrimination_pts": 27.3
+    },
+    "FT/gpt": {
+      "n_good": 6,
+      "n_bad": 6,
+      "accept_good_pct": 0,
+      "accept_bad_pct": 0,
+      "discrimination_pts": 0
+    },
+    "FT/gemini": {
+      "n_good": 6,
+      "n_bad": 6,
+      "accept_good_pct": 0,
+      "accept_bad_pct": 16.7,
+      "discrimination_pts": -16.7
+    },
+    "FT/pooled": {
+      "n_good": 12,
+      "n_bad": 12,
+      "accept_good_pct": 0,
+      "accept_bad_pct": 8.3,
+      "discrimination_pts": -8.3
+    }
+  }
+}

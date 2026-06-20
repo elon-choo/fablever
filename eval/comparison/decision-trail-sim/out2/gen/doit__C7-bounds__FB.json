@@ -1,0 +1,7 @@
+{
+  "tid": "C7-bounds",
+  "arm": "FB",
+  "pass": true,
+  "code": 0,
+  "text": "Fixed. The change is one line in `push`:\n\n```js\npush(x) { buf[(head + size) % cap] = x; if (size < cap) size++; else head = (head + 1) % cap; },\n```\n\nThe write slot `(head + size) % cap` was already correct — it lands on the oldest element when the buffer is full. The bug was that on overflow `head` stayed put, so `toArray()` kept starting from the stale oldest position. Now when the buffer is full (`size === cap`), `head` advances by one, so the logical window slides forward and the oldest entry is dropped. The tail (next-write position `(head + size) % cap`) advances naturally with it.\n\nA hand-trace at `cap=3` confirms it: after pushing `1,2,3` the buffer reads `[1,2,3]`; `push(4)` → `[2,3,4]`; `push(5)` → `[3,4,5]` — each overflow drops the oldest and advances head, while a partially-filled buffer (`size < cap`) is untouched.\n\nOne caveat on grounding: I couldn't run the check end-to-end because `node` execution is behind a permission prompt in this session (the `node` command returned \"requires approval\" and didn't run) — so this is verified by trace, not by an executed test. If you approve `node`, the test that pins head/tail after overflow should pass; happy to run it once it's allowed."
+}
