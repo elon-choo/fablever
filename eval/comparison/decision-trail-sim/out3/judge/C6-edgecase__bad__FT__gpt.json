@@ -1,0 +1,7 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL"
+}

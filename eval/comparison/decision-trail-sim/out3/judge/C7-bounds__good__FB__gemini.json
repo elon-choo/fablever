@@ -1,0 +1,7 @@
+{
+  "tid": "C7-bounds",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL"
+}

@@ -1,0 +1,7 @@
+{
+  "tid": "C1-bugfix",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL"
+}

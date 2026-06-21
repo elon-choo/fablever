@@ -1,0 +1,7 @@
+{
+  "tid": "C2-flatten",
+  "cond": "bad",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL"
+}

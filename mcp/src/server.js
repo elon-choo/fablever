@@ -118,7 +118,10 @@ function fableLint(text) {
   // fire and the linter behaves exactly as before. They grade STRUCTURE / PRESENCE / GROUNDING only —
   // never semantic correctness — so a well-formed trail passes here, but the truth of each line still
   // rests on the artifact it cites, not on this check.
-  const trailM = t.match(/(^|\n)[ \t]*(?:\*\*|#{1,6}\s*)?decision trail\b[*: \t]*\r?\n([\s\S]*)$/i);
+  // Match the label at line-start, then capture the rest — whether the trail is a multi-line block
+  // ("Decision trail:\n- ...") or inline after the colon ("Decision trail: ..."). The \r?\n? makes the
+  // newline optional so a degenerate single-line trail is still graded, not silently passed.
+  const trailM = t.match(/(^|\n)[ \t]*(?:\*\*|#{1,6}\s*)?decision trail\b[*:]*[ \t]*\r?\n?([\s\S]*)$/i);
   if (trailM) {
     const before = t.slice(0, trailM.index);                 // the outcome answer above the trail
     const body = trailM[2] || '';

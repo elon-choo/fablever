@@ -90,12 +90,62 @@ the principle in `profiles/full.md` (→ the output style) and is intended to ex
 (the per-turn reminders) — and why those two live-symlinked files are the adoption switch held for the
 operator's go.
 
+## Round 3 (briefing-judgeability done right) — `out3/RESULTS.md`
+
+The open headline from Rounds 1-2: does the trail actually help a reviewer judge the work? Round 1 couldn't
+answer it (the append-arm FT had no trail, and the judge prompt floored). Round 3 fixes both: FT uses the
+FableTrail output style (trails fire), and the judge prompt is calibrated (PASS and FAIL equally reachable).
+Each task's correct vs subtly-wrong reference is briefed under FB and FT; a blind judge predicts PASS/FAIL
+from the briefing alone. Metric = discrimination = accept-good% − accept-bad%; the key error rate is
+accept-bad% (approving defective work). Confirmed feasibility: on the wrong C7 reference, the FT trail
+explicitly concluded "not done — the overflow branch still reads `head + 2`… is wrong" and pointed the
+reviewer at the exact spot.
+
+FT briefings carrying a trail: **100%**. Blind judge predicts PASS/FAIL from the briefing alone.
+
+| arm / judge | n good | n bad | accept-good % | accept-bad % | discrimination |
+|---|---|---|---|---|---|
+| FB / GPT-5.5 | 6 | 6 | 50 | 0 | **50** |
+| FB / Gemini | 6 | 6 | 0 | 0 | 0 |
+| FB / pooled | 12 | 12 | 25 | **0** | **25** |
+| FT / GPT-5.5 | 6 | 6 | 16.7 | 0 | 16.7 |
+| FT / Gemini | 6 | 6 | 0 | 0 | 0 |
+| FT / pooled | 12 | 12 | 8.3 | **0** | **8.3** |
+
+**Result: NEGATIVE for the headline — FT discrimination (8.3) ≤ FB (25), the opposite of predicted.** Two
+things drive it, and both are honest and interesting:
+1. **accept-bad% = 0 for BOTH arms, every judge.** Plain FB briefings already led judges to reject *every*
+   defective implementation. The model surfaces the bug in its briefing whether or not it keeps a trail
+   (it can read the code), so the trail has no defect-catching headroom to add here.
+2. The whole gap is in **accept-good%** (FB 25 vs FT 8.3): the trail's mandatory "Not verified / where to
+   look" line makes the reviewer/judge appropriately cautious about **good** work too, so they predict FAIL
+   even on correct code — *lowering* net discrimination. This is exactly the trust-calibration prediction
+   (an uncertainty pointer raises caution across the board), here landing against the feature.
+
+Honest caveats on this null: tiny N (6+6 per arm); accept-bad floored at 0 for both arms (no room to show a
+gain); Gemini behaved as a near-pure FAIL predictor (0 discrimination) so GPT carries the signal; and the
+controlled "brief on given code" setup lets even plain FB spot the bug, which a real agentic run (where the
+agent believes its own work correct) might not — so this under-tests the scenario where a trail could matter
+most. The pre-registered kill criterion (FT discrimination ≤ FB) is met: **this pilot does not support the
+briefing-judgeability claim, and is mild evidence against it.**
+
 ## Honest bottom line
 
-- The deterministic `fable_lint` gate is real and unit-tested (4 new cases; all 21 MCP checks pass), and it
-  grades structure/grounding only — never semantic correctness, which is the honest limit.
-- Round 1 showed the artifact's *trigger* needed fixing and that the discipline's *substance* (grounding +
-  a "where to look" pointer) transfers regardless.
-- **Briefing-judgeability — the feature's headline value — is NOT established by this pilot** (Round 1's
-  judge floored; the proper test needs a larger, balanced set with a calibrated judge). This is the honest
-  gap, recorded as future work, not papered over.
+What the simulation **does** support (Round 2b, deterministic, robust):
+- The feature is mechanically real and well-behaved **when shipped in the output style** (not as an appended
+  instruction): the trail fires on real work (6/6), is 100% grounded to artifacts, has 0% bloat, keeps the
+  outcome answer as lean as plain fablever (195 vs 202 words), costs nothing in task success (6/6 vs 6/6),
+  and stays off trivial Q&A. The `fable_lint` gate that enforces this is unit-tested (all 21 MCP checks pass)
+  and grades structure/grounding only — never correctness, the honest limit.
+
+What it does **not** support (Round 3, the headline value):
+- **The trail did not help a reviewer judge the work — it slightly hurt.** With a calibrated judge and trails
+  that actually fire, FT briefing-discrimination (8.3) came in *below* FB (25). Both arms already caught
+  every defect (accept-bad 0%); the trail's honest "not verified" pointer just made reviewers more cautious
+  about good work too. At this N it is mild evidence *against* the judgeability claim, not for it.
+
+Net: ship the feature as a **transparency/auditability** improvement — the briefing genuinely becomes a
+grounded, risk-flagging, capped decision record at no cost to brevity or task success — but **do not claim it
+makes work easier to judge as correct**; the controlled pilot found the opposite. A larger agentic study
+(real DO-IT runs on harder tasks with a natural pass/fail mix, where the agent believes its own work correct)
+is the honest way to revisit the judgeability question; this pilot deliberately under-tests that scenario.

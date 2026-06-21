@@ -1,0 +1,7 @@
+{
+  "tid": "C7-bounds",
+  "cond": "good",
+  "arm": "FT",
+  "judge": "gpt",
+  "verdict": "FAIL"
+}

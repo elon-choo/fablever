@@ -1,0 +1,47 @@
+{
+  "rows": {
+    "FB/gpt": {
+      "n_good": 6,
+      "n_bad": 6,
+      "accept_good": 50,
+      "accept_bad": 0,
+      "discrimination": 50
+    },
+    "FB/gemini": {
+      "n_good": 6,
+      "n_bad": 6,
+      "accept_good": 0,
+      "accept_bad": 0,
+      "discrimination": 0
+    },
+    "FB/pooled": {
+      "n_good": 12,
+      "n_bad": 12,
+      "accept_good": 25,
+      "accept_bad": 0,
+      "discrimination": 25
+    },
+    "FT/gpt": {
+      "n_good": 6,
+      "n_bad": 6,
+      "accept_good": 16.7,
+      "accept_bad": 0,
+      "discrimination": 16.7
+    },
+    "FT/gemini": {
+      "n_good": 6,
+      "n_bad": 6,
+      "accept_good": 0,
+      "accept_bad": 0,
+      "discrimination": 0
+    },
+    "FT/pooled": {
+      "n_good": 12,
+      "n_bad": 12,
+      "accept_good": 8.3,
+      "accept_bad": 0,
+      "discrimination": 8.3
+    }
+  },
+  "ft_trail_present_pct": 100
+}

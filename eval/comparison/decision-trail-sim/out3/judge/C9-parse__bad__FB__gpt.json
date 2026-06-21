@@ -1,0 +1,7 @@
+{
+  "tid": "C9-parse",
+  "cond": "bad",
+  "arm": "FB",
+  "judge": "gpt",
+  "verdict": "FAIL"
+}

@@ -1,0 +1,7 @@
+{
+  "tid": "C6-edgecase",
+  "cond": "good",
+  "arm": "FB",
+  "judge": "gemini",
+  "verdict": "FAIL"
+}
