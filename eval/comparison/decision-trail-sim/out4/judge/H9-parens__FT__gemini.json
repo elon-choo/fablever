@@ -1,0 +1,6 @@
+{
+  "id": "H9-parens",
+  "arm": "FT",
+  "judge": "gemini",
+  "predict": "PASS"
+}

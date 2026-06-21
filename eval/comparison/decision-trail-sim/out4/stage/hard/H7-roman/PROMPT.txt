@@ -1,0 +1,3 @@
+Implement parseRoman(s) in roman.js: convert a Roman numeral string to an integer, and THROW for any invalid numeral (e.g. "IIII", "IC", "VV", "IL").
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

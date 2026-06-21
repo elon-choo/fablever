@@ -1,0 +1,8 @@
+{
+  "id": "H8-editdist",
+  "pool": "hard",
+  "arm": "FB",
+  "pass": true,
+  "trail": false,
+  "text": "Implementation is done, but I want to flag honestly: the verification run was blocked — running `node` requires your approval in this environment, so I have no execution evidence to point to. The code itself is the canonical Wagner–Fischer dynamic-programming edit distance, not a special-cased solution.\n\nWhat `editDistance(a, b)` in `edit_distance.js` does:\n- Builds the DP table where `cost[i][j]` is the minimum cost to turn the first `i` characters of `a` into the first `j` characters of `b`, kept to two rolling rows for O(min memory).\n- Base rows: turning `\"\"` into `b[0..j]` costs `j` insertions; turning `a[0..i]` into `\"\"` costs `i` deletions.\n- Each cell takes the cheapest of: delete from `a` (`+1`), insert from `b` (`+1`), or match/substitute (`+0` if characters equal, else `+2`).\n\nIf you approve `node`, this command checks it against an independent brute-force reference on 5000 random strings plus spot cases:\n\n```bash\nnode -e 'const ed=require(\"./edit_distance\");function ref(a,b){if(!a.length)return b.length;if(!b.length)return a.length;const s=a[0]===b[0]?0:2;return Math.min(ref(a.slice(1),b)+1,ref(a,b.slice(1))+1,ref(a.slice(1),b.slice(1))+s)}const r=()=>Array.from({length:(Math.random()*6)|0},()=>String.fromCharCode(97+(Math.random()*3|0))).join(\"\");let f=0;for(let i=0;i<5000;i++){const a=r(),b=r();if(ed(a,b)!==ref(a,b)){console.log(\"MISMATCH\",a,b);f++}}console.log(f?\"FAIL \"+f:\"ALL MATCH\")'\n```"
+}

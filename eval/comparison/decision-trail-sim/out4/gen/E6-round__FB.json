@@ -1,0 +1,8 @@
+{
+  "id": "E6-round",
+  "pool": "ep",
+  "arm": "FB",
+  "pass": true,
+  "trail": false,
+  "text": "Done. I replaced the `Math.round` stub (which rounds halves up, e.g. would give `2.5→3`) with a proper round-half-to-even implementation in `/private/tmp/big-KCCw7C/bankers.js`:\n\n```js\nmodule.exports = function round(x) {\n  const floor = Math.floor(x);\n  const frac = x - floor;\n  if (frac < 0.5) return floor;\n  if (frac > 0.5) return floor + 1;\n  // Exactly halfway: round to the even integer.\n  return floor % 2 === 0 ? floor : floor + 1;\n};\n```\n\nThe trick that makes it work for negatives: `Math.floor` always rounds toward −∞, so `frac` is always in `[0, 1)` even for negative `x`, and an exact half always lands on `frac === 0.5`. At that point I pick `floor` if it's even, else `floor + 1` (the even neighbor).\n\nI couldn't execute the node test — the command needs your approval to run — so this is a hand-trace, not an observed run, of each case:\n\n- `0.5→0`, `1.5→2`, `2.5→2`, `3.5→4` (your examples) ✓\n- `-0.5→0`, `-1.5→-2`, `-2.5→-2`, `-3.5→-4` (negatives, symmetric) ✓\n- non-halves round normally: `0.4→0`, `0.6→1`, `2.49→2`, `2.51→3`, `-0.6→-1` ✓\n\nIf you approve the Bash call (or run it yourself), this confirms it:\n\n```\nnode -e 'const r=require(\"./bankers.js\"); for(const [x,e] of [[0.5,0],[1.5,2],[2.5,2],[3.5,4],[-0.5,0],[-1.5,-2],[-2.5,-2],[-3.5,-4]]) console.log(x, r(x), r(x)===e?\"OK\":\"FAIL\")'\n```"
+}

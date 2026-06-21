@@ -1,0 +1,1 @@
+Implement flattenDepth(arr, depth) in flatten_depth.js: flatten nested arrays but only up to `depth` levels. depth=0 returns a shallow copy unchanged. depth=1 flattens one level. depth can be Infinity. Non-array elements pass through. Default depth is 1 when omitted.

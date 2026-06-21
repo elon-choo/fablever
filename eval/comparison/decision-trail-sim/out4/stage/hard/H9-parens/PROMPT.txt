@@ -1,0 +1,3 @@
+Implement evalExpr(s) in eval_expr2.js: evaluate an integer arithmetic expression supporting + - * /, parentheses, and unary minus, with correct operator precedence; division truncates toward zero (so (0-7)/2 = -3, not -4).
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

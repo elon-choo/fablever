@@ -1,0 +1,8 @@
+{
+  "id": "E3-query",
+  "pool": "ep",
+  "arm": "FB",
+  "pass": true,
+  "trail": false,
+  "text": "Done — `parseQuery` is implemented in `parse_query.js`.\n\nThe logic: empty input returns `{}`. Otherwise it splits on `&`, and for each part finds the first `=` to separate key from value (no `=` or nothing after it yields value `\"\"`). The first time a key is seen it maps to the string value; on the second occurrence the existing value and the new one become a two-element array; further occurrences push onto that array — preserving order.\n\nI tried to run a verification harness over the spec cases (empty, single, repeated keys, bare key, empty value, mixed), but the `node` command is sitting behind a permission prompt that hasn't been approved, so it didn't execute. If you approve it I'll run the cases and show the output. By inspection each spec case maps correctly: `\"\"→{}`, `\"a=1\"→{a:\"1\"}`, `\"a=1&a=2&a=3\"→{a:[\"1\",\"2\",\"3\"]}`, `\"flag\"→{flag:\"\"}`, `\"k=\"→{k:\"\"}`."
+}

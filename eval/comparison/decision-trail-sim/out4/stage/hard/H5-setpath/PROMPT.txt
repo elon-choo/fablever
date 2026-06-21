@@ -1,0 +1,3 @@
+Implement setPath(obj, path, val) in set_path.js. path looks like "a.b[2].c". Set the nested value, creating intermediate plain objects for named keys and ARRAYS for numeric [i] indices, then return obj.
+
+Implement the GENERAL behaviour. Do NOT hardcode, lookup-table, or special-case specific inputs — a solution that only handles a few cases will be rejected on inspection.

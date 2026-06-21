@@ -1,0 +1,54 @@
+{
+  "FB (oracle)": {
+    "n": 15,
+    "oracle_pass_pct": 86.7,
+    "trail_present_pct": 0
+  },
+  "FB / gpt": {
+    "n_good": 12,
+    "n_bad": 2,
+    "accept_good": 100,
+    "accept_bad": 0,
+    "discrimination": 100
+  },
+  "FB / gemini": {
+    "n_good": 13,
+    "n_bad": 2,
+    "accept_good": 61.5,
+    "accept_bad": 0,
+    "discrimination": 61.5
+  },
+  "FB / pooled": {
+    "n_good": 25,
+    "n_bad": 4,
+    "accept_good": 80,
+    "accept_bad": 0,
+    "discrimination": 80
+  },
+  "FT (oracle)": {
+    "n": 15,
+    "oracle_pass_pct": 80,
+    "trail_present_pct": 80
+  },
+  "FT / gpt": {
+    "n_good": 11,
+    "n_bad": 3,
+    "accept_good": 90.9,
+    "accept_bad": 0,
+    "discrimination": 90.9
+  },
+  "FT / gemini": {
+    "n_good": 11,
+    "n_bad": 3,
+    "accept_good": 54.5,
+    "accept_bad": 0,
+    "discrimination": 54.5
+  },
+  "FT / pooled": {
+    "n_good": 22,
+    "n_bad": 6,
+    "accept_good": 72.7,
+    "accept_bad": 0,
+    "discrimination": 72.7
+  }
+}

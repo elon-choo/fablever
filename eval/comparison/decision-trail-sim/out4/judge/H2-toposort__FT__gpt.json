@@ -1,0 +1,6 @@
+{
+  "id": "H2-toposort",
+  "arm": "FT",
+  "judge": "gpt",
+  "predict": "PASS"
+}

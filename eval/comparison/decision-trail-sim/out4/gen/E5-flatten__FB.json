@@ -1,0 +1,8 @@
+{
+  "id": "E5-flatten",
+  "pool": "ep",
+  "arm": "FB",
+  "pass": true,
+  "trail": false,
+  "text": "The implementation is done, but my test run needs your approval to execute (it's gated). The function is in place — here's the logic and how each spec case is handled:\n\n```js\nmodule.exports = function flattenDepth(arr, depth = 1) {\n  if (depth < 1) return arr.slice();\n  return arr.reduce(\n    (acc, item) =>\n      acc.concat(Array.isArray(item) ? flattenDepth(item, depth - 1) : item),\n    []\n  );\n};\n```\n\n- **`depth=0`** → `depth < 1` is true, so it returns `arr.slice()` — a shallow copy, contents unchanged (and a new array, not the same reference).\n- **`depth=1`** (also the default via `depth = 1`) → flattens one level: each array item is recursed with `depth - 1 = 0`, which just copies its contents in one level deep.\n- **`depth=Infinity`** → `Infinity - 1` stays `Infinity`, so it keeps descending until no nested arrays remain.\n- **Non-array elements** pass through untouched via the `Array.isArray(item) ? ... : item` branch.\n\nI held off on running the verification test since the `node` command requires your approval. If you approve it (or tell me to proceed), I'll run the test cases and confirm the output matches the spec."
+}

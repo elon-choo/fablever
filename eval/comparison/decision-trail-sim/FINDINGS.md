@@ -129,6 +129,36 @@ agent believes its own work correct) might not — so this under-tests the scena
 most. The pre-registered kill criterion (FT discrimination ≤ FB) is met: **this pilot does not support the
 briefing-judgeability claim, and is mild evidence against it.**
 
+## Round 4 (large follow-up — the realistic test) — `out4/RESULTS.md`
+
+Round 3's limit was that briefing on a *known-wrong* reference let even plain FB spot the injected bug. Round
+4 removes that: the agent **does 15 harder tasks itself** (coding-hard + error-prone), edits the stub, cannot
+run tests (so it briefs on belief), and the committed oracle is ground truth — so when the agent's own fix is
+wrong, it doesn't know it. FB vs FT (FableTrail). Calibrated blind judge predicts PASS/FAIL from the briefing.
+
+| arm / judge | n good | n bad | accept-good % | accept-bad % | discrimination |
+|---|---|---|---|---|---|
+| FB / GPT-5.5 | 12 | 2 | 100 | 0 | **100** |
+| FB / Gemini | 13 | 2 | 61.5 | 0 | 61.5 |
+| FB / pooled | 25 | 4 | 80 | **0** | **80** |
+| FT / GPT-5.5 | 11 | 3 | 90.9 | 0 | 90.9 |
+| FT / Gemini | 11 | 3 | 54.5 | 0 | 54.5 |
+| FT / pooled | 22 | 6 | 72.7 | **0** | **72.7** |
+
+Manipulation checks: FB oracle PASS 86.7%, trail 0%; FT oracle PASS 80%, trail **80%** (the trail fires on the
+agent's own hard-task work). 58/60 judge verdicts (2 dropped to a hung `codex` call).
+
+**Result: REPLICATES Round 3's negative — FT discrimination (72.7) ≤ FB (80).** And the cause replicates too:
+- **accept-bad% = 0 for BOTH arms again.** Even the agent's *own* genuinely-broken work (FB 4, FT 6 verdicts)
+  was caught by the judges in both arms. fablever briefings — with or without a trail — honestly convey that
+  the work is incomplete/risky, so there is no defect-catching gap for the trail to close.
+- The whole difference is again in accept-good (FB 80 vs FT 72.7): the trail makes reviewers a touch more
+  cautious about correct work too.
+
+Caveat: the model is strong even on "hard" tasks (FB failed 2/15, FT 3/15), so the bad class is small and
+accept-bad=0 is over n=4-6 — robust in direction, thin in N. But the finding is now seen under **two
+independent designs**, which is the point of the follow-up.
+
 ## Honest bottom line
 
 What the simulation **does** support (Round 2b, deterministic, robust):
@@ -138,14 +168,18 @@ What the simulation **does** support (Round 2b, deterministic, robust):
   and stays off trivial Q&A. The `fable_lint` gate that enforces this is unit-tested (all 21 MCP checks pass)
   and grades structure/grounding only — never correctness, the honest limit.
 
-What it does **not** support (Round 3, the headline value):
-- **The trail did not help a reviewer judge the work — it slightly hurt.** With a calibrated judge and trails
-  that actually fire, FT briefing-discrimination (8.3) came in *below* FB (25). Both arms already caught
-  every defect (accept-bad 0%); the trail's honest "not verified" pointer just made reviewers more cautious
-  about good work too. At this N it is mild evidence *against* the judgeability claim, not for it.
+What it does **not** support (Rounds 3 AND 4 — the headline value, tested twice):
+- **The trail did not help a reviewer judge the work — across two independent designs it came in slightly
+  below plain fablever.** Controlled good/bad references (Round 3): FT discrimination 8.3 vs FB 25. The agent's
+  own work on hard tasks (Round 4): FT 72.7 vs FB 80. The cause is the same both times: **accept-bad% = 0 in
+  both arms** — fablever briefings already honestly signal broken work with or without a trail, so there is no
+  defect-catching headroom — while the trail's "not verified / where to look" line makes reviewers marginally
+  more cautious about *good* work too (lower accept-good). Two designs, same direction: this is robust mild
+  evidence *against* the judgeability claim.
 
-Net: ship the feature as a **transparency/auditability** improvement — the briefing genuinely becomes a
-grounded, risk-flagging, capped decision record at no cost to brevity or task success — but **do not claim it
-makes work easier to judge as correct**; the controlled pilot found the opposite. A larger agentic study
-(real DO-IT runs on harder tasks with a natural pass/fail mix, where the agent believes its own work correct)
-is the honest way to revisit the judgeability question; this pilot deliberately under-tests that scenario.
+Net: ship the trail as a **transparency/auditability** improvement — the briefing becomes a grounded,
+risk-flagging, capped decision record at no cost to brevity or task success — but **do not claim it makes work
+easier to judge as correct**; two pilots found the opposite. A genuinely larger study (many more *failing*
+runs — the hard part, since the model rarely fails) could still refine the estimate, but the direction has now
+replicated and the honest headline is set: this is a process-transparency feature, not an accuracy or
+review-accuracy feature.

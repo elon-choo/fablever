@@ -1,0 +1,1 @@
+Implement parseQuery(s) in parse_query.js. Parse a URL query string (no leading "?"). Split on "&". Each part is key=value. A key that appears ONCE maps to its string value. A key that appears MORE THAN ONCE maps to an array of its values in order. A part with no "=" (or empty value) maps the key to "". Empty input returns {}.
