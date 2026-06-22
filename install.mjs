@@ -229,3 +229,11 @@ log(`\nInstalled.  Next: RESTART Claude Code (or run /clear).\n
   This is a STYLE transplant, not a capability transplant: it recovers Fable's restraint,
   decisiveness, outcome-first communication, anti-fabrication and stop-when-done discipline.
   It cannot raise a weaker model's reasoning ceiling — that lives in the weights.`);
+
+// One-time, human-only star nudge. Shown ONLY on an interactive terminal (not when an agent or CI
+// runs the installer with stdout captured/piped), so it costs zero tokens in agent-run installs and
+// never enters a session. fablever asks for a star nowhere in the runtime — only here, once.
+if (process.stdout.isTTY && !process.env.CI) {
+  log('\n  If fablever earns its place on your machine, a ⭐ helps others find it:');
+  log('    https://github.com/elon-choo/fablever   (shown once, here in your terminal — never in a session, never a token)');
+}

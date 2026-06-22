@@ -16,6 +16,9 @@ keep it that way.
   hooks all derive from it. Don't fork the wording.
 - **Honesty over hype.** This is a *style* transplant, not a *capability* transplant. Don't add claims that
   external steering raises a model's reasoning ceiling. Quantitative claims must be reproducible or dropped.
+- **No promo in the agent runtime.** Never add a star/support/"like us" ask to the output style, any hook,
+  or an MCP tool response — those run every session and cost the user tokens. Star nudges live only on
+  human-facing surfaces (the README badge, one TTY-only line after install). Hard rule, not a preference.
 
 ## Develop
 
@@ -43,3 +46,8 @@ better `fable_lint` heuristics, additional honest measurements, clearer docs.
 
 Out of scope: anything that requires a third-party package or a network call at install/run time; claims
 of capability gains; auto-applying the style to other users without their explicit opt-in.
+
+## If fablever helped
+
+The only thing this project asks is a ⭐ on [the repo](https://github.com/elon-choo/fablever/stargazers) —
+and only if it earned one. It costs nothing and never touches your session (see the runtime rule above).

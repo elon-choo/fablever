@@ -47,6 +47,7 @@ repo — so you can check them against the prose rather than take this file's wo
 
 | Strength | What's actually true | Verify in |
 |----------|----------------------|-----------|
+| **The delivery gate is proven, statistically** | On a 60-task powered run, the gate-guided revision beats shipping the raw first draft **27–0** (p≈1.5×10⁻⁸, 95% CI [87.5,100]%); objectively it clears the *named* acceptance gap on **80.6%** of blocked tasks vs **12.9%** for a generic pass. The quality-ceiling boundary is conceded in the same file (T-vs-P 16–9, n.s.). | `eval/comparison/fable-check-sim/out4/RESULTS.md` (raw judgments in `out4/judge/`, runner `run-mega.mjs`) |
 | **It is measured, not asserted** | Ships a pre-registered, stratified, model-swap, condition-blind eval harness — and the *results*, including a **null/negative** one it discloses. | `eval/ab-harness.mjs`, `eval/results-2026-06-15.md`, `eval/results-2026-06-15-hard.md` |
 | **The eval has controls** | 4 arms (baseline, prompt-matched, draw-matched, panel) that isolate structure from lens-taxonomy and draw-count confounds. Few "agent" tools control for these at all. | `eval/ab-harness.mjs`, `whitepaper/02-methodology.md` §2.2 |
 | **A best-case result, robustly judged** | On the latest models (GPT-5.5 + Gemini-3.1-pro-preview) the cost-no-object pipeline caught **16/18** planted defects at the **highest precision of any config (0.74)** under a **5-judge cross-model panel (4 GPT + 1 Gemini)**; the prior-model run peaked at **18/18** recall. Each number is labelled with the models that produced it, and the scripts + raw data are committed. | `whitepaper/03-results.md` §3.3, `eval/ultra/` |
@@ -57,6 +58,30 @@ repo — so you can check them against the prose rather than take this file's wo
 | **Adversarially reviewed, on the record** | 3 rounds × (Claude expert personas + GPT + Gemini) consensus, **with the attacks that failed recorded too**. | `docs/PUBLICATION-READINESS.md` |
 | **Provenance** | Distilled from Anthropic's *published* Fable prompting guidance (not reverse-engineered, not leaked content). | `docs/RESEARCH.md`, `NOTICE` |
 | **Transparent experiment trail** | The full dated experiment log is published — including the runs that **failed or went against the project** (the saturated-fixture loss, the escalation that backfired). | [`whitepaper/08-experiment-log.md`](whitepaper/08-experiment-log.md) |
+
+### 2.1 · The delivery gate (`fable_check`) — the freshest and most direct evidence of a real improvement
+
+This is the single result to check if you want "does it improve the actual work, with numbers." The
+`fable_check` tool is a deterministic acceptance gate: before a deliverable is handed over, it tests the
+draft against a per-domain Definition-of-Done and **BLOCKs** when a required acceptance criterion is
+missing — naming the specific gap. To measure whether that helps, a 60-task battery was generated in the
+Fable style; each blocked draft was revised three ways and judged **blind, forced-choice, both orders**
+(order-inconsistent = position-bias tie) by Gemini-2.5-pro, scored with an **exact two-sided binomial
+sign test** and **Wilson 95% CIs**:
+
+- **Proven:** gate-guided revision **T** vs the raw first draft **C** → **27–0** (4 ties), p ≈ 1.5×10⁻⁸,
+  95% CI **[87.5, 100]%**. Shipping the raw draft loses essentially every time.
+- **Objective, no judge:** the gate-guided revision cleared the *named* acceptance gap on **80.6%** of
+  blocked tasks; a generic "make it excellent" pass cleared it on **12.9%**.
+- **Conceded boundary (same run):** **T** vs a *generic* second pass **P** → **16–9** (6 ties), p = 0.23
+  — **not significant.** The gate does not raise the quality *ceiling* over any second revision; its
+  proven value is the deterministic structural guarantee, not a higher ceiling. This null is reported
+  next to the win, not buried.
+
+Verify: read [`eval/comparison/fable-check-sim/out4/RESULTS.md`](eval/comparison/fable-check-sim/out4/RESULTS.md)
+(every raw per-task judgment is committed under `out4/judge/`; runner `run-mega.mjs`). The gate logic is
+`mcp/src/server.js` → `fableCheck()`, covered by `node test/mcp-test.js` (48 checks). Earlier, smaller
+replications (pilot 7–0; cross-model agreement check) are kept under the same directory's `out/`–`out3/`.
 
 ---
 
@@ -108,6 +133,9 @@ Step-by-step commands: [`whitepaper/07-reproduce.md`](whitepaper/07-reproduce.md
 
 - **Offline, no keys:** `node eval/ultra/score.mjs` recomputes the candidate/confirmed counts
   behind the headline straight from committed raw data ([`eval/ultra/raw/`](eval/ultra/raw/)).
+- **The delivery-gate result (§2.1), offline:** `cat eval/comparison/fable-check-sim/out4/RESULTS.md`
+  reads the 27–0 / 80.6%-vs-12.9% tally; the raw per-task judgments it was computed from are committed
+  alongside in `out4/judge/`. The gate itself is exercised by `node test/mcp-test.js` (48 checks).
 - Tests: `npm test` (orchestration contract + runtime smoke + MCP + fusion + install lifecycle).
 - The Claude-only A/B (`eval/ab-harness.mjs`) is a **Workflow-tool module**, not a bare-`node`
   script; its recorded output is committed at `eval/results-2026-06-15*.md`.

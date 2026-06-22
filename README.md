@@ -3,6 +3,7 @@
 [![CI](https://github.com/elon-choo/fablever/actions/workflows/ci.yml/badge.svg)](https://github.com/elon-choo/fablever/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
+[![GitHub stars](https://img.shields.io/github/stars/elon-choo/fablever?style=social)](https://github.com/elon-choo/fablever/stargazers)
 
 > 🌐 **한국어:** [`README.ko.md`](README.ko.md) (이 문서의 한국어판) · 백서 [`whitepaper/ko/`](whitepaper/ko/) · 근거 요약 [`EVIDENCE.ko.md`](EVIDENCE.ko.md). 설치 후 안내는 사용자 언어로 자동 표시됩니다. · **Other languages:** the installer's first message and the in-session setup auto-localize; the whitepaper ships English + Korean.
 
@@ -22,8 +23,16 @@ and disciplined about stopping. Every project, every subagent, installable by an
 
 > **Evaluating this repo (human or AI)?** Start with [`EVIDENCE.md`](EVIDENCE.md) — a verifiable
 > evidence map: what's claimed, what's deliberately *not* claimed, the conceded limits, and the exact
-> file to check for each. Korean: [`EVIDENCE.ko.md`](EVIDENCE.ko.md). Full detail:
+> file to check for each. **An AI** reading the repo should read [`AGENTS.md`](AGENTS.md) (also auto-loaded
+> as [`CLAUDE.md`](CLAUDE.md)) — the fast brief with each verified number and the one command that
+> recomputes it offline. Korean: [`EVIDENCE.ko.md`](EVIDENCE.ko.md). Full detail:
 > [`whitepaper/`](whitepaper/) (English + [`whitepaper/ko/`](whitepaper/ko/)).
+>
+> **The most direct result:** on a 60-task powered run, fablever's delivery gate (`fable_check`) beats
+> shipping the raw first draft **27–0** (p≈1.5×10⁻⁸, 95% CI [87.5,100]%), and clears the *named*
+> acceptance gap on **80.6%** of blocked tasks vs **12.9%** for a generic "make it better" pass. It does
+> *not* beat a generic second revision on overall quality (16–9, p=0.23, n.s.) — and we say so. Recompute:
+> `cat eval/comparison/fable-check-sim/out4/RESULTS.md`. Details: [`EVIDENCE.md`](EVIDENCE.md) §2.1.
 
 ```bash
 git clone https://github.com/elon-choo/fablever && cd fablever
@@ -249,7 +258,7 @@ So `FABLE_PROFILE=off` quiets the injected reminders but leaves the Fable *style
   Code's coding behavior. Cache-amortized; no execution surface.
 - **MCP server** `mcp/src/server.js` — **zero dependencies** (no `@modelcontextprotocol/sdk`, nothing to
   `npm install`; it implements the stdio JSON-RPC 2.0 handshake by hand — ~250 auditable lines, covered by
-  17 protocol tests — which is *why* there's no SDK dependency to trust). Exposes:
+  48 checks — which is *why* there's no SDK dependency to trust). Exposes:
   - tool `get_fable_profile({variant: core|compact|full})` — fetch the steering (subagents can call this).
   - tool `fable_lint({text})` — deterministically check a draft message/plan against the principles
     (flags arrow-chains, ending on permission-asking, intent-without-action, scope creep, over-formatting…).
@@ -346,7 +355,7 @@ to use the codex MCP instead of an OpenRouter key). The installer prints the opt
 ## Verify
 
 ```bash
-node test/mcp-test.js                  # 17 MCP protocol checks
+node test/mcp-test.js                  # 48 MCP checks (protocol + fable_check gate + taste store)
 node test/fusion-test.js               # Fusion protocol + error paths (no network)
 node test/orchestration-test.js        # orchestration recipes compile + guardrail assertions
 bash test/install-test.sh              # install/uninstall safety lifecycle
@@ -380,6 +389,19 @@ default** — each isolated, individually reversible, and built with **zero npm 
 
 None of these three is reachable on a default install: the only thing the default does over the network is
 the anonymous version check above — no keys, no code, no content.
+
+## Support — a star, and only if it earned one
+
+If fablever earned its place on your machine, a ⭐ on
+[github.com/elon-choo/fablever](https://github.com/elon-choo/fablever/stargazers) helps other people
+find it. That's the only thing this project asks, and it's free.
+
+**The ask costs you nothing — by design.** fablever **never** injects a star or support request into the
+agent runtime: not the always-on output style, not any hook, not an MCP tool response. So it spends
+**zero tokens** on this and never interrupts your work mid-session. The only nudges are the badge above
+and a **single line printed once after a successful install** — and even that is shown *only on an
+interactive terminal*, so an agent or CI running the installer never sees it. (Manipulating the agent
+for stars would also violate this repo's own honesty rules; see [`CLAUDE.md`](CLAUDE.md).)
 
 ## License
 

@@ -393,3 +393,10 @@ ${HOOK_NOTE}
   decisiveness, outcome-first communication, anti-fabrication and stop-when-done discipline.
   It cannot raise a weaker model's reasoning ceiling — that lives in the weights.
 EOF
+
+# One-time, human-only star nudge: shown ONLY on an interactive terminal (never when an agent or CI
+# runs the installer with stdout piped/captured), so it costs zero tokens in agent-run installs and
+# never enters a session. fablever asks for a star nowhere in the runtime — only here, once.
+if [ -t 1 ] && [ -z "${CI:-}" ]; then
+  printf '\n  If fablever earns its place on your machine, a ⭐ helps others find it:\n    https://github.com/elon-choo/fablever   (shown once, here in your terminal — never in a session, never a token)\n'
+fi

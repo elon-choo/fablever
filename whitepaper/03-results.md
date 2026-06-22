@@ -133,3 +133,39 @@ keeping output clean.
 that parallel structure per se beats a solo agent (the controls refute that); anything
 beyond n=6 author-planted artifacts with single-run generation. Full caveats:
 [§6](06-limitations.md).
+
+## 3.5 The delivery gate (`fable_check`) — a powered, statistically significant result
+
+The ULTRA numbers above are a small-n defect-catch result. The delivery gate was measured on a much
+larger battery and is the one result here that reaches statistical significance.
+
+`fable_check` is a deterministic acceptance gate (in `mcp/src/server.js` → `fableCheck()`): before a
+deliverable is handed over, it checks the draft against a per-domain Definition-of-Done and **BLOCKs**
+when a required acceptance criterion is missing, naming the gap. **60 tasks** were generated in the
+Fable style; the gate fired on **31**. Each blocked draft was revised three ways and judged blind,
+forced-choice, both orders (order-inconsistent = position-bias tie) by Gemini-2.5-pro:
+
+- **C** — the raw Fable-style first draft, shipped as-is.
+- **T** — one revision *guided by the gate's specific BLOCK flags*.
+- **P** — one revision under a *generic* "make it excellent" instruction (placebo for "any second pass").
+
+Scored with an **exact two-sided binomial sign test** and **Wilson 95% CIs**:
+
+| comparison | result | p (two-sided) | 95% CI | reading |
+|---|---|---|---|---|
+| **T vs C** | **27–0** (4 ties) | **≈1.5×10⁻⁸** | **[87.5, 100]%** | the gate-guided revision reliably beats shipping the raw draft |
+| T vs P | 16–9 (6 ties) | 0.23 (n.s.) | [44.5, 79.8]% | no detectable quality edge over a generic second pass |
+| C vs P | 0–28 (3 ties) | ≈0 | [0, 12.1]% | any second pass beats the raw draft |
+
+**Objective check, no judge:** the gate-guided revision **T** cleared the *named* acceptance gap on
+**80.6%** of blocked tasks; the generic **P** cleared it on **12.9%**.
+
+**Establishes:** that routing a deliverable through the deterministic gate and acting on its named gaps
+**reliably beats shipping the unchecked first draft** (T-vs-C, p≈1.5×10⁻⁸) — and that the gate's value
+is the **structural guarantee** (it gets the *specific* missing criterion fixed 80.6% vs 12.9% of the
+time), measured directly without a judge. **Does not establish:** that the gate raises the overall
+quality *ceiling* above any second revision — T-vs-P is a null (p=0.23), and is reported as one. Cluster
+= task; the powered run uses one primary judge (cross-model agreement was checked separately on the
+smaller `out3/` run). Scripts + every raw judgment: [`eval/comparison/fable-check-sim/`](../eval/comparison/fable-check-sim/)
+(`out4/RESULTS.md`, runner `run-mega.mjs`); recompute with `cat eval/comparison/fable-check-sim/out4/RESULTS.md`
+and exercise the gate with `node test/mcp-test.js`.

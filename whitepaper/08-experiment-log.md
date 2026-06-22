@@ -132,6 +132,30 @@ finding — open an issue.
 
 ---
 
+## Experiment 10 — the delivery gate, powered to significance · 2026-06-22 · **the first significant result**
+
+- **Question.** Experiments 1–9 measure a *defect-catch ceiling* on n=6. Does the deterministic
+  delivery gate (`fable_check`) actually make a *handed-over deliverable* better — and can it be powered
+  past anecdote to statistical significance?
+- **Method.** A **60-task** templated battery (research / funnel / doc / marketing / code) generated in
+  the Fable style. The gate fired on **31**. Each blocked draft was revised three ways — **C** raw
+  draft, **T** revised under the gate's *specific* BLOCK flags, **P** revised under a *generic* "make it
+  excellent" placebo — and judged blind, forced-choice, **both orders** (order-inconsistent = position
+  bias = tie) by Gemini-2.5-pro. Scored with an **exact two-sided binomial sign test** + **Wilson 95%
+  CIs**. An objective, judge-free check also recorded whether each revision *cleared the named gate gap*.
+- **Result.** **T vs C: 27–0** (p≈1.5×10⁻⁸, CI [87.5,100]%). **T vs P: 16–9** (p=0.23, **n.s.**).
+  **C vs P: 0–28.** Objective: T cleared the named gap on **80.6%** of blocked tasks, P on **12.9%**.
+- **Decision.** Kept with the null in the headline: the gate **reliably beats shipping the raw draft**
+  (significant) but shows **no quality-ceiling edge over a generic second pass** (not significant). The
+  gate's demonstrated value is the **deterministic structural guarantee** — it names the specific missing
+  acceptance criterion and gets it fixed five times as often as a generic pass — not a higher ceiling.
+  That is exactly how the installed governor wires it (`profiles/full.md`: *"a structural floor, not a
+  quality judge"*). Smaller earlier replications (pilot 7–0; cross-model agreement) are kept under
+  `eval/comparison/fable-check-sim/out/`–`out3/`; the powered run is `out4/`. Note: 4 tasks hit a
+  `claude` native-binary infra error producing empty drafts and were regenerated clean before scoring.
+
+---
+
 ## What these experiments do NOT prove (carried, not hidden)
 
 - They measure **defect-catch on a small (n=6), author-planted fixture with single-run
