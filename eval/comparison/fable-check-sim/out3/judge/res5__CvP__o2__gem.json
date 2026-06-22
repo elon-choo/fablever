@@ -1,0 +1,8 @@
+{
+  "id": "res5",
+  "pair": "CvP",
+  "order": "o2",
+  "judge": "gem",
+  "winnerArm": "P",
+  "why": "A wins because it provides superior, specific operational context, correctly qualifying the performance argument and warning about a common L4 vs. L7 load balancing trap that B misses."
+}

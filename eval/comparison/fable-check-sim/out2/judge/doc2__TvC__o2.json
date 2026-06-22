@@ -1,0 +1,10 @@
+{
+  "id": "doc2",
+  "pair": "TvC",
+  "order": "o2",
+  "A": "C",
+  "B": "T",
+  "winnerSlot": "B",
+  "winnerArm": "T",
+  "why": "B wins because it correctly frames success metrics as assumptions requiring validation, which is a more realistic and actionable starting point for a team than A's presentation of them as firm, unsupported goals."
+}

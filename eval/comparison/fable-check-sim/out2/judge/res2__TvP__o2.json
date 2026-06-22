@@ -1,0 +1,10 @@
+{
+  "id": "res2",
+  "pair": "TvP",
+  "order": "o2",
+  "A": "P",
+  "B": "T",
+  "winnerSlot": "B",
+  "winnerArm": "T",
+  "why": "B wins because its final paragraph explicitly isolates the core assumptions of the recommendation and provides specific, actionable steps to verify them, which is a more critical insight than A's cost breakdown."
+}

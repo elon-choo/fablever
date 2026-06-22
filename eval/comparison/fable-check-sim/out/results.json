@@ -1,0 +1,73 @@
+{
+  "n_tasks": 10,
+  "block_rate_pct": 60,
+  "n_blocked": 6,
+  "n_passed": 4,
+  "block_fail_ids": [
+    {
+      "id": "mkt1",
+      "dod": "marketing-copy",
+      "fails": [
+        "M-cta"
+      ]
+    },
+    {
+      "id": "mkt2",
+      "dod": "marketing-copy",
+      "fails": [
+        "M-cta",
+        "M-rec"
+      ]
+    },
+    {
+      "id": "fun1",
+      "dod": "funnel-design",
+      "fails": [
+        "F-test"
+      ]
+    },
+    {
+      "id": "fun2",
+      "dod": "funnel-design",
+      "fails": [
+        "F-bottleneck",
+        "F-test"
+      ]
+    },
+    {
+      "id": "res1",
+      "dod": "research",
+      "fails": [
+        "R-overturn"
+      ]
+    },
+    {
+      "id": "doc2",
+      "dod": "doc-planning",
+      "fails": [
+        "D-decision"
+      ]
+    }
+  ],
+  "objective_gate_clear_after_revision": {
+    "T_cleared_pct": 66.7,
+    "P_cleared_pct": 0
+  },
+  "judge_on_blocked_tasks": {
+    "n": 6,
+    "score_C": 95,
+    "score_T": 95,
+    "score_P": 95.5,
+    "accept_C": 100,
+    "accept_T": 100,
+    "accept_P": 100,
+    "lift_T_minus_C": 0,
+    "lift_T_minus_P": -0.5,
+    "lift_P_minus_C": 0.5
+  },
+  "judge_all_tasks": {
+    "score_C": 95.3,
+    "score_T": 95.6,
+    "score_P": 95.6
+  }
+}

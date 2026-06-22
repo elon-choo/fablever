@@ -1,0 +1,10 @@
+{
+  "id": "doc2",
+  "pair": "TvC",
+  "order": "o1",
+  "A": "T",
+  "B": "C",
+  "winnerSlot": "A",
+  "winnerArm": "T",
+  "why": "A's explicit recommendation in the summary and its framing of metrics as testable assumptions make it a more mature and actionable document than B's flat statements of fact."
+}

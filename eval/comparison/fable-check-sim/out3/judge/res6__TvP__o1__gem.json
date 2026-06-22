@@ -1,0 +1,8 @@
+{
+  "id": "res6",
+  "pair": "TvP",
+  "order": "o1",
+  "judge": "gem",
+  "winnerArm": "P",
+  "why": "Deliverable B provides a superior decision framework by categorizing triggers and includes the critical, non-obvious insight that managed Kubernetes (like GKE Autopilot) reduces the node burden but not the entire platform tax, which is a more valuable and specific piece of advice than A's external citations."
+}

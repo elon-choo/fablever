@@ -1,0 +1,8 @@
+{
+  "id": "doc2",
+  "pair": "CvP",
+  "order": "o2",
+  "judge": "gem",
+  "winnerArm": "C",
+  "why": "B provides a complete, actionable PRD that correctly scopes the work with non-goals and flags critical open questions, whereas A is an empty document."
+}

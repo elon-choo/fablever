@@ -1,0 +1,10 @@
+{
+  "id": "res1",
+  "pair": "TvC",
+  "order": "o1",
+  "A": "T",
+  "B": "C",
+  "winnerSlot": "A",
+  "winnerArm": "T",
+  "why": "A wins because it includes a dedicated section explicitly stating the core assumptions of its recommendation and the concrete evidence that would change the answer, a critical component of a rigorous technical decision that B lacks."
+}

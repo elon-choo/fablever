@@ -206,6 +206,227 @@ function fableStatus() {
   return { summary: lines.join('\n'), status };
 }
 
+// ---------------------------------------------------------------------------
+// Taste memory — a local, on/off store of the requester's repeated preferences,
+// so future deliverables match them instead of re-litigating taste each time.
+// Persisted at ~/.claude/fable-profile/taste.json (override with FABLE_TASTE_FILE).
+// Two kinds of preference:
+//   kind:'rule' — a deterministically checkable forbid/require regex. These become
+//                 extra HARD gate items inside fable_check (a forbid match, or a
+//                 missing require, is a FAIL). This is the gate-not-narrate path:
+//                 the taste actually blocks delivery, it does not just get recited.
+//   kind:'note' — soft taste guidance (voice, altitude). NEVER auto-graded; surfaced
+//                 as an UNCHECKED, human-confirm item. A model grading its own taste
+//                 would just reproduce the decision-trail illusion-of-rigor, so a
+//                 note can never auto-PASS.
+// On/off: the store's `enabled` flag, OR the env override FABLE_TASTE=off (env wins).
+// ---------------------------------------------------------------------------
+const TASTE_FILE = process.env.FABLE_TASTE_FILE ||
+  path.join(os.homedir(), '.claude', 'fable-profile', 'taste.json');
+
+function loadTaste() {
+  const d = readJSONsafe(TASTE_FILE);
+  if (!d || typeof d !== 'object') return { enabled: true, prefs: [] };
+  return { enabled: d.enabled !== false, prefs: Array.isArray(d.prefs) ? d.prefs : [] };
+}
+function saveTaste(store) {
+  fs.mkdirSync(path.dirname(TASTE_FILE), { recursive: true });
+  fs.writeFileSync(TASTE_FILE, JSON.stringify(store, null, 2));
+}
+function tasteIsOn(store) {
+  if ((process.env.FABLE_TASTE || '').toLowerCase() === 'off') return false;
+  return store.enabled !== false;
+}
+function hashId(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return 't' + h.toString(36);
+}
+function safeRegex(src) { try { return src ? new RegExp(src, 'i') : null; } catch { return null; } }
+
+function fableTaste(args) {
+  const a = args || {};
+  const action = String(a.action || '').toLowerCase();
+  const store = loadTaste();
+  const envOff = (process.env.FABLE_TASTE || '').toLowerCase() === 'off';
+  switch (action) {
+    case 'on':
+    case 'off': {
+      store.enabled = action === 'on';
+      saveTaste(store);
+      return { ok: true, enabled: store.enabled, active: tasteIsOn(store), env_override: envOff ? 'FABLE_TASTE=off overrides the stored flag until you unset it' : null, count: store.prefs.length };
+    }
+    case 'status':
+      return { ok: true, enabled: store.enabled, active: tasteIsOn(store), env_override: envOff ? 'FABLE_TASTE=off' : null, count: store.prefs.length, by_kind: { rule: store.prefs.filter(p => p.kind === 'rule').length, note: store.prefs.filter(p => p.kind === 'note').length } };
+    case 'list': {
+      const dom = a.domain ? String(a.domain) : null;
+      const on = tasteIsOn(store);
+      const prefs = on ? store.prefs.filter(p => !dom || p.domain === dom || p.domain === 'global') : [];
+      return { ok: true, enabled: store.enabled, active: on, applied: on, count: prefs.length, prefs };
+    }
+    case 'add': {
+      if (!a.text || typeof a.text !== 'string') return { ok: false, error: 'add requires a "text" description of the preference' };
+      const kind = a.kind === 'rule' ? 'rule' : 'note';
+      const domain = a.domain ? String(a.domain) : 'global';
+      if (kind === 'rule' && !a.forbid && !a.require) return { ok: false, error: 'a rule needs a "forbid" or "require" regex (otherwise use kind:"note")' };
+      if (kind === 'rule' && !safeRegex(a.forbid || a.require)) return { ok: false, error: 'forbid/require must be a valid regular expression' };
+      const pref = { id: hashId(domain + '|' + kind + '|' + a.text + '|' + (a.forbid || '') + '|' + (a.require || '')), domain, kind, text: String(a.text) };
+      if (kind === 'rule') { if (a.forbid) pref.forbid = String(a.forbid); if (a.require) pref.require = String(a.require); }
+      const at = store.prefs.findIndex(p => p.id === pref.id);
+      if (at >= 0) store.prefs[at] = pref; else store.prefs.push(pref);
+      saveTaste(store);
+      return { ok: true, added: pref, count: store.prefs.length };
+    }
+    case 'remove': {
+      if (!a.id) return { ok: false, error: 'remove requires an "id"' };
+      const before = store.prefs.length;
+      store.prefs = store.prefs.filter(p => p.id !== String(a.id));
+      saveTaste(store);
+      return { ok: true, removed: before - store.prefs.length, count: store.prefs.length };
+    }
+    default:
+      return { ok: false, error: `unknown action "${a.action}". Valid: add | list | remove | on | off | status` };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// fable_check — deterministic DELIVERY GATE. Checks a finished deliverable against
+// a per-domain Definition of Done. Where fable_lint checks the STYLE of a draft
+// message, fable_check checks whether the ARTIFACT meets its acceptance criteria,
+// and a FAIL is a hard BLOCK: fix and re-run before handing it over. The lesson from
+// the decision-trail experiment was that an after-the-fact narration changes nothing;
+// a check that can actually FAIL and force a fix is the lever. Items are 'auto'
+// (deterministically checkable -> PASS/FAIL) or 'human' (taste/judgement -> UNCHECKED,
+// a person confirms; NEVER auto-passed — a model grading its own taste just recreates
+// the trail's illusion-of-rigor). Zero LLM.
+// ---------------------------------------------------------------------------
+const CITE = /`[^`]+`|https?:\/\/\S+|\([A-Z][A-Za-z.\- ]+,?\s*(?:19|20)\d{2}\)|\b[\w./-]+\.(?:js|ts|jsx|tsx|mjs|cjs|py|go|rs|java|rb|php|md|json|ya?ml|sh|sql|csv)\b|\b[\w./-]+:\d+\b|\btests?\b|\bspec\b|\bpass(?:es|ed|ing)?\b|\bfail(?:s|ed|ing)?\b/i;
+const DONE_CLAIM = /\b(fixed|resolved|works now|now works|now passes|passing|implemented|completed|verified)\b|고쳤|해결했|완료했|확인했/i;
+const PROCESS_OPENER = /^\s*(?:let me\b|i'll\b|i will\b|first,?\b|i'm going to\b|now i\b|to start\b|in order to\b|this (?:document|memo|report|plan|analysis) (?:will|describes|outlines|covers)|먼저\b|이 (?:문서|메모|보고서|분석)(?:는|은))/i;
+const METRIC = /\b\d+(?:\.\d+)?\s?%|\b\d+(?:\.\d+)?x\b|\b\d{2,}\s?(?:ms|users?|customers?|명|건|회|배)\b/i;
+const ASSUME_MARKER = /\bassum|\bestimat|\bapprox|\broughly|\bTBD\b|to be confirmed|open question|미결|가정|추정|대략|예시|\bexample\b/i;
+const REC_DOC = /\brecommend|\bmy pick\b|\bgo with\b|\bdecision:|결론|추천|권장|제안(?:은|:|\s)/i;
+const OVERTURN = /what would (?:overturn|change|invalidate)|반증|뒤집|\blimitation|\bcaveat|한계|confidence|weakest/i;
+// CTA detection is deliberately broad: the v1 keyword list under-detected real CTAs ("get early access",
+// "start your free trial") and false-BLOCKed good copy. We count CTA-like phrases and only fail on CLUTTER
+// (3+ competing CTAs) — a single primary CTA, a primary+secondary, or an intentionally CTA-less strategy
+// deliverable all pass. "Exactly one CTA" is the right north star but too brittle to gate deterministically.
+const CTA = /\bget (?:early access|started|access|the app|it now|your \w+)\b|\bstart(?:ed)?(?: your)?(?:\s+\w+){0,3}\s+(?:free|trial|today|now)\b|\bsign\s?up\b|\bsubscribe\b|\btry (?:it )?(?:free|now|today)\b|\bdownload(?:\s+(?:the app|now|today|it))?\b|\bjoin (?:now|us|today|free|\d)|\bbuy(?:\s+(?:now|it|the|our))?\b|\border (?:now|today)\b|\bbook (?:now|a|your)\b|\bregister(?:\s+(?:now|today|free))?\b|\bclaim (?:your|now|the)\b|\brequest (?:a )?demo\b|\bschedule (?:a )?(?:call|demo)\b|\blearn more\b|지금\s*(?:구매|시작|신청|가입|예약|받기|확인)|구매하기|신청하기|시작하기|가입하기|다운로드|예약하기|등록하기|받아보기/gi;
+const OPTION = /\boption\s*[a-z0-9]\b|\bangle\s*\d|\bvariant\s*[a-z0-9]\b|버전\s*[A-Za-z0-9]|\b안\s*\d/gi;
+const REC = /\brecommend|\bmy (?:pick|recommendation)\b|\bi.?d (?:go with|send|use|pick|choose|recommend)\b|\bgo with (?:angle|option|#|\d|the)\b|\blead with (?:angle|option|#|\d)\b|\bsend (?:angle|option|#)?\s*\d|\buse (?:angle|option) \d|\bthe (?:send|pick|winner) is\b|추천|권장|이걸 (?:보내|쓰)|보내(?:라|세요)/i;
+const FMETRIC = /\b(conversion|cvr|ctr|cac|ltv|activation|retention|sign-?up|arpu|aov|churn)\b|전환|가입|이탈|리텐션|활성화|객단가/i;
+const TIMEFRAME = /\b\d+\s*(?:day|week|month|days|weeks|months)\b|\d+\s*(?:일|주|개월|주간|분기)|\bq[1-4]\b|this (?:week|month|quarter)/i;
+const BOTTLENECK = /\bbottleneck|biggest drop|largest drop|primary (?:drop|leak)|main leak|병목|가장 큰 이탈|주요 이탈/i;
+const TESTPRIO = /(?:test|experiment|a\/b|실험|테스트)[^.\n]{0,40}(?:first|#1|우선|priority|먼저)|(?:first|#1|우선|priority|먼저)[^.\n]{0,40}(?:test|experiment|실험|테스트)/i;
+
+function firstMatch(t, re) { const m = String(t).match(re); return m ? m[0] : null; }
+function wordCount(s) { return (String(s).match(/\S+/g) || []).length; }
+function firstSentence(t) { const m = String(t).trim().match(/^[^.!?\n。]{0,200}[.!?\n。]/); return m ? m[0] : String(t).trim().slice(0, 200); }
+function noFabMetric(t) {
+  const sents = String(t).split(/(?<=[.!?。\n])\s+/);
+  for (const s of sents) { if (METRIC.test(s) && !CITE.test(s) && !ASSUME_MARKER.test(s)) return { pass: false, evidence: s.trim().slice(0, 140) }; }
+  return { pass: true, evidence: 'no unsourced metric' };
+}
+
+const DOD_CATALOG = {
+  'code': { domain: 'code', items: [
+    { id: 'C-test', kind: 'auto', label: 'A "done/works" claim cites a test or command that verifies it.',
+      check: t => DONE_CLAIM.test(t) ? { pass: !!firstMatch(t, CITE), evidence: firstMatch(t, CITE) || 'claims done but cites no test/command' } : { pass: true, evidence: 'no done-claim to back' },
+      gap: 'Says the change works but points to nothing the reader can run.', fix: 'Cite the test or repro command you ran, or state explicitly what is still unverified.' },
+    { id: 'C-nofab', kind: 'auto', label: 'Performance/quantity numbers carry a source or estimate marker.', check: noFabMetric,
+      gap: 'A number is stated with no source and no estimate marker.', fix: 'Cite where the number comes from, or mark it TBD/estimate.' },
+    { id: 'C-guards', kind: 'human', label: 'Existing guards (auth, null, error paths) preserved in the diff.',
+      fix: 'Eyeball the diff: confirm no pre-existing guard or branch was silently dropped.' },
+  ] },
+  'doc-planning': { domain: 'doc-planning', items: [
+    { id: 'D-lead', kind: 'auto', label: 'Leads with the recommendation/outcome, not process narration.',
+      check: t => ({ pass: !PROCESS_OPENER.test(firstSentence(t)), evidence: firstSentence(t).trim().slice(0, 120) }),
+      gap: 'Opens with "this document will…"/"let me…" instead of the decision.', fix: 'Put the recommendation or conclusion in the first line; move framing below it.' },
+    { id: 'D-decision', kind: 'auto', label: 'Contains an explicit recommendation/decision.',
+      check: t => ({ pass: REC_DOC.test(t), evidence: firstMatch(t, REC_DOC) || 'no recommendation/decision marker found' }),
+      gap: 'Lays out context but never commits to a recommendation.', fix: 'State the call ("Recommend X") so the reader has something to accept or veto.' },
+    { id: 'D-nofab', kind: 'auto', label: 'Numbers/dates carry a source or an explicit assumption marker.', check: noFabMetric,
+      gap: 'A figure is asserted with no source and no assumption marker.', fix: 'Source it, or label it an assumption/TBD the reader can veto.' },
+    { id: 'D-altitude', kind: 'human', label: 'Right altitude and framing for the intended audience.',
+      fix: 'Confirm the depth matches who reads this (exec memo vs build spec).' },
+  ] },
+  'research': { domain: 'research', items: [
+    { id: 'R-lead', kind: 'auto', label: 'States the conclusion up front, not buried after process.',
+      check: t => ({ pass: !PROCESS_OPENER.test(firstSentence(t)), evidence: firstSentence(t).trim().slice(0, 120) }),
+      gap: 'Opens with method/framing instead of the finding.', fix: 'Lead with the answer; put method and evidence after it.' },
+    { id: 'R-cited', kind: 'auto', label: 'Factual claims are backed by at least one citable source.',
+      check: t => wordCount(t) <= 40 ? { pass: true, evidence: 'too short to require citation' } : { pass: CITE.test(t), evidence: firstMatch(t, CITE) || 'no citation/source token found' },
+      gap: 'Makes factual claims with no source the reader can check.', fix: 'Cite a source (name+year, URL, or file) for each load-bearing claim.' },
+    { id: 'R-overturn', kind: 'auto', label: 'States what would overturn the conclusion / its limits.',
+      check: t => ({ pass: OVERTURN.test(t), evidence: firstMatch(t, OVERTURN) || 'no limitation / what-would-overturn line' }),
+      gap: 'Presents a conclusion with no stated weakness or disconfirmer.', fix: 'Add a line on what evidence would change the answer, or the key limitation.' },
+    { id: 'R-sources', kind: 'human', label: 'Sources are trustworthy and correctly interpreted.',
+      fix: 'Spot-check that the cited sources actually say what they are used to claim.' },
+  ] },
+  'marketing-copy': { domain: 'marketing-copy', items: [
+    { id: 'M-cta', kind: 'auto', label: 'Not cluttered with competing calls to action.',
+      check: t => { const n = (String(t).match(CTA) || []).length; return { pass: n < 3, evidence: `${n} CTA-like phrase(s) detected` }; },
+      gap: 'Three or more competing CTAs — the reader does not get one clear next step.', fix: 'Keep one primary CTA (a soft secondary is fine); cut the rest.' },
+    { id: 'M-nofab', kind: 'auto', label: 'Stats/testimonials carry a source or estimate marker.', check: noFabMetric,
+      gap: 'A statistic is stated with no source.', fix: 'Source the stat, or remove it.' },
+    { id: 'M-rec', kind: 'auto', label: 'If multiple angles are offered, one is recommended.',
+      check: t => { const n = (String(t).match(OPTION) || []).length; return n >= 2 ? { pass: REC.test(t), evidence: REC.test(t) ? 'recommendation present' : `${n} angles, no pick` } : { pass: true, evidence: 'single angle' }; },
+      gap: 'Lists angles but does not say which to run.', fix: 'Name your recommended angle.' },
+    { id: 'M-voice', kind: 'human', label: 'On-brand voice and tone.',
+      fix: 'Confirm it sounds like the brand (this is the prime taste-memory check).' },
+  ] },
+  'funnel-design': { domain: 'funnel-design', items: [
+    { id: 'F-goal', kind: 'auto', label: 'Names a target metric and a timeframe.',
+      check: t => ({ pass: FMETRIC.test(t) && TIMEFRAME.test(t), evidence: `metric=${!!firstMatch(t, FMETRIC)} timeframe=${!!firstMatch(t, TIMEFRAME)}` }),
+      gap: 'No explicit goal metric and/or no timeframe.', fix: 'State the metric to move and over what period.' },
+    { id: 'F-bottleneck', kind: 'auto', label: 'Names the single biggest bottleneck.',
+      check: t => ({ pass: BOTTLENECK.test(t), evidence: firstMatch(t, BOTTLENECK) || 'no bottleneck named' }),
+      gap: 'Does not single out where the funnel leaks most.', fix: 'Name the one stage that loses the most, and focus there first.' },
+    { id: 'F-test', kind: 'auto', label: 'Gives a prioritized first test.',
+      check: t => ({ pass: TESTPRIO.test(t), evidence: TESTPRIO.test(t) ? 'prioritized test present' : 'no #1 test / priority' }),
+      gap: 'No clearly prioritized experiment to run first.', fix: 'Call out the #1 test and what to hold for later.' },
+    { id: 'F-priority', kind: 'human', label: 'Prioritization is right for this business.',
+      fix: 'Confirm the chosen bottleneck/test actually matters most for the goal.' },
+  ] },
+};
+
+function fableCheck(text, dodId) {
+  const t = String(text || '');
+  const cat = DOD_CATALOG[dodId];
+  if (!cat) return { ok: false, error: `unknown dod_id "${dodId}". Valid: ${Object.keys(DOD_CATALOG).join(' | ')}` };
+  const items = [];
+  for (const it of cat.items) {
+    if (it.kind === 'human') { items.push({ id: it.id, label: it.label, status: 'UNCHECKED', evidence: null, gap: null, fix: it.fix }); continue; }
+    let r; try { r = it.check(t); } catch (e) { r = { pass: false, evidence: 'check error: ' + e.message }; }
+    items.push({ id: it.id, label: it.label, status: r.pass ? 'PASS' : 'FAIL', evidence: r.evidence, gap: r.pass ? null : it.gap, fix: r.pass ? null : it.fix });
+  }
+  // Taste-memory: rules become extra HARD gate items; notes become UNCHECKED items.
+  const store = loadTaste();
+  let tasteApplied = false;
+  if (tasteIsOn(store)) {
+    const relevant = store.prefs.filter(p => p.domain === dodId || p.domain === 'global');
+    for (const p of relevant) {
+      if (p.kind === 'rule') {
+        const fre = safeRegex(p.forbid), rre = safeRegex(p.require);
+        if (fre) { tasteApplied = true; const m = firstMatch(t, fre); items.push({ id: 'taste:' + p.id + ':forbid', label: `taste rule — avoid: ${p.text}`, status: m ? 'FAIL' : 'PASS', evidence: m || 'forbidden pattern absent', gap: m ? `Violates a saved taste rule: ${p.text}` : null, fix: m ? `Remove "${m}".` : null }); }
+        if (rre) { tasteApplied = true; const ok = rre.test(t); items.push({ id: 'taste:' + p.id + ':require', label: `taste rule — require: ${p.text}`, status: ok ? 'PASS' : 'FAIL', evidence: ok ? 'required pattern present' : 'required pattern absent', gap: ok ? null : `Misses a saved taste rule: ${p.text}`, fix: ok ? null : `Ensure: ${p.text}.` }); }
+      } else {
+        tasteApplied = true;
+        items.push({ id: 'taste:' + p.id, label: `taste note — ${p.text}`, status: 'UNCHECKED', evidence: null, gap: null, fix: `Confirm the deliverable honors: ${p.text}` });
+      }
+    }
+  }
+  const fail = items.filter(i => i.status === 'FAIL');
+  const unchecked = items.filter(i => i.status === 'UNCHECKED');
+  const pass = items.filter(i => i.status === 'PASS');
+  const gate = fail.length ? 'BLOCK' : 'PASS';
+  const summary = (gate === 'BLOCK'
+    ? `BLOCK — ${fail.length} acceptance check(s) failed: ${fail.map(f => f.id).join(', ')}. Fix and re-run before delivering.`
+    : `PASS — all ${pass.length} deterministic check(s) met.`)
+    + (unchecked.length ? ` ${unchecked.length} item(s) need human confirmation (never auto-passed): ${unchecked.map(u => u.id).join(', ')}.` : '');
+  return { ok: true, dod_id: dodId, domain: cat.domain, gate, pass_count: pass.length, fail_count: fail.length, unchecked_count: unchecked.length, taste_applied: tasteApplied, items, summary };
+}
+
 const TOOLS = [
   {
     name: 'get_fable_profile',
@@ -230,6 +451,35 @@ const TOOLS = [
     name: 'fable_status',
     description: 'Report whether fablever is active right now and how it is configured: is the Fable output style on, the current cost mode (auto/on/off and where it comes from), the cross-model reviewer preset, and any FABLE_* env overrides. Read-only (reads local config). Use to answer the user\'s "is fablever on / what mode am I in / which reviewer preset / how do I change it".',
     inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'fable_check',
+    description: 'Deterministically GATE a finished deliverable against a per-domain Definition of Done before you hand it over — the delivery gate. dod_id ∈ code | doc-planning | research | marketing-copy | funnel-design. Returns each acceptance item as PASS / FAIL / UNCHECKED with the gap and the fix, plus an overall gate of PASS or BLOCK. A BLOCK means a checkable criterion is unmet: fix it and re-run, do not deliver. UNCHECKED items are taste/judgement calls a human must confirm — they are never auto-passed. Also enforces your taste-memory rules for the domain. Zero LLM. Run it on the artifact you are about to deliver, not on a draft message (that is fable_lint).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The finished deliverable text to gate.' },
+        dod_id: { type: 'string', enum: ['code', 'doc-planning', 'research', 'marketing-copy', 'funnel-design'], description: 'Which domain Definition of Done to check against.' },
+      },
+      required: ['text', 'dod_id'],
+    },
+  },
+  {
+    name: 'fable_taste',
+    description: 'Manage taste-memory: a local, on/off store of the requester\'s repeated preferences so future deliverables match them without re-asking. A "rule" (forbid/require regex) becomes a HARD gate item inside fable_check; a "note" is surfaced for human confirmation and never auto-passed. actions: add | list | remove | on | off | status. Turn the whole store off with action:"off" (or env FABLE_TASTE=off).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['add', 'list', 'remove', 'on', 'off', 'status'], description: 'What to do.' },
+        text: { type: 'string', description: 'add: a human description of the preference.' },
+        domain: { type: 'string', description: 'add/list: which domain this preference applies to (a dod_id, or "global"). Default "global".' },
+        kind: { type: 'string', enum: ['rule', 'note'], description: 'add: "rule" = deterministically enforced via forbid/require regex; "note" = soft, human-confirmed. Default "note".' },
+        forbid: { type: 'string', description: 'add (rule): a regex that must NOT appear in the deliverable.' },
+        require: { type: 'string', description: 'add (rule): a regex that MUST appear in the deliverable.' },
+        id: { type: 'string', description: 'remove: the preference id to delete.' },
+      },
+      required: ['action'],
+    },
   },
 ];
 
@@ -296,6 +546,13 @@ function handle(msg) {
         if (name === 'fable_status') {
           const s = fableStatus();
           return result(id, { content: [{ type: 'text', text: `${s.summary}\n\n${JSON.stringify(s.status, null, 2)}` }] });
+        }
+        if (name === 'fable_check') {
+          if (typeof args.text !== 'string' || typeof args.dod_id !== 'string') return error(id, -32602, 'fable_check requires "text" and "dod_id" string arguments');
+          return result(id, { content: [{ type: 'text', text: JSON.stringify(fableCheck(args.text, args.dod_id), null, 2) }] });
+        }
+        if (name === 'fable_taste') {
+          return result(id, { content: [{ type: 'text', text: JSON.stringify(fableTaste(args), null, 2) }] });
         }
         return error(id, -32602, `Unknown tool: ${name}`);
       } catch (e) {

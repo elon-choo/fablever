@@ -1,0 +1,10 @@
+{
+  "id": "fun3",
+  "pair": "TvC",
+  "order": "o1",
+  "A": "T",
+  "B": "C",
+  "winnerSlot": "A",
+  "winnerArm": "T",
+  "why": "Deliverable A provides a complete strategy by defining a target metric, singling out the most likely problem, and prescribing a specific first test, while B offers only a generic list of tactics."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "fun3",
+  "pair": "CvP",
+  "order": "o2",
+  "A": "P",
+  "B": "C",
+  "winnerSlot": "A",
+  "winnerArm": "P",
+  "why": "A wins because it strategically reframes the problem by distinguishing between high-intent 'checkout' abandonment and low-intent 'cart' abandonment, a crucial nuance that B misses entirely."
+}

@@ -1,0 +1,8 @@
+{
+  "id": "fun1",
+  "pair": "TvP",
+  "order": "o1",
+  "judge": "gpt",
+  "winnerArm": "T",
+  "why": "A is the only one that clearly names activation as the biggest leak and proposes a concrete first A/B onboarding experiment, while B mostly stays at diagnostic steps and prioritized generic levers."
+}

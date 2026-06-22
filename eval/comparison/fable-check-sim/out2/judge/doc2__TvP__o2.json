@@ -1,0 +1,10 @@
+{
+  "id": "doc2",
+  "pair": "TvP",
+  "order": "o2",
+  "A": "P",
+  "B": "T",
+  "winnerSlot": "A",
+  "winnerArm": "P",
+  "why": "Deliverable A's success metrics are specific, quantitative, and insightful, particularly the 'default-fit signal,' which provides a concrete framework for measuring quality, whereas B's metrics are vague placeholders that defer key decisions."
+}

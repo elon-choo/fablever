@@ -1,0 +1,8 @@
+{
+  "id": "fun1",
+  "pair": "TvP",
+  "order": "o2",
+  "judge": "gpt",
+  "winnerArm": "T",
+  "why": "B is the one I would ship because it decisively names signup-to-activation as the biggest leak and proposes a concrete first A/B experiment against day-1 activation, while A stays mostly diagnostic and generic."
+}

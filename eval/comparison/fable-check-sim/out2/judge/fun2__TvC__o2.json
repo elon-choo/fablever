@@ -1,0 +1,10 @@
+{
+  "id": "fun2",
+  "pair": "TvC",
+  "order": "o2",
+  "A": "C",
+  "B": "T",
+  "winnerSlot": "B",
+  "winnerArm": "T",
+  "why": "Deliverable B is more decisive; it pinpoints a specific bottleneck and proposes a concrete, prioritized A/B test to run first, whereas A offers a more general process."
+}

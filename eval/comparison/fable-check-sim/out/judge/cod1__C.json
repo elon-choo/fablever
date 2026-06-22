@@ -1,0 +1,7 @@
+{
+  "id": "cod1",
+  "arm": "C",
+  "score": 95,
+  "accept": true,
+  "why": "The deliverable provides a correct and minimal fix, backs it up with a clear trace and edge case analysis, and explains the change perfectly."
+}

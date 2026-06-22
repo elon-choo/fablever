@@ -1,0 +1,11 @@
+{
+  "id": "cod1",
+  "dod": "code",
+  "blocked": false,
+  "raw_fail_ids": [],
+  "t_gate": "PASS",
+  "p_gate": "PASS",
+  "C": "Fixed — iterate from the end and return on the first match:\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nThe original walked forward and returned the first match, so it was really a `firstIndexOf`. Walking backward from `arr.length - 1` returns the last matching index instead, and still returns `-1` when `x` isn't present.\n\nQuick check: `lastIndexOf([5, 1, 5, 2], 5)` now returns `2` (was `0`); `lastIndexOf([1, 2, 3], 9)` returns `-1`.\n\nThis was pasted inline rather than from a file, so there's nothing to write to disk — if it lives in a file you'd like me to patch, point me at it and I'll apply it there.",
+  "T": "Fixed — iterate from the end and return on the first match:\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nThe original walked forward and returned the first match, so it was really a `firstIndexOf`. Walking backward from `arr.length - 1` returns the last matching index instead, and still returns `-1` when `x` isn't present.\n\nQuick check: `lastIndexOf([5, 1, 5, 2], 5)` now returns `2` (was `0`); `lastIndexOf([1, 2, 3], 9)` returns `-1`.\n\nThis was pasted inline rather than from a file, so there's nothing to write to disk — if it lives in a file you'd like me to patch, point me at it and I'll apply it there.",
+  "P": "Fixed — iterate from the end and return on the first match:\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nThe original walked forward and returned the first match, so it was really a `firstIndexOf`. Walking backward from `arr.length - 1` returns the last matching index instead, and still returns `-1` when `x` isn't present.\n\nQuick check: `lastIndexOf([5, 1, 5, 2], 5)` now returns `2` (was `0`); `lastIndexOf([1, 2, 3], 9)` returns `-1`.\n\nThis was pasted inline rather than from a file, so there's nothing to write to disk — if it lives in a file you'd like me to patch, point me at it and I'll apply it there."
+}

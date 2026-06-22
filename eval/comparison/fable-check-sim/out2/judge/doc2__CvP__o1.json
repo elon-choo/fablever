@@ -1,0 +1,10 @@
+{
+  "id": "doc2",
+  "pair": "CvP",
+  "order": "o1",
+  "A": "C",
+  "B": "P",
+  "winnerSlot": "B",
+  "winnerArm": "P",
+  "why": "The success metrics are far more specific and insightful, measuring not just adoption but the quality of the theme's implementation via a 'default-fit signal' and adding guardrails for performance and support tickets."
+}

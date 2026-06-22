@@ -1,0 +1,10 @@
+{
+  "id": "res2",
+  "pair": "TvP",
+  "order": "o1",
+  "A": "T",
+  "B": "P",
+  "winnerSlot": "A",
+  "winnerArm": "T",
+  "why": "Deliverable A wins because its 'What would change this answer' section is superior, as it not only states when the verdict flips but also explicitly names the core assumption and provides concrete, checkable ways to invalidate the entire recommendation."
+}

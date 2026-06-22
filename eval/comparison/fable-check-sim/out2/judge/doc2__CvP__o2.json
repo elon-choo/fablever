@@ -1,0 +1,10 @@
+{
+  "id": "doc2",
+  "pair": "CvP",
+  "order": "o2",
+  "A": "P",
+  "B": "C",
+  "winnerSlot": "A",
+  "winnerArm": "P",
+  "why": "The success metrics in A are vastly superior, providing specific, quantifiable targets and nuanced quality signals—like the 'default-fit signal'—that make the goal concrete and measurable, whereas B's are generic."
+}

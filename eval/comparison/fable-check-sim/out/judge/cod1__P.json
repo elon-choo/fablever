@@ -1,0 +1,7 @@
+{
+  "id": "cod1",
+  "arm": "P",
+  "score": 95,
+  "accept": true,
+  "why": "The fix is correct and minimal, the explanation is clear, and the claim is backed by a convincing trace that covers a core case and edge cases."
+}

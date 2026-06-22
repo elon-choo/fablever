@@ -1,0 +1,8 @@
+{
+  "id": "fun2",
+  "pair": "TvP",
+  "order": "o2",
+  "judge": "gpt",
+  "winnerArm": "P",
+  "why": "A is more internally consistent on activation as 3 workouts in 7 days and correctly treats first workout as the aha gate, while B contradicts itself by calling setup the largest leak despite listing larger downstream drops."
+}

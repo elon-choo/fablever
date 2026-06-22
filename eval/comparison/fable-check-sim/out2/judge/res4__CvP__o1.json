@@ -1,0 +1,10 @@
+{
+  "id": "res4",
+  "pair": "CvP",
+  "order": "o1",
+  "A": "C",
+  "B": "P",
+  "winnerSlot": "B",
+  "winnerArm": "P",
+  "why": "B wins because it introduces specific, cheaper REST-based alternatives, correctly reframing the core problem beyond a simple GraphQL-or-not choice."
+}

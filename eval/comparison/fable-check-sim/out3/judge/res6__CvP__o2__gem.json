@@ -1,0 +1,8 @@
+{
+  "id": "res6",
+  "pair": "CvP",
+  "order": "o2",
+  "judge": "gem",
+  "winnerArm": "P",
+  "why": "Deliverable A wins for its more nuanced decision framework, which correctly separates hard requirements from technical triggers, and for its specific, high-value clarification that managed Kubernetes does not eliminate the complexity tax."
+}

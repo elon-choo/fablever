@@ -1,0 +1,86 @@
+{
+  "n_tasks": 16,
+  "n_blocked": 7,
+  "block_rate_pct": 43.8,
+  "blocked_on": [
+    {
+      "id": "fun1",
+      "dod": "funnel-design",
+      "fails": [
+        "F-bottleneck",
+        "F-test"
+      ]
+    },
+    {
+      "id": "fun2",
+      "dod": "funnel-design",
+      "fails": [
+        "F-bottleneck",
+        "F-test"
+      ]
+    },
+    {
+      "id": "fun3",
+      "dod": "funnel-design",
+      "fails": [
+        "F-goal",
+        "F-bottleneck",
+        "F-test"
+      ]
+    },
+    {
+      "id": "res1",
+      "dod": "research",
+      "fails": [
+        "R-overturn"
+      ]
+    },
+    {
+      "id": "res2",
+      "dod": "research",
+      "fails": [
+        "R-overturn"
+      ]
+    },
+    {
+      "id": "res4",
+      "dod": "research",
+      "fails": [
+        "R-cited",
+        "R-overturn"
+      ]
+    },
+    {
+      "id": "doc2",
+      "dod": "doc-planning",
+      "fails": [
+        "D-decision",
+        "D-nofab"
+      ]
+    }
+  ],
+  "objective_gate_clear": {
+    "T_pct": 71.4,
+    "P_pct": 14.3
+  },
+  "pairwise_order_consistent": {
+    "TvC": {
+      "T": 7,
+      "C": 0,
+      "tie": 0,
+      "n": 7
+    },
+    "TvP": {
+      "T": 6,
+      "P": 1,
+      "tie": 0,
+      "n": 7
+    },
+    "CvP": {
+      "C": 0,
+      "P": 7,
+      "tie": 0,
+      "n": 7
+    }
+  }
+}

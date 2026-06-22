@@ -1,0 +1,10 @@
+{
+  "id": "res1",
+  "pair": "TvP",
+  "order": "o1",
+  "A": "T",
+  "B": "P",
+  "winnerSlot": "A",
+  "winnerArm": "T",
+  "why": "Deliverable A wins because it includes a dedicated, explicit section on 'What would change my answer,' directly addressing the prompt's requirement to state the recommendation's main limitation and providing concrete disconfirming evidence."
+}

@@ -1,0 +1,7 @@
+{
+  "id": "cod2",
+  "arm": "C",
+  "score": 98,
+  "accept": true,
+  "why": "The deliverable is excellent: it provides a correct, order-preserving O(n) solution and a clear explanation, even correctly identifying a subtle but important behavioral difference with NaN."
+}

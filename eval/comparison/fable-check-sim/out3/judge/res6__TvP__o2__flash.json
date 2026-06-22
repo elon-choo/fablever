@@ -1,0 +1,8 @@
+{
+  "id": "res6",
+  "pair": "TvP",
+  "order": "o2",
+  "judge": "flash",
+  "winnerArm": "P",
+  "why": "Deliverable A is tighter, more decisive, and crucially addresses the common misconception about managed Kubernetes not fully escaping the K8s tax, which B omits."
+}

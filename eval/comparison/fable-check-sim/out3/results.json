@@ -1,0 +1,51 @@
+{
+  "n_tasks": 21,
+  "n_blocked": 12,
+  "block_rate_pct": 57.1,
+  "objective_gate_clear": {
+    "T_pct": 83.3,
+    "P_pct": 16.7
+  },
+  "gemini_pro": {
+    "TvC": {
+      "T": 12,
+      "C": 0,
+      "tie": 0,
+      "n": 12
+    },
+    "TvP": {
+      "T": 5,
+      "P": 5,
+      "tie": 2,
+      "n": 12
+    },
+    "CvP": {
+      "C": 2,
+      "P": 10,
+      "tie": 0,
+      "n": 12
+    }
+  },
+  "gemini_flash_TvP": {
+    "T": 4,
+    "P": 3,
+    "tie": 5,
+    "n": 12
+  },
+  "codex_TvP_partial": {
+    "T": 1,
+    "P": 1,
+    "tie": 0,
+    "n": 2
+  },
+  "cross_judge_TvP_agreement": {
+    "gem_vs_flash": {
+      "both": 7,
+      "agree": 7
+    },
+    "gem_vs_codex": {
+      "both": 2,
+      "agree": 2
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "res1",
+  "pair": "TvC",
+  "order": "o2",
+  "A": "C",
+  "B": "T",
+  "winnerSlot": "B",
+  "winnerArm": "T",
+  "why": "The explicit 'What would change my answer' section in B is the deciding factor; it more rigorously frames the core assumptions and potential invalidators of the recommendation, which is more useful than A's functionally similar but less direct approach."
+}

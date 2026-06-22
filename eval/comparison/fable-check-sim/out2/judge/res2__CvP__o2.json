@@ -1,0 +1,10 @@
+{
+  "id": "res2",
+  "pair": "CvP",
+  "order": "o2",
+  "A": "P",
+  "B": "C",
+  "winnerSlot": "A",
+  "winnerArm": "P",
+  "why": "A wins because it provides an 'honest ledger' by explicitly detailing the costs of its recommended solution (static generation), making its cost-benefit analysis more complete and trustworthy."
+}

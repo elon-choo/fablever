@@ -1,0 +1,8 @@
+{
+  "id": "fun4",
+  "pair": "TvP",
+  "order": "o2",
+  "judge": "flash",
+  "winnerArm": "P",
+  "why": "Deliverable A provides a more robust and senior-level diagnostic approach, explicitly detailing how to segment data by channel, platform, and geo to avoid misdiagnosing a product issue when the root cause might be acquisition-related, which is a critical distinction B largely overlooks."
+}
