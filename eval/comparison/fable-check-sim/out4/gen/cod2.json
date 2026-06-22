@@ -1,0 +1,11 @@
+{
+  "id": "cod2",
+  "dod": "code",
+  "blocked": false,
+  "raw_fail_ids": [],
+  "t_gate": "PASS",
+  "p_gate": "PASS",
+  "C": "```js\nconst dedup = a => [...new Set(a)];\n```\n\nThis goes from **O(n²) to O(n)**. The original calls `a.indexOf(x)` once per element, and each `indexOf` scans the array — so for an array of length n you do roughly n² comparisons. `Set` builds a hash-based lookup, so each insert is amortized O(1) and the whole thing is linear.\n\nConcretely, at n = 10,000 the original does ~100M comparisons; the Set version does ~10,000 insertions. Both preserve first-seen order.\n\nOne behavioral note: `Set` uses SameValueZero equality, so it correctly dedupes `NaN` (treats `NaN` as equal to itself), whereas the `indexOf` version keeps every `NaN` because `NaN === NaN` is false. For all other values the results are identical.",
+  "T": "```js\nconst dedup = a => [...new Set(a)];\n```\n\nThis goes from **O(n²) to O(n)**. The original calls `a.indexOf(x)` once per element, and each `indexOf` scans the array — so for an array of length n you do roughly n² comparisons. `Set` builds a hash-based lookup, so each insert is amortized O(1) and the whole thing is linear.\n\nConcretely, at n = 10,000 the original does ~100M comparisons; the Set version does ~10,000 insertions. Both preserve first-seen order.\n\nOne behavioral note: `Set` uses SameValueZero equality, so it correctly dedupes `NaN` (treats `NaN` as equal to itself), whereas the `indexOf` version keeps every `NaN` because `NaN === NaN` is false. For all other values the results are identical.",
+  "P": "```js\nconst dedup = a => [...new Set(a)];\n```\n\nThis goes from **O(n²) to O(n)**. The original calls `a.indexOf(x)` once per element, and each `indexOf` scans the array — so for an array of length n you do roughly n² comparisons. `Set` builds a hash-based lookup, so each insert is amortized O(1) and the whole thing is linear.\n\nConcretely, at n = 10,000 the original does ~100M comparisons; the Set version does ~10,000 insertions. Both preserve first-seen order.\n\nOne behavioral note: `Set` uses SameValueZero equality, so it correctly dedupes `NaN` (treats `NaN` as equal to itself), whereas the `indexOf` version keeps every `NaN` because `NaN === NaN` is false. For all other values the results are identical."
+}

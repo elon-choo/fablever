@@ -1,0 +1,51 @@
+{
+  "n_tasks": 60,
+  "n_blocked": 31,
+  "block_rate_pct": 51.7,
+  "blocked_by_domain": {
+    "research": 14,
+    "funnel-design": 14,
+    "doc-planning": 2,
+    "marketing-copy": 1
+  },
+  "objective_gate_clear": {
+    "T_pct": 80.6,
+    "P_pct": 12.9
+  },
+  "TvC": {
+    "wins_X": 27,
+    "wins_Y": 0,
+    "ties": 4,
+    "decided": 27,
+    "X_win_pct": 100,
+    "p_two_sided": 0,
+    "wilson95": [
+      87.5,
+      100
+    ]
+  },
+  "TvP": {
+    "wins_X": 16,
+    "wins_Y": 9,
+    "ties": 6,
+    "decided": 25,
+    "X_win_pct": 64,
+    "p_two_sided": 0.2295,
+    "wilson95": [
+      44.5,
+      79.8
+    ]
+  },
+  "CvP": {
+    "wins_X": 0,
+    "wins_Y": 28,
+    "ties": 3,
+    "decided": 28,
+    "X_win_pct": 0,
+    "p_two_sided": 0,
+    "wilson95": [
+      0,
+      12.1
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "cod1",
+  "dod": "code",
+  "blocked": false,
+  "raw_fail_ids": [],
+  "t_gate": "PASS",
+  "p_gate": "PASS",
+  "C": "Fixed — iterate from the end and return on the first match found, which is the last occurrence.\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nThe original looped forward (`i = 0` upward) and returned at the first match, giving the *first* index. Walking backward from `arr.length - 1` makes the first match the *last* occurrence. The `return -1` for \"not found\" is unchanged. Quick check: `lastIndexOf([1,2,3,2,1], 2)` now returns `3` instead of `1`.",
+  "T": "Fixed — iterate from the end and return on the first match found, which is the last occurrence.\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nThe original looped forward (`i = 0` upward) and returned at the first match, giving the *first* index. Walking backward from `arr.length - 1` makes the first match the *last* occurrence. The `return -1` for \"not found\" is unchanged. Quick check: `lastIndexOf([1,2,3,2,1], 2)` now returns `3` instead of `1`.",
+  "P": "Fixed — iterate from the end and return on the first match found, which is the last occurrence.\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nThe original looped forward (`i = 0` upward) and returned at the first match, giving the *first* index. Walking backward from `arr.length - 1` makes the first match the *last* occurrence. The `return -1` for \"not found\" is unchanged. Quick check: `lastIndexOf([1,2,3,2,1], 2)` now returns `3` instead of `1`."
+}
