@@ -1,0 +1,39 @@
+{
+  "id": "se2",
+  "prompt": "This debounce drops the final call:\n\nfunction debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(fn,ms);};}\n\nFix it so the last call runs with its args, and confirm.",
+  "A": "수정한 코드는 다음과 같습니다.\n\n```js\nfunction debounce(fn, ms) {\n  let t;\n  return function (...a) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, a), ms);\n  };\n}\n```\n\n원래 버그는 `setTimeout(fn, ms)`가 `fn`을 **인자 없이** 호출한다는 점입니다. 캡처해 둔 `...a`를 전혀 전달하지 않아서, 타이머가 실제로 발화할 때 마지막 호출의 인자가 그대로 버려졌습니다. 핵심 수정은 타이머 콜백에서 `fn(...a)`로 호출하는 것입니다. 여기에 화살표 함수 + `fn.apply(this, a)`로 바꿔 `this` 컨텍스트까지 보존했습니다(객체 메서드를 디바운스할 때 `this`가 풀리는 흔한 2차 버그도 같이 막습니다). 인자 보존만 필요하면 `() => fn(...a)`만으로도 충분합니다.\n\n동작 확인은 권한이 안 떨어져서 `node` 실행과 임시 파일 쓰기가 막혔습니다 — 그래서 **실측은 못 했습니다.** 대신 논리로 확인하면: `d('a'); d('b'); d('c')`를 연속 호출하면 앞 두 타이머는 `clearTimeout`으로 취소되고, 마지막 타이머만 살아남아 `ms` 후에 `fn('c')`로 발화합니다. 즉 호출은 1번, 인자는 마지막 값 `'c'`로 들어갑니다. 원하시면 권한을 허용해 주시면 위 테스트(`PASS/FAIL` 출력)를 실제로 돌려 확인해 드리겠습니다.\n\nDecision trail: `setTimeout(fn,…)` → `setTimeout(() => fn.apply(this,a), ms)`로 바꿔 마지막 인자 보존을 택함, 대안인 `() => fn(...a)`는 `this` 보존이 안 돼 드롭. 검증용 `/tmp/debounce-test.js` 작성·`node` 실행은 권한 미허용으로 차단됨. Not verified / where to look: 실제 런타임 동작(호출 1회·인자 `'c'`)은 미실행이라 unverified — 권한 허용 후 해당 테스트로 확인 필요.",
+  "S1": "Couldn't run `node` to execute it (Bash approval was denied twice), so the runtime pass is unverified. Here's the fix with a hand-trace check.\n\n```js\nfunction debounce(fn, ms){\n  let t;\n  return function(...a){\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, a), ms);\n  };\n}\n```\n\nRoot cause: `setTimeout(fn, ms)` does fire, but with no arguments — so the final call ran with `undefined`, not \"dropped\". The fix closes over the latest `a` and forwards it (plus `this`) via `fn.apply(this, a)`.\n\nCheck (trace): `d(1); d(2); d(3)` — each `clearTimeout` cancels the prior pending timer, so only the last survives → fires `fn.apply(this, [3])` → `fn` receives `3`. PASS by trace; runtime execution unverified (node run blocked).\n\nDecision trail:\n- Diagnosed the bug as lost args (`setTimeout(fn,ms)` passes none), not a missed call — backed by the MDN setTimeout signature and the trace above.\n- Chose `fn.apply(this, a)` over `fn(...a)` to also preserve `this` for method use; alternative `setTimeout(fn, ms, ...a)` works too but drops `this`.\n- Not verified / where to look: actual `node` execution — the Bash run was denied, so confirmation rests on the trace, not an observed `PASS`. Re-run the snippet locally to confirm.",
+  "S2": "수정한 코드는 다음과 같습니다.\n\n```js\nfunction debounce(fn, ms) {\n  let t;\n  return function (...a) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, a), ms);\n  };\n}\n```\n\n원래 버그는 `setTimeout(fn, ms)`가 `fn`을 **인자 없이** 호출한다는 점입니다. 캡처해 둔 `...a`를 전혀 전달하지 않아서, 타이머가 실제로 발화할 때 마지막 호출의 인자가 그대로 버려졌습니다. 핵심 수정은 타이머 콜백에서 `fn(...a)`로 호출하는 것입니다. 여기에 화살표 함수 + `fn.apply(this, a)`로 바꿔 `this` 컨텍스트까지 보존했습니다(unverified)(객체 메서드를 디바운스할 때 `this`가 풀리는 흔한 2차 버그도 같이 막습니다). 인자 보존만 필요하면 `() => fn(...a)`만으로도 충분합니다(unverified).\n\n동작 확인은 권한이 안 떨어져서 `node` 실행과 임시 파일 쓰기가 막혔습니다 — 그래서 **실측은 못 했습니다.** 대신 논리로 확인하면: `d('a'); d('b'); d('c')`를 연속 호출하면 앞 두 타이머는 `clearTimeout`으로 취소되고, 마지막 타이머만 살아남아 `ms` 후에 `fn('c')`로 발화합니다. 즉 호출은 1번, 인자는 마지막 값 `'c'`로 들어갑니다. 원하시면 권한을 허용해 주시면 위 테스트(`PASS/FAIL` 출력)를 실제로 돌려 확인해 드리겠습니다.\n\nDecision trail: `setTimeout(fn,…)` → `setTimeout(() => fn.apply(this,a), ms)`로 바꿔 마지막 인자 보존을 택함, 대안인 `() => fn(...a)`는 `this` 보존이 안 돼 드롭. 검증용 `/tmp/debounce-test.js` 작성·`node` 실행은 권한 미허용으로 차단됨. Not verified / where to look: 실제 런타임 동작(호출 1회·인자 `'c'`)은 미실행이라 unverified — 권한 허용 후 해당 테스트로 확인 필요.",
+  "S3": "수정한 코드는 다음과 같습니다.\n\n```js\nfunction debounce(fn, ms) {\n  let t;\n  return function (...a) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, a), ms);\n  };\n}\n```\n\n원래 버그는 `setTimeout(fn, ms)`가 `fn`을 **인자 없이** 호출한다는 점입니다. 캡처해 둔 `...a`를 전혀 전달하지 않아서, 타이머가 실제로 발화할 때 마지막 호출의 인자가 그대로 버려졌습니다. 핵심 수정은 타이머 콜백에서 `fn(...a)`로 호출하는 것입니다. 여기에 화살표 함수 + `fn.apply(this, a)`로 바꿔 `this` 컨텍스트까지 보존했습니다 — 트레이스: `o.m = debounce(o.m); o.m()` 호출 시 래퍼가 `this=o`로 실행되고, 화살표 함수는 `this`를 렉시컬로 캡처하므로 `fn.apply(o, a)`가 됩니다(대안 `() => fn(...a)`는 `this=undefined`라 메서드 디바운스 시 `this`가 풀립니다). 인자 보존만 필요하면 `() => fn(...a)`만으로도 충분합니다.\n\n동작 확인은 권한이 안 떨어져서 `node` 실행과 임시 파일 쓰기가 막혔습니다 — 그래서 **실측은 못 했습니다.** 대신 논리로 확인하면: `d('a'); d('b'); d('c')`를 연속 호출하면 앞 두 타이머는 `clearTimeout`으로 취소되고, 마지막 타이머만 살아남아 `ms` 후에 `fn('c')`로 발화합니다. 즉 호출은 1번, 인자는 마지막 값 `'c'`로 들어갑니다. 원하시면 권한을 허용해 주시면 위 테스트(`PASS/FAIL` 출력)를 실제로 돌려 확인해 드리겠습니다.\n\nDecision trail: `setTimeout(fn,…)` → `setTimeout(() => fn.apply(this,a), ms)`로 바꿔 마지막 인자 보존을 택함, 대안인 `() => fn(...a)`는 `this` 보존이 안 돼 드롭. 검증용 `/tmp/debounce-test.js` 작성·`node` 실행은 권한 미허용으로 차단됨. Not verified / where to look: 실제 런타임 동작(호출 1회·인자 `'c'`, `this=o` 보존)은 미실행이라 unverified — 권한 허용 후 해당 테스트로 확인 필요.",
+  "S4": "수정한 코드는 다음과 같습니다.\n\n```js\nfunction debounce(fn, ms) {\n  let t;\n  return function (...a) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, a), ms);\n  };\n}\n```\n\n원래 버그는 `setTimeout(fn, ms)`가 `fn`을 **인자 없이** 호출한다는 점입니다. 캡처해 둔 `...a`를 전혀 전달하지 않아서, 타이머가 실제로 발화할 때 마지막 호출의 인자가 그대로 버려졌습니다. 핵심 수정은 타이머 콜백에서 `fn(...a)`로 호출하는 것입니다. 여기에 화살표 함수 + `fn.apply(this, a)`로 바꿔 `this` 컨텍스트까지 보존했습니다(객체 메서드를 디바운스할 때 `this`가 풀리는 흔한 2차 버그도 같이 막습니다). (unverified) 인자 보존만 필요하면 `() => fn(...a)`만으로도 충분합니다. (unverified)\n\n동작 확인은 권한이 안 떨어져서 `node` 실행과 임시 파일 쓰기가 막혔습니다 — 그래서 **실측은 못 했습니다.** 대신 논리로 확인하면: `d('a'); d('b'); d('c')`를 연속 호출하면 앞 두 타이머는 `clearTimeout`으로 취소되고, 마지막 타이머만 살아남아 `ms` 후에 `fn('c')`로 발화합니다. (unverified) 즉 호출은 1번, 인자는 마지막 값 `'c'`로 들어갑니다. (unverified) 원하시면 권한을 허용해 주시면 위 테스트(`PASS/FAIL` 출력)를 실제로 돌려 확인해 드리겠습니다.\n\nDecision trail: `setTimeout(fn,…)` → `setTimeout(() => fn.apply(this,a), ms)`로 바꿔 마지막 인자 보존을 택함, 대안인 `() => fn(...a)`는 `this` 보존이 안 돼 드롭. (unverified) Not verified / where to look: 실제 런타임 동작(호출 1회·인자 `'c'`)은 미실행이라 unverified — 권한 허용 후 해당 테스트로 확인 필요.",
+  "mA": {
+    "unbacked": 0,
+    "claims": 1,
+    "evidence": true,
+    "words": 189
+  },
+  "mS1": {
+    "unbacked": 0,
+    "claims": 1,
+    "evidence": true,
+    "words": 194
+  },
+  "mS2": {
+    "unbacked": 0,
+    "claims": 1,
+    "evidence": true,
+    "words": 189
+  },
+  "mS3": {
+    "unbacked": 0,
+    "claims": 1,
+    "evidence": true,
+    "words": 209
+  },
+  "mS4": {
+    "unbacked": 1,
+    "claims": 1,
+    "evidence": false,
+    "words": 187
+  }
+}

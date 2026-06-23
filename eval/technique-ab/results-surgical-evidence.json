@@ -1,0 +1,62 @@
+{
+  "n": 16,
+  "baseline_A": {
+    "unb": 25,
+    "ev": 37.5,
+    "words": 210
+  },
+  "arms": [
+    {
+      "arm": "S1",
+      "n": 16,
+      "unb": 12.5,
+      "ev": 62.5,
+      "words": 103,
+      "S_wins": 11,
+      "A_wins": 4,
+      "ties": 1,
+      "decided": 15,
+      "S_win_pct": 73.3,
+      "p": 0.1185
+    },
+    {
+      "arm": "S2",
+      "n": 16,
+      "unb": 18.8,
+      "ev": 50,
+      "words": 225,
+      "S_wins": 5,
+      "A_wins": 10,
+      "ties": 1,
+      "decided": 15,
+      "S_win_pct": 33.3,
+      "p": 0.3018
+    },
+    {
+      "arm": "S3",
+      "n": 16,
+      "unb": 0,
+      "ev": 81.3,
+      "words": 239,
+      "S_wins": 6,
+      "A_wins": 6,
+      "ties": 4,
+      "decided": 12,
+      "S_win_pct": 50,
+      "p": 1
+    },
+    {
+      "arm": "S4",
+      "n": 11,
+      "unb": 27.3,
+      "ev": 36.4,
+      "words": 204,
+      "S_wins": 2,
+      "A_wins": 8,
+      "ties": 1,
+      "decided": 10,
+      "S_win_pct": 20,
+      "p": 0.1094
+    }
+  ]
+}

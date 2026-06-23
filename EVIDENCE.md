@@ -138,7 +138,12 @@ Full list: [`whitepaper/06-limitations.md`](whitepaper/06-limitations.md). The l
   [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/) and
   [`eval/real-log-replay/`](eval/real-log-replay/). Still genuinely not run: a **multi-participant
   human study** and a **long interactive coding session** (multi-turn + subagents) — the single-turn
-  evals here do not simulate it. The repo's "style not capability, no magnitude claimed" position is
+  evals here do not simulate it. A sibling project (`fivetaku/fablize`) names this gap precisely as the
+  **"harness paradox"**: an always-on gate can fill context with verification noise and *cost* long-session
+  attention, so a 0.0 lift is a break-even warning, not a pass. Measuring it needs an **out-of-band holdout**
+  design (gate ON vs OFF, outcome signals harvested post-hoc from git/transcripts) — logged as the
+  highest-leverage next eval in [`eval/technique-ab/RESEARCH-upgrade-points.md`](eval/technique-ab/RESEARCH-upgrade-points.md).
+  The repo's "style not capability, no magnitude claimed" position is
   now backed by runs, not just conceded; index in [`EVALS.md`](EVALS.md).
 
 If you found a weakness not listed here, that is a contribution — it belongs in an issue, and
@@ -161,6 +166,11 @@ Step-by-step commands: [`whitepaper/07-reproduce.md`](whitepaper/07-reproduce.md
 - The cross-model ULTRA pipeline — scripts **and** the raw JSON they produced — is committed in
   [`eval/ultra/`](eval/ultra/); only the live judge step needs your own API keys (read the scripts
   before running — supply-chain hygiene).
+- **The technique A/Bs** (independently testing generic ideas, judged by GPT-5.5 via the Codex CLI) live in
+  [`eval/technique-ab/`](eval/technique-ab/) with every runner, raw generation, and verdict committed:
+  plan-first (adopt), local-context seeding + auto-generated seed (adopt — auto reaches 88.9% vs 100%
+  hand-written), and the evidence-loop refined to its winning **inline** packaging (beats baseline 26–6
+  pooled, p=0.0005). Upgrade-research writeup: [`eval/technique-ab/RESEARCH-upgrade-points.md`](eval/technique-ab/RESEARCH-upgrade-points.md).
 
 ---
 

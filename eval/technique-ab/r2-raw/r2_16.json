@@ -1,0 +1,22 @@
+{
+  "id": "r2_16",
+  "prompt": "This pagination returns the wrong page:\n\nfunction page(a,p,size){return a.slice(p*size,p*size+size);}\n\nIf p is 1-based this is wrong — fix for 1-based pages and confirm.",
+  "A": "버그는 페이지 오프셋이 0-based 공식이라는 점입니다. `p`가 1-based이면 1페이지가 `slice(size, 2*size)`가 되어 실제로는 두 번째 페이지가 나옵니다. `p`에서 1을 빼주면 됩니다.\n\n```js\nfunction page(a,p,size){return a.slice((p-1)*size,(p-1)*size+size);}\n```\n\n확인 (배열 `[A,B,C,D,E]`, `size=2` 기준):\n\n- `page(a,1,2)` → `slice(0,2)` → `[A,B]` (1페이지) ✓\n- `page(a,2,2)` → `slice(2,4)` → `[C,D]` (2페이지) ✓\n- `page(a,3,2)` → `slice(4,6)` → `[E]` (마지막, 부분 페이지) ✓\n\n`slice`는 범위를 벗어난 인덱스를 알아서 잘라내므로 마지막 부분 페이지도 안전합니다. 끝 인덱스는 `(p-1)*size+size`가 곧 `p*size`와 같으므로 `a.slice((p-1)*size, p*size)`로 더 간결하게 써도 동일하게 동작합니다.",
+  "S1": "```js\nfunction page(a,p,size){return a.slice((p-1)*size,(p-1)*size+size);}\n```\n\nCheck: `page([10,20,30,40],1,2)` → `slice(0,2)` → `[10,20]`; `page(...,2,2)` → `slice(2,4)` → `[30,40]`. Correct for 1-based.",
+  "L": "버그는 페이지 오프셋이 0-based 공식이라는 점입니다. `p`가 1-based이면 1페이지가 `slice(size, 2*size)`가 되어 실제로는 두 번째 페이지가 나옵니다.\n\n원본 버그 재현 (배열 `[A,B,C,D,E]`, `size=2`):\n\n- 원본 `page(a,1,2)` → `slice(1*2, 1*2+2)` = `slice(2,4)` → `[C,D]` — 1페이지를 요청했는데 2페이지 내용이 반환됨(버그 확인)\n\n`p`에서 1을 빼주면 됩니다.\n\n```js\nfunction page(a,p,size){return a.slice((p-1)*size,(p-1)*size+size);}\n```\n\n수정 후 확인 (같은 배열, `size=2`):\n\n- `page(a,1,2)` → `slice(0,2)` → `[A,B]` (1페이지) ✓\n- `page(a,2,2)` → `slice(2,4)` → `[C,D]` (2페이지) ✓\n- `page(a,3,2)` → `slice(4,6)` → `[E]` (마지막, 부분 페이지) ✓\n\n`slice`는 범위를 벗어난 끝 인덱스를 알아서 잘라내므로 마지막 부분 페이지도 안전합니다 — 위 `page(a,3,2)`에서 `slice(4,6)`이 길이 5인 배열에 대해 `[E]`만 반환하는 것으로 확인됩니다. 끝 인덱스는 `(p-1)*size+size = p*size - size + size = p*size`로 항상 같으므로(대수적으로 동치), `a.slice((p-1)*size, p*size)`로 더 간결하게 써도 동일하게 동작합니다.",
+  "mA": {
+    "unbacked": 0,
+    "evidence": false,
+    "words": 80
+  },
+  "mS1": {
+    "unbacked": 0,
+    "evidence": false,
+    "words": 19
+  },
+  "mL": {
+    "unbacked": 0,
+    "evidence": false,
+    "words": 125
+  }
+}

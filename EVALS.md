@@ -38,10 +38,21 @@ their own merits here** — judged by **GPT-5.5 via the Codex CLI**, a different
 |---|---|---|
 | **Plan-first artifact** (plan before executing) | on hard 5-part tasks, plan-then-execute beat direct **9–1** (90%, **p=0.022**) | **ADOPT** for hard multi-step work |
 | **Local-context seeding** (convention in a local `AGENTS.md`) | adherence: no-seed **11%** → local-seed **78%** → generic "follow conventions" nudge **22%** | **ADOPT** — a specific local file beats a vague nudge |
-| **Evidence loop** (no "done" without a shown check) | cut unsupported claims 18.8%→12.5% (deterministic win) **but** GPT-5.5 preferred the leaner baseline **12–4** (length 217→384 words) | **DO NOT adopt as-is** — over-pads; needs a surgical version |
+| **↳ Auto-generated seed** (generator reads the code, writes the `AGENTS.md`) | adherence: no-seed 33% → auto-seed **88.9%** → hand-written 100% (regex: auto **100%** vs hand 78%) | **ADOPT** — auto-generation preserves the lift; closes the auto-discovery gap → shippable feature |
+| **Evidence loop** (no "done" without a shown check) | as a **2nd rewrite pass**: hit the metric but GPT-5.5 preferred the leaner baseline **12–4** (length 217→384). **Refined (inline, 1st-pass):** unsupported→**0%**, length *halved* 224→117, beats baseline **15–2** (p=0.0023) & the original loop **17–0**; pooled vs baseline **26–6 (p=0.0005)** | **ADOPT the inline packaging, NOT a 2nd pass** — the discipline belongs in the first generation |
 
 Full writeup + provenance note: [`eval/technique-ab/`](eval/technique-ab/). These validate *the ideas*; wiring
 any of them into the install is a separate gated change.
+
+**Upgrade research (community-praised harnesses + a sibling project).** A mechanism + social-listening study
+of the tools people actually rally behind (lazycodex/oho, insane-search, slides-grab, `fivetaku/fablize`) →
+[`eval/technique-ab/RESEARCH-upgrade-points.md`](eval/technique-ab/RESEARCH-upgrade-points.md). Key
+independent corroboration: **fablize** attacks fablever's *exact* thesis and reached the same split (procedure
+transfers, capability doesn't) via 19 A/B + 26 sessions — and its `MEASUREMENT_PROTOCOL.md` names the one
+thing fablever hasn't measured (the "harness paradox": does always-on verification *cost* long-session
+attention?). Prioritized, evidence-screened candidates: **task-type routing**, **auto-generated local seed**,
+and **out-of-band holdout measurement** — each gated behind its own A/B, two of which are now running
+(`run-surgical-evidence.mjs`, `run-autoseed.mjs`).
 
 ## What was NOT tested (open, not hidden)
 

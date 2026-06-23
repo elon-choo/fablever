@@ -1,0 +1,14 @@
+{
+  "n": 9,
+  "adherence_oracle_gpt5_5_pct": {
+    "A_none": 33.3,
+    "B_hand_seed": 100,
+    "D_auto_seed": 88.9
+  },
+  "adherence_regex_pct": {
+    "A_none": 33.3,
+    "B_hand_seed": 77.8,
+    "D_auto_seed": 100
+  },
+  "mean_autoConv_words": 62
+}

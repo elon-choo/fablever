@@ -1,0 +1,39 @@
+{
+  "id": "se3",
+  "prompt": "This retry never waits between attempts:\n\nasync function retry(fn,n){for(let i=0;i<n;i++){try{return await fn();}catch(e){if(i===n-1)throw e;}}}\n\nAdd exponential backoff and confirm.",
+  "A": "실행으로 확인하려 했지만 이 환경에서 `node` 실행과 파일 쓰기가 모두 권한 승인 대기로 막혀(아래 도구 호출 3건 전부 차단) **라이브 실행 확인은 못 했다.** 코드는 로직 추적으로 검증했고, 승인해주면 바로 돌려서 타이밍까지 보여줄 수 있다.\n\n핵심 수정은 실패한 시도 사이에 `baseMs * factor ** i`만큼 잠드는 것 — 시도가 거듭될수록 대기가 2배씩 늘어난다(지수 백오프). 마지막 시도 실패 후에는 잠들지 않고 바로 throw 한다(불필요한 대기 제거).\n\n```js\nconst sleep = (ms) => new Promise((r) => setTimeout(r, ms));\n\nasync function retry(fn, n, { baseMs = 100, factor = 2, maxMs = Infinity } = {}) {\n  for (let i = 0; i < n; i++) {\n    try {\n      return await fn();\n    } catch (e) {\n      if (i === n - 1) throw e;          // 마지막 시도면 대기 없이 즉시 throw\n      const delay = Math.min(baseMs * factor ** i, maxMs);  // 100, 200, 400, ...\n      await sleep(delay);\n    }\n  }\n}\n```\n\n원본 대비 바뀐 점은 `catch` 안의 `await sleep(...)` 한 줄과, 폭주를 막는 `maxMs` 상한뿐이다. 시그니처는 호환을 유지했다 — `retry(fn, 3)`처럼 기존 호출은 그대로 동작하고, 옵션은 세 번째 인자로만 추가된다.\n\n확인(수동 추적, `baseMs=100`, 3번째 시도에서 성공하는 함수 기준):\n- i=0 실패 → 100ms 대기\n- i=1 실패 → 200ms 대기\n- i=2 실패 → 400ms 대기\n- i=3 성공 → `\"ok\"` 반환\n\n즉 시도 간 간격이 약 100 → 200 → 400ms로 배가된다. 원본은 이 대기가 0이라 실패 즉시 재호출하며 서버를 두드렸다.\n\n선택 사항 한 가지: 다수 클라이언트가 동시에 같은 주기로 재시도해 부하가 겹치는 \"thundering herd\"를 피하려면 지터(jitter)를 더하는 게 표준이다 — `const delay = Math.min(baseMs * factor ** i, maxMs) * (0.5 + Math.random() / 2)` 형태. 필요하면 넣어주겠다.\n\nDecision trail:\n- 지수 백오프를 `catch` 내 `await sleep(baseMs * factor ** i)`로 구현하고, 별도 백오프 라이브러리 도입은 배제 — 단일 파일·의존성 0이 요구에 맞음(`retry-test.mjs` 작성 시도분 참조).\n- 마지막 시도에서는 대기 없이 throw 하도록 `if (i === n-1) throw e`를 sleep 앞에 둠 — 불필요한 꼬리 지연 제거(코드 8행).\n- 라이브 실행 확인은 시도했으나 `node -e`·base64 파이프·Write 모두 권한 미승인으로 차단 — **unverified**: 실제 타이밍(100/200/400ms)은 추적으로만 확인했고 실행 로그로는 미검증. 승인 시 `node --input-type=module`로 재확인 가능.",
+  "S1": "```js\nasync function retry(fn, n, base = 100) {\n  for (let i = 0; i < n; i++) {\n    try { return await fn(); }\n    catch (e) {\n      if (i === n - 1) throw e;                          // last attempt: rethrow, no sleep\n      await new Promise(r => setTimeout(r, base * 2 ** i)); // backoff: 100,200,400,…ms\n    }\n  }\n}\n```\n\nCheck (base=100, n=4): waits before retries i=0,1,2 → 100ms, 200ms, 400ms (=`100*2**i`); after i=3 it rethrows with no wait. So 4 attempts, 3 sleeps, total backoff 700ms — confirmed correct.\n\nTwo small upgrades you may want, both unverified until you add them: jitter (`base*2**i*(0.5+Math.random()*0.5)`) to avoid thundering-herd, and a `cap` (`Math.min(base*2**i, cap)`) so delays don't grow unbounded.",
+  "S2": "핵심 수정은 단 한 곳입니다. 검증을 주장하면서 같은 줄에 구체 근거가 없던 문장에 최소 증거를 붙였습니다. 나머지는 그대로 둡니다.\n\n---\n\n실행으로 확인하려 했지만 이 환경에서 `node` 실행과 파일 쓰기가 모두 권한 승인 대기로 막혀(아래 도구 호출 3건 전부 차단) **라이브 실행 확인은 못 했다.** 코드는 로직 추적으로 검증했고(i=0 실패→100ms, i=1→200ms, i=2→400ms 대기), 승인해주면 바로 돌려서 타이밍까지 보여줄 수 있다.\n\n핵심 수정은 실패한 시도 사이에 `baseMs * factor ** i`만큼 잠드는 것 — 시도가 거듭될수록 대기가 2배씩 늘어난다(지수 백오프). 마지막 시도 실패 후에는 잠들지 않고 바로 throw 한다(불필요한 대기 제거).\n\n```js\nconst sleep = (ms) => new Promise((r) => setTimeout(r, ms));\n\nasync function retry(fn, n, { baseMs = 100, factor = 2, maxMs = Infinity } = {}) {\n  for (let i = 0; i < n; i++) {\n    try {\n      return await fn();\n    } catch (e) {\n      if (i === n - 1) throw e;          // 마지막 시도면 대기 없이 즉시 throw\n      const delay = Math.min(baseMs * factor ** i, maxMs);  // 100, 200, 400, ...\n      await sleep(delay);\n    }\n  }\n}\n```\n\n원본 대비 바뀐 점은 `catch` 안의 `await sleep(...)` 한 줄과, 폭주를 막는 `maxMs` 상한뿐이다. 시그니처는 호환을 유지했다 — `retry(fn, 3)`처럼 기존 호출은 그대로 동작하고, 옵션은 세 번째 인자로만 추가된다.\n\n확인(수동 추적, `baseMs=100`, 3번째 시도에서 성공하는 함수 기준):\n- i=0 실패 → 100ms 대기\n- i=1 실패 → 200ms 대기\n- i=2 실패 → 400ms 대기\n- i=3 성공 → `\"ok\"` 반환\n\n즉 시도 간 간격이 약 100 → 200 → 400ms로 배가된다. 원본은 이 대기가 0이라 실패 즉시 재호출하며 서버를 두드렸다.\n\n선택 사항 한 가지: 다수 클라이언트가 동시에 같은 주기로 재시도해 부하가 겹치는 \"thundering herd\"를 피하려면 지터(jitter)를 더하는 게 표준이다 — `const delay = Math.min(baseMs * factor ** i, maxMs) * (0.5 + Math.random() / 2)` 형태. 필요하면 넣어주겠다.\n\nDecision trail:\n- 지수 백오프를 `catch` 내 `await sleep(baseMs * factor ** i)`로 구현하고, 별도 백오프 라이브러리 도입은 배제 — 단일 파일·의존성 0이 요구에 맞음(`retry-test.mjs` 작성 시도분 참조).\n- 마지막 시도에서는 대기 없이 throw 하도록 `if (i === n-1) throw e`를 sleep 앞에 둠 — 불필요한 꼬리 지연 제거(코드 8행).\n- 라이브 실행 확인은 시도했으나 `node -e`·base64 파이프·Write 모두 권한 미승인으로 차단 — **unverified**: 실제 타이밍(100/200/400ms)은 추적으로만 확인했고 실행 로그로는 미검증. 승인 시 `node --input-type=module`로 재확인 가능.",
+  "S3": "실행으로 확인하려 했지만 이 환경에서 `node` 실행과 파일 쓰기가 모두 권한 승인 대기로 막혀(아래 도구 호출 3건 전부 차단) **라이브 실행 확인은 못 했다.** 코드는 아래 수동 추적으로만 검증했고(실행 로그 없음), 승인해주면 바로 돌려서 타이밍까지 보여줄 수 있다.\n\n핵심 수정은 실패한 시도 사이에 `baseMs * factor ** i`만큼 잠드는 것 — 시도가 거듭될수록 대기가 2배씩 늘어난다(지수 백오프). 마지막 시도 실패 후에는 잠들지 않고 바로 throw 한다(코드 8행 `if (i === n - 1) throw e`가 sleep 앞에 있어 꼬리 대기 없음).\n\n```js\nconst sleep = (ms) => new Promise((r) => setTimeout(r, ms));\n\nasync function retry(fn, n, { baseMs = 100, factor = 2, maxMs = Infinity } = {}) {\n  for (let i = 0; i < n; i++) {\n    try {\n      return await fn();\n    } catch (e) {\n      if (i === n - 1) throw e;          // 마지막 시도면 대기 없이 즉시 throw\n      const delay = Math.min(baseMs * factor ** i, maxMs);  // 100, 200, 400, ...\n      await sleep(delay);\n    }\n  }\n}\n```\n\n원본 대비 바뀐 점은 `catch` 안의 `await sleep(...)` 한 줄과, 폭주를 막는 `maxMs` 상한뿐이다. 시그니처 호환은 세 번째 인자의 `= {}` 기본값이 보장한다 — `retry(fn, 3)` 호출 시 옵션이 `{}`로 들어가 `baseMs=100, factor=2, maxMs=Infinity` 기본값으로 동작하므로 기존 호출은 그대로 동작한다.\n\n확인(수동 추적, 미실행 — `baseMs=100`, 4번째 시도(`i=3`)에서 성공하고 `n≥4`인 함수 기준):\n- i=0 실패 → `Math.min(100*2**0, ∞)=100ms` 대기\n- i=1 실패 → `100*2**1=200ms` 대기\n- i=2 실패 → `100*2**2=400ms` 대기\n- i=3 성공 → `\"ok\"` 반환\n\n즉 시도 간 간격이 산술상 100 → 200 → 400ms로 배가된다(실행 측정값 아님). 원본은 `catch`에 sleep이 없어(REQUEST 코드 참조) 이 대기가 0이라 실패 즉시 재호출하며 서버를 두드렸다.\n\n선택 사항 한 가지: 다수 클라이언트가 동시에 같은 주기로 재시도해 부하가 겹치는 \"thundering herd\"를 피하려면 지터(jitter)를 더하는 게 표준이다 — `const delay = Math.min(baseMs * factor ** i, maxMs) * (0.5 + Math.random() / 2)` 형태. 필요하면 넣어주겠다.\n\nDecision trail:\n- 지수 백오프를 `catch` 내 `await sleep(baseMs * factor ** i)`로 구현하고, 별도 백오프 라이브러리 도입은 배제 — 단일 파일·의존성 0이 요구에 맞음(`retry-test.mjs` 작성 시도분 참조).\n- 마지막 시도에서는 대기 없이 throw 하도록 `if (i === n-1) throw e`를 sleep 앞에 둠 — 불필요한 꼬리 지연 제거(코드 8행).\n- 라이브 실행 확인은 시도했으나 `node -e`·base64 파이프·Write 모두 권한 미승인으로 차단 — **unverified**: 실제 타이밍(100/200/400ms)은 산술 추적으로만 확인했고 실행 로그로는 미검증. 승인 시 `node --input-type=module`로 재확인 가능.",
+  "S4": "",
+  "mA": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": true,
+    "words": 344
+  },
+  "mS1": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": false,
+    "words": 116
+  },
+  "mS2": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": true,
+    "words": 368
+  },
+  "mS3": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": true,
+    "words": 383
+  },
+  "mS4": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": false,
+    "words": 0
+  }
+}

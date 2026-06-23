@@ -1,0 +1,22 @@
+{
+  "id": "r2_10",
+  "prompt": "This reverses a linked list but loses the tail:\n\nfunction rev(h){let p=null;while(h){const n=h.next;h.next=p;p=h;h=n;}return h;}\n\nFix the return and confirm.",
+  "A": "`return p;` instead of `return h;`.\n\nAt the end of the loop `h` is always `null` (that's the loop's exit condition), so the original returns nothing useful. The reversed list's new head is `p`, which trails one step behind `h` and lands on the last non-null node.\n\n```javascript\nfunction rev(h){let p=null;while(h){const n=h.next;h.next=p;p=h;h=n;}return p;}\n```\n\nTrace on `1→2→3`: after the loop `p` points at `3→2→1` and `h` is `null`. Returning `p` gives the fully reversed list with the old tail (`3`) as the new head — nothing is lost; the original code just returned the wrong variable.",
+  "S1": "`function rev(h){let p=null;while(h){const n=h.next;h.next=p;p=h;h=n;}return p;}` — fixed (`return p` not `h`): input 1→2→3 gives 3→2→1 (p ends at old tail 3, h ends null); O(n) time, O(1) space.",
+  "L": "`return p;` instead of `return h;`.\n\nThe loop condition is `while(h)`, so the loop exits only when `h` is falsy — i.e. `h` is `null` at the end every time. That's why the original `return h` always returns `null`. The new head is `p`, which trails one node behind `h` and therefore ends on the last non-null node visited.\n\n```javascript\nfunction rev(h){let p=null;while(h){const n=h.next;h.next=p;p=h;h=n;}return p;}\n```\n\nShown trace on `1→2→3` (start: `p=null`, `h=1`):\n\n| iteration | `n=h.next` | link set (`h.next=p`) | `p` after | `h` after |\n|-----------|-----------|------------------------|-----------|-----------|\n| 1 | `2` | `1.next=null` | `1` | `2` |\n| 2 | `3` | `2.next=1` | `2` | `3` |\n| 3 | `null` | `3.next=2` | `3` | `null` |\n\nAfter iteration 3, `h` is `null`, so the loop exits. The links now form `3→2→1→null`, and `p=3`. Returning `p` yields head `3` with all three original nodes (`1`, `2`, `3`) still reachable, so the old tail is not lost — the original code merely returned the wrong variable.",
+  "mA": {
+    "unbacked": 0,
+    "evidence": true,
+    "words": 96
+  },
+  "mS1": {
+    "unbacked": 0,
+    "evidence": true,
+    "words": 28
+  },
+  "mL": {
+    "unbacked": 0,
+    "evidence": true,
+    "words": 170
+  }
+}

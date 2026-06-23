@@ -1,0 +1,39 @@
+{
+  "id": "se8",
+  "prompt": "This sums an array but is off by one:\n\nfunction sum(a){let t=0;for(let i=0;i<=a.length;i++)t+=a[i];return t;}\n\nFix it and confirm it is correct.",
+  "A": "수정한 함수는 다음과 같습니다. 루프 조건 `i <= a.length` 를 `i < a.length` 로 바꾼 것이 전부입니다.\n\n```javascript\nfunction sum(a){let t=0;for(let i=0;i<a.length;i++)t+=a[i];return t;}\n```\n\n실행 검증을 하려 했지만 명령 승인이 필요해 막혀, 직접 트레이스로 확인했습니다. `[1,2,3,4]` 기준으로 원래 코드는 `i`가 0..4까지 돌면서 마지막에 `a[4]`가 `undefined`이고 `t += undefined`가 되어 전체 합이 `NaN`이 됩니다. 고친 코드는 `i`가 0..3까지만 돌아 `1+2+3+4 = 10`을 정확히 반환합니다. 빈 배열은 루프를 한 번도 돌지 않아 `0`, 원소 하나짜리 `[5]`는 `5`로 모두 맞습니다.\n\n원하시면 위 `node -e` 테스트를 직접 돌려 실측 결과까지 보여드리겠습니다 — Bash 승인만 해주시면 됩니다.",
+  "S1": "```js\nfunction sum(a){let t=0;for(let i=0;i<a.length;i++)t+=a[i];return t;}\n```\n\n`i<=a.length` read `a[a.length]`=undefined → `t+=undefined` → NaN; changed to `i<a.length`. Check: `sum([1,2,3])` traces t=1,3,6 → 6; `sum([])` → 0. O(n). (Bash run denied, so traced by hand, not executed.)",
+  "S2": "The draft already shows a concrete input→output trace on each correctness-claiming line (`[1,2,3,4]`→`10`, `[]`→`0`, `[5]`→`5`), so no surgical edit is warranted. Returning it unchanged:\n\n수정한 함수는 다음과 같습니다. 루프 조건 `i <= a.length` 를 `i < a.length` 로 바꾼 것이 전부입니다.\n\n```javascript\nfunction sum(a){let t=0;for(let i=0;i<a.length;i++)t+=a[i];return t;}\n```\n\n실행 검증을 하려 했지만 명령 승인이 필요해 막혀, 직접 트레이스로 확인했습니다. `[1,2,3,4]` 기준으로 원래 코드는 `i`가 0..4까지 돌면서 마지막에 `a[4]`가 `undefined`이고 `t += undefined`가 되어 전체 합이 `NaN`이 됩니다. 고친 코드는 `i`가 0..3까지만 돌아 `1+2+3+4 = 10`을 정확히 반환합니다. 빈 배열은 루프를 한 번도 돌지 않아 `0`, 원소 하나짜리 `[5]`는 `5`로 모두 맞습니다.\n\n원하시면 위 `node -e` 테스트를 직접 돌려 실측 결과까지 보여드리겠습니다 — Bash 승인만 해주시면 됩니다.",
+  "S3": "수정한 함수는 다음과 같습니다. 루프 조건 `i <= a.length` 를 `i < a.length` 로 바꾼 것이 전부입니다.\n\n```javascript\nfunction sum(a){let t=0;for(let i=0;i<a.length;i++)t+=a[i];return t;}\n```\n\n실행 검증을 하려 했지만 명령 승인이 필요해 막혀, 직접 트레이스로 확인했습니다. `[1,2,3,4]` 기준으로 원래 코드는 `i`가 0..4까지 돌면서 마지막에 `a[4]`가 `undefined`이고 `t += undefined`가 되어 전체 합이 `NaN`이 됩니다. 고친 코드는 `i`가 0..3까지만 돌아 `1+2+3+4 = 10`을 정확히 반환합니다. 빈 배열은 루프를 한 번도 돌지 않아 `0`, 원소 하나짜리 `[5]`는 `5`로 모두 맞습니다.\n\n위 결과는 모두 손 트레이스 기준이며 **런타임 실측은 UNVERIFIED(미실행)** 입니다. 아래 테스트를 승인해주시면 실측까지 보여드립니다:\n\n```bash\nnode -e 'function sum(a){let t=0;for(let i=0;i<a.length;i++)t+=a[i];return t}console.log(sum([1,2,3,4]),sum([]),sum([5]))'  # 기대: 10 0 5\n```",
+  "S4": "",
+  "mA": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": false,
+    "words": 92
+  },
+  "mS1": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": false,
+    "words": 36
+  },
+  "mS2": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": true,
+    "words": 116
+  },
+  "mS3": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": true,
+    "words": 106
+  },
+  "mS4": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": false,
+    "words": 0
+  }
+}
