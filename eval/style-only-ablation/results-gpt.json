@@ -1,0 +1,15 @@
+{
+  "judge": "gpt-5.5 (via codex)",
+  "FvB": {
+    "F_wins": 17,
+    "B_wins": 26,
+    "ties": 5,
+    "decided": 43,
+    "F_win_pct": 39.5,
+    "p": 0.2221,
+    "ci": [
+      26.4,
+      54.4
+    ]
+  }
+}

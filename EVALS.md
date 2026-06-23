@@ -56,12 +56,14 @@ weaker reviewer's misses).
 fablever does **not** make Claude smarter or cheaper — and we have the runs to say so, not just caution.
 Measured: it **costs ~14%/call** (a style-block overhead that amortizes); on enumerable **defect-catch** a
 strong single model is already at ceiling, so **cross-model verification adds 0 recall**; on **multi-step**
-tasks style-only is already 100% complete, so the **gate adds nothing** there. **One big caveat, found the
-honest way:** the forced-choice *quality* judgments here used a single Gemini judge — and when we re-judged
-the real-log replay with **GPT-5.5**, the result **flipped from plain-preferred 8–2 to fablever-preferred
-14–3 (p=0.013)**. So the one-shot "fablever doesn't win" reads are **judge-dependent**, not robust; a
-non-Anthropic frontier judge significantly prefers fablever, and the same cross-judge check is owed to the
-style-only ablation and productivity A/Bs before either direction is trusted. What fablever has *robust*
+tasks style-only is already 100% complete, so the **gate adds nothing** there. **The judge matters — and we
+checked, both ways:** the forced-choice *quality* judgments used a single Gemini judge, so we re-judged with
+**GPT-5.5**. On the **real-log replay** the result **flipped** (Gemini: plain 8–2 → GPT-5.5: fablever 14–3,
+p=0.013) — so the one-shot "fablever doesn't win" read on *real, messy* prompts is **judge-dependent**. But
+on the **flagship style-only ablation** the same cross-judge check did **NOT** flip (Gemini 4–9, GPT-5.5
+17–26 — plain slightly ahead under both, n.s.): on clean synthetic tasks fablever's quality wash is
+**judge-robust**. So the honest line is precise: a non-Anthropic judge prefers fablever on real prompts, but
+fablever still does **not** beat plain on raw quality. What fablever has *robust*
 (judge-independent, deterministic) evidence for stays narrow and behavioral: a delivery gate that beats
 shipping the **unchecked first draft** (27–0), near-total **scope discipline** (0% vs plain's 42%
 violations) that a naive "be concise" prompt *fails* to deliver (it backfires 1–14), and an install that is

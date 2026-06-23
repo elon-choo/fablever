@@ -64,9 +64,10 @@ fixture, **not** a productivity number. Recompute offline: **`node eval/ultra/sc
 - **No productivity-magnitude claim — and the one-shot judgments turned out judge-dependent.** "Improves
   productivity by N%" is not asserted. The developer-productivity A/B was run (one-shot + multi-turn, no
   gain). The real-prompt replay first showed plain preferred 8–2 **under a Gemini judge** — but re-judging
-  the *same* replies with **GPT-5.5 flipped it to fablever 14–3 (p=0.013)**. So the one-shot "no win" reads
-  are a property of the judge, not robust; published with both judges, and the cross-judge check is owed to
-  the other Gemini-judged forced-choice evals. (`eval/real-log-replay/`, `eval/comparison/productivity-ab/`)
+  the *same* replies with **GPT-5.5 flipped it to fablever 14–3 (p=0.013)**. We then ran the same check on
+  the flagship style-only ablation, where it did **not** flip (Gemini 4–9, GPT-5.5 17–26, both n.s.). Net:
+  a non-Anthropic judge prefers fablever on *real* prompts, yet fablever still does not beat plain on raw
+  quality — judge-dependence is real but localized. (`eval/real-log-replay/`, `eval/style-only-ablation/RESULTS-gpt.md`)
 - **Not free, and not magic on its own features.** The style **costs ~14%/call** (a measured token
   overhead that amortizes — not a token-saver); **cross-model "xverify" added 0 defect recall** over a
   single strong model already at ceiling on 34 planted defects; and the default-install **gate closed 0

@@ -27,10 +27,11 @@
 - **생산성-크기 주장 없음 — 측정했고, 원샷 판정은 판정자-의존적으로 드러남.** "생산성을 N% 향상"은
   주장하지 *않는다*(T2 강등). A/B를 돌렸고 원샷+멀티턴 생산성은 이득 없음. 실제 프롬프트 재현은 처음
   **Gemini 판정에서 평범한 Opus가 8–2** 우세였으나, **같은** 응답을 **GPT-5.5로 재판정하니 fablever가
-  14–3(p=0.013)으로 역전**됐다. 즉 그 원샷 "패배"는 판정자의 취향이지 견고한 속성이 아니다 — 양쪽 판정자를
-  모두 공개했고, 단일 Gemini로 판정한 다른 forced-choice 평가들에도 같은 교차판정 검증이 필요하다. 검증:
-  [`eval/real-log-replay/`](eval/real-log-replay/) (`results.json`=Gemini, `results-gpt.json`=GPT-5.5),
-  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/).
+  14–3(p=0.013)으로 역전**됐다 — 즉 *실제 messy* 프롬프트에서의 그 "패배"는 판정자 취향이었다. 같은 교차판정을
+  flagship **style-only ablation**에도 돌렸더니 여기선 **뒤집히지 않았다**(Gemini 4–9, GPT-5.5 17–26 — 둘 다
+  plain이 약간 앞섬, n.s.): 깨끗한 합성 과제에서 품질 무승부는 판정자-견고하다. 정직한 결론: 비-Anthropic
+  판정자는 실제 프롬프트에서 fablever를 선호하지만, fablever가 원품질에서 plain을 이기는 건 아니다. 검증:
+  [`eval/real-log-replay/`](eval/real-log-replay/), [`eval/style-only-ablation/RESULTS-gpt.md`](eval/style-only-ablation/RESULTS-gpt.md).
 - **자기 셀링포인트로 측정했고 — 도움이 안 됐다.** 이걸 *팔리게* 할 기능들을 직접 테스트하고 null을 공개했다:
   스타일은 **호출당 ~14% 비용 증가**(토큰 절약기가 아님), **교차모델 xverify는 결함 리콜 0 추가**(이미 천장에
   도달한 단일 강력 모델 대비, 심은 결함 34개), 기본설치 **게이트는 멀티스텝 완결성 0 개선**(style-only가 이미

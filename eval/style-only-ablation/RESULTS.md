@@ -1,5 +1,7 @@
 # Style-only ablation — Baseline (B) vs Generic prompt (G) vs fablever style-only (F)
 
+> **Cross-judge check (added later):** the F-vs-B result below was re-judged with **GPT-5.5** to test for Gemini-judge bias (after the real-log replay flipped between judges). It did **not** flip — GPT-5.5 also puts plain slightly ahead (17–26, n.s.) vs Gemini's 4–9. The quality wash is judge-robust. See [`RESULTS-gpt.md`](RESULTS-gpt.md).
+
 48 frozen tasks (6 domains), same base model (claude-opus-4-8). See PROTOCOL.md (committed before the run). Blind forced-choice quality (Gemini-2.5-pro, both orders, order-inconsistent = tie). Acceptance via an INDEPENDENT Gemini oracle (not fablever's gate). Scope-violation is deterministic on the 12 report-only/scope-limited tasks (lower = better). p = exact two-sided binomial; CI = Wilson 95%.
 
 ## Blind quality preference

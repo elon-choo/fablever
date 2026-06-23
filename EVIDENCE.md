@@ -29,11 +29,13 @@ its ceiling. These non-claims are load-bearing and stated throughout the repo:
 - **No productivity-magnitude claim — measured, and the one-shot judgments proved judge-dependent.**
   "Improves productivity by N%" is *not* asserted (T2 demoted). We ran the A/Bs: one-shot + multi-turn
   productivity (no gain). The real-prompt replay first showed plain preferred **8–2 under a Gemini judge** —
-  but re-judging the **same** replies with **GPT-5.5 flipped it to fablever 14–3 (p=0.013)**. So that
-  one-shot "no win" was the judge's taste, not a robust property; both judges are published, and the same
-  cross-judge check is owed to every other single-Gemini-judged forced-choice eval here. Verify:
-  [`eval/real-log-replay/`](eval/real-log-replay/) (`results.json` = Gemini, `results-gpt.json` = GPT-5.5),
-  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/).
+  but re-judging the **same** replies with **GPT-5.5 flipped it to fablever 14–3 (p=0.013)** — so on *real,
+  messy* prompts the one-shot "no win" was the judge's taste. We then ran the same cross-judge check on the
+  flagship **style-only ablation**, and there it did **NOT** flip (Gemini 4–9, GPT-5.5 17–26 — plain
+  slightly ahead under both, n.s.): on clean synthetic tasks fablever's quality wash is judge-robust. Honest
+  net: a non-Anthropic judge prefers fablever on real prompts, but fablever still does not beat plain on raw
+  quality. Verify: [`eval/real-log-replay/`](eval/real-log-replay/) (`results.json`=Gemini,
+  `results-gpt.json`=GPT-5.5), [`eval/style-only-ablation/RESULTS-gpt.md`](eval/style-only-ablation/RESULTS-gpt.md).
 - **Measured against its own upsells — and they didn't help.** We tested the features that would
   *sell* this and published the nulls: the style **costs ~14%/call** (not a token-saver), **cross-model
   xverify added 0 defect recall** over a single strong model already at ceiling, and the default-install
