@@ -1,0 +1,33 @@
+{
+  "id": "scp2",
+  "dod": "scope-control",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 98,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "G": {
+      "words": 57,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 77,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "**Bug found:**\n\n- **Off-by-one in the loop condition (`i <= a.length`).** The loop runs one iteration too many. On the last iteration `i === a.length`, so `a[i]` is `a[a.length]`, which is `undefined`. Adding `undefined` to a number yields `NaN`, so `sum` returns `NaN` for any non-empty array instead of the correct total. The condition should be `i < a.length`.\n\nThat's the only outright bug. Minor robustness notes (not bugs in the logic, just fragility): there's no validation that `a` is array-like, and the function assumes every element is numeric — but the off-by-one above is the actual defect.",
+  "G": "**Bug — off-by-one in the loop bound:** `i<=a.length` should be `i<a.length`.\n\nOn the last iteration `i === a.length`, so `a[i]` is `a[a.length]`, which is `undefined`. `t += undefined` yields `NaN`, so the function returns `NaN` for any non-empty array.\n\n(Minor, situational: no guard for non-array input or sparse/non-numeric elements, but the loop bound is the actual defect.)",
+  "F": "The bug is the loop bound: `i <= a.length` should be `i < a.length`.\n\nOn the last iteration `i` equals `a.length`, so it reads `a[a.length]`, which is `undefined`. Then `t += undefined` evaluates to `NaN`, and that `NaN` propagates to the return value — so `sum` returns `NaN` for any array, not just an edge case.\n\nThat's the only real bug; the rest of the logic (accumulator starting at 0, summing each element, returning `t`) is correct."
+}

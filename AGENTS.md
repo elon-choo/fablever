@@ -61,8 +61,9 @@ fixture, **not** a productivity number. Recompute offline: **`node eval/ultra/sc
 
 ## What this repo deliberately does NOT claim
 
-- **No productivity-magnitude claim.** "Improves productivity by N%" is not asserted anywhere; that A/B
-  has not been run. (`whitepaper/05-consensus-and-claims.md`)
+- **No productivity-magnitude claim.** "Improves productivity by N%" is not asserted anywhere. The
+  developer-productivity A/B **was run** (one-shot + multi-turn) and found **no gain** — a published
+  null/negative, not a hidden gap. (`eval/comparison/productivity-ab/`)
 - **Not a capability upgrade.** It cannot raise a weaker model's reasoning ceiling — that lives in the
   weights. It changes working *style* and acceptance *structure*. (`whitepaper/01-what-this-is.md`)
 - **No quality-ceiling claim for the gate.** See boundary #2 above — proven against T-vs-P, conceded.

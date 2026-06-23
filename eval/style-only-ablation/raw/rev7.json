@@ -1,0 +1,33 @@
+{
+  "id": "rev7",
+  "dod": "code-review",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 319,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 1
+    },
+    "G": {
+      "words": 285,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 294,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "Here's what's wrong with this code:\n\n```javascript\nfunction transfer(from,to,amt){ from.bal-=amt; to.bal+=amt; } // no checks\n```\n\n**Correctness / security bugs**\n\n1. **No sufficient-funds check** — `from.bal` can go negative. Nothing stops an overdraft; the account can be drained below zero indefinitely.\n\n2. **Negative `amt` reverses the transfer** — calling `transfer(victim, attacker, -100)` moves money *from* `to` *to* `from`. This is a money-theft vector. Amount must be validated as `> 0`.\n\n3. **String `amt` corrupts the destination** — `-=` always coerces to a number, but `+=` does string concatenation if `amt` is a string. So `transfer(a, b, \"50\")` does `from.bal -= \"50\"` (numeric → 50 subtracted) but `to.bal += \"50\"` (e.g. `\"100\" → \"10050\"`). The two sides behave differently — silent data corruption.\n\n4. **No input validation** — `from`, `to`, or `amt` being `null`/`undefined`/`NaN` throws or quietly propagates `NaN` into balances, permanently poisoning them (`NaN` is sticky).\n\n**Integrity / robustness**\n\n5. **Not atomic** — the debit and credit are two separate statements. If anything throws between them (or the process dies), money is destroyed or created with no rollback. A transfer must be all-or-nothing.\n\n6. **Race conditions** — two concurrent transfers on the same account read-modify-write `bal` with no locking; updates can be lost (classic lost-update / double-spend).\n\n7. **Floating-point money** — storing balances as JS numbers means `0.1 + 0.2` style rounding errors. Money should be integer minor units (cents) or a decimal type.\n\n8. **No same-account guard** — `from === to` isn't handled (harmless here, but usually worth rejecting).\n\n**Observability / contract**\n\n9. **No return value or success signal** — the caller can't tell whether the transfer succeeded or failed.\n\n10. **No audit trail** — silently mutates objects in place; no logging/record of the movement, which is mandatory for anything financial.\n\nThe trailing `// no checks` comment is accurate — the core issue is that this performs an irreversible, security-sensitive operation with zero validation, atomicity, or concurrency control.",
+  "G": "Here's what's wrong with it:\n\n**Input validation**\n- **No `amt` sign check** — a negative `amt` reverses the transfer, letting you drain `to` into `from`. Zero is a pointless no-op that still \"succeeds.\"\n- **No type/NaN check** — if `amt` (or either `bal`) is `undefined`/non-numeric, `-=`/`+=` produce `NaN` and silently corrupt *both* balances instead of erroring.\n- **No null checks** — `from`, `to`, or a missing `.bal` property throw or produce `NaN`.\n\n**Business rules**\n- **No sufficient-funds check** — `from.bal` can go negative; there's no `from.bal >= amt` guard.\n- **No authorization** — nothing verifies the caller is allowed to move funds from `from`.\n- **No self-transfer / identity guard** — `from === to` and similar edge cases aren't handled.\n\n**Atomicity & correctness**\n- **Not atomic** — the debit and credit are two separate steps. If anything between/after the first line fails (exception, crash, async boundary), `from` is debited but `to` is never credited — money vanishes. No transaction or rollback.\n- **Race conditions** — it's an unguarded read-modify-write on shared state; concurrent transfers can lose updates.\n- **Float math on money** — using `+=`/`-=` on floating-point balances accumulates rounding errors. Money should be integer minor units (or a decimal type).\n\n**Interface / observability**\n- **No return value or error** — the caller has no way to know whether it succeeded or failed.\n- **Silent failure** — combined with the above, bad inputs corrupt data with zero signal.\n- **No audit trail / logging** — it mutates the passed objects in place with no record.\n\nThe `// no checks` comment is accurate — but the deeper issues are the **non-atomicity** (partial transfers lose money) and the **negative-amount exploit**, which are worse than just \"missing validation.\"",
+  "F": "This is a money-transfer function with no safety at all — the `// no checks` comment is doing a lot of confessing. Here's what's wrong:\n\n**Correctness / financial integrity**\n1. **No overdraft check.** Nothing verifies `from.bal >= amt`, so the sender's balance can go negative. There's no insufficient-funds guard.\n2. **No positive-amount check.** A negative `amt` reverses the flow — `transfer(victim, attacker, -100)` pulls money *out* of `victim` into `attacker`. Zero is also allowed as a meaningless no-op.\n3. **No numeric validation.** If `amt` is `undefined`, a string, or `NaN`, both balances silently become `NaN` and both accounts are corrupted.\n\n**Atomicity / failure handling**\n4. **Not atomic.** The debit happens first, then the credit. If `to` is null/undefined, or anything throws between the two lines, `from` has already been debited but `to` is never credited — money simply vanishes. There's no rollback.\n5. **No null/existence checks on `from` or `to`.** `to.bal` throws if `to` is missing, *after* the sender was already charged.\n\n**Concurrency**\n6. **Race condition / lost update.** This is an unguarded read-modify-write on shared state. Two concurrent transfers can interleave and produce a wrong balance — the classic double-spend / lost-update bug. No locking or transaction.\n\n**Money representation**\n7. **Floating-point balances.** Using JS numbers for money invites rounding errors (`0.1 + 0.2`-style drift). Balances should be integer minor units (cents) or a decimal type.\n\n**Auditability / contract**\n8. **No authorization, no return value, no audit trail.** Nothing checks the caller is allowed to move these funds, nothing signals success/failure, and there's no record of the transaction.\n\nThe one structural thing worth flagging beyond the missing checks: even *with* validation added, points 4 and 6 (atomicity and concurrency) can't be fixed inside this function alone — they need a transactional boundary around it."
+}

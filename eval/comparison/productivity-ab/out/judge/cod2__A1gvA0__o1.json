@@ -1,0 +1,7 @@
+{
+  "id": "cod2",
+  "pair": "A1gvA0",
+  "order": "o1",
+  "winnerArm": "A1g",
+  "why": "Response A was more direct, providing the single best answer and a critical warning about a behavioral edge case (`NaN`) without adding unrequested alternative code."
+}

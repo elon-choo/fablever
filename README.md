@@ -25,8 +25,9 @@ and disciplined about stopping. Every project, every subagent, installable by an
 > evidence map: what's claimed, what's deliberately *not* claimed, the conceded limits, and the exact
 > file to check for each. **An AI** reading the repo should read [`AGENTS.md`](AGENTS.md) (also auto-loaded
 > as [`CLAUDE.md`](CLAUDE.md)) — the fast brief with each verified number and the one command that
-> recomputes it offline. Korean: [`EVIDENCE.ko.md`](EVIDENCE.ko.md). Full detail:
-> [`whitepaper/`](whitepaper/) (English + [`whitepaper/ko/`](whitepaper/ko/)).
+> recomputes it offline. For **which install mode is backed by which evidence** (and what was tested vs
+> not — including a *published* productivity null), see [`EVALS.md`](EVALS.md). Korean:
+> [`EVIDENCE.ko.md`](EVIDENCE.ko.md). Full detail: [`whitepaper/`](whitepaper/) (English + [`whitepaper/ko/`](whitepaper/ko/)).
 >
 > **The most direct result:** on a 60-task powered run, fablever's delivery gate (`fable_check`) beats
 > shipping the raw first draft **27–0** (p≈1.5×10⁻⁸, 95% CI [87.5,100]%), and clears the *named*
@@ -359,9 +360,22 @@ node test/mcp-test.js                  # 48 MCP checks (protocol + fable_check g
 node test/fusion-test.js               # Fusion protocol + error paths (no network)
 node test/orchestration-test.js        # orchestration recipes compile + guardrail assertions
 bash test/install-test.sh              # install/uninstall safety lifecycle
+node test/install-matrix.mjs           # SAFETY: 10 synthetic ~/.claude fixtures — install is idempotent,
+                                       #   uninstall restores settings.json deep-equal to the original (140 checks)
+node test/privacy-canary/run.mjs       # PRIVACY: planted secrets + git/curl shimmed — proves the default
+                                       #   makes one anonymous `git ls-remote HEAD` and leaks no key/code (16 checks)
 node tools/fable-leaktest.js           # behavioral baseline from your own logs
 node tools/fable-leaktest.js --since <install-date>   # did the profile move the needle?
 ```
+
+> **Safety & privacy, proven by test (not prose).** `test/install-matrix.mjs` installs/uninstalls across
+> 10 synthetic pre-existing settings (empty, custom style, unrelated hooks, nested keys, …) and asserts the
+> headline guarantee — **install then uninstall is a no-op on your `settings.json`** (deep-equal restore),
+> idempotent re-install, unrelated hooks/keys untouched. `test/privacy-canary/run.mjs` plants fake API keys
+> and a secret file, replaces `git`/`curl` with logging shims, and asserts the **default install's entire
+> network footprint is one anonymous `git ls-remote <repo> HEAD`** — no key value, no code, no canary in any
+> command argument, hook output, or written file; `FABLE_UPDATE_CHECK=off` removes even that. Both run in a
+> throwaway `HOME` and are part of `npm test`.
 
 ## Supply-chain hygiene
 

@@ -1,0 +1,7 @@
+{
+  "id": "res12",
+  "pair": "A1svA0",
+  "order": "o1",
+  "winnerArm": "A0",
+  "why": "Response B's list of webhook implementation requirements was more complete, including the critical 'Fast ACK + async processing' pattern, which prevents a common production bug and saves me a code review cycle."
+}

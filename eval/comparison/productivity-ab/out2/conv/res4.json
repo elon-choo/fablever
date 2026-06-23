@@ -1,0 +1,38 @@
+{
+  "id": "res4",
+  "dod": "research",
+  "A0": {
+    "resolved": true,
+    "done_turn": 1,
+    "effective_turns": 1,
+    "asst_turns": 1,
+    "asst_words": 488,
+    "convo": [
+      {
+        "role": "dev",
+        "text": "Should we use server-side or client-side rendering for a content-heavy marketing site? Give me a recommendation and your reasoning."
+      },
+      {
+        "role": "asst",
+        "text": "**Recommendation: Render on the server — and lean toward static generation (SSG), not per-request SSR, for most of the site.** Use client-side rendering only for isolated interactive widgets.\n\nFor a content-heavy marketing site, server-rendered HTML is almost always the right call. Here's the reasoning:\n\n## Why not client-side rendering (CSR)\n\nA pure CSR app (e.g. a vanilla React/Vue SPA) ships a near-empty HTML shell and builds the page in the browser after JS loads. For a marketing site this hurts you exactly where it counts:\n\n- **SEO** — crawlers and link-preview bots (Google, Slack, Twitter/X, LinkedIn) see a blank page or rely on flaky JS execution. For a site whose *entire purpose* is discoverability and sharing, this is disqualifying.\n- **Time-to-content** — users stare at a blank screen until the JS bundle downloads, parses, and runs. Marketing traffic is high-bounce and often on mobile/poor connections, so every 100ms of delay costs conversions.\n- **Social/OG tags** — per-page Open Graph metadata is awkward to do well without server rendering.\n\n## Why server rendering wins here\n\nMarketing content is **mostly read, rarely interactive, and changes infrequently** — the ideal profile for pre-rendering. The page exists as real HTML the moment the request lands: fast first paint, perfect for crawlers, cheap to serve.\n\n## SSG vs. SSR specifically\n\nWithin \"server rendering,\" prefer **static generation (build-time pre-render)** over **per-request SSR** wherever you can:\n\n| | Best for | Trade-off |\n|---|---|---|\n| **SSG** (static) | Pages that look the same for everyone — landing, about, blog, pricing | Must rebuild to update content (mitigated by ISR / on-demand revalidation) |\n| **SSR** (per-request) | Truly per-request content — geo/locale, A/B tests, logged-in state | Server cost + latency on every hit |\n\nA content marketing site is overwhelmingly the first row. SSG gives you HTML that's fully CDN-cacheable, so it's the fastest and cheapest option, with the best uptime characteristics. Reach for SSR/ISR only for the genuinely dynamic slices.\n\n## Concrete suggestion\n\n- **Astro** if the site is content-first with light interactivity — it ships *zero JS by default* and lets you drop in interactive \"islands\" (a pricing calculator, a carousel) only where needed. This is the best fit for a content-heavy marketing site.\n- **Next.js** if you want one framework that scales into app-like features later, or your team already lives in React — use static/ISR for content pages, SSR for the dynamic bits.\n\n**Bottom line:** static-generate the content, server-render the few dynamic pages, and sprinkle client-side interactivity as islands. Don't build the whole thing as a client-rendered SPA — you'd be fighting the medium on SEO and load speed, the two things a marketing site can't afford to lose.\n\nOne caveat worth checking before you commit: how often does the content change, and is any of it personalized per visitor? If it's frequently edited by non-engineers, pair SSG with a CMS + on-demand revalidation so they aren't blocked on rebuilds."
+      }
+    ]
+  },
+  "A1": {
+    "resolved": true,
+    "done_turn": 1,
+    "effective_turns": 1,
+    "asst_turns": 1,
+    "asst_words": 442,
+    "convo": [
+      {
+        "role": "dev",
+        "text": "Should we use server-side or client-side rendering for a content-heavy marketing site? Give me a recommendation and your reasoning."
+      },
+      {
+        "role": "asst",
+        "text": "For a content-heavy marketing site, use **server-side rendering** — specifically static generation (SSG) where you can, falling back to SSR for anything that must be dynamic. Reach for client-side rendering only for isolated interactive widgets inside otherwise-static pages.\n\nHere's the reasoning, in order of what actually matters for this kind of site:\n\n**SEO is the deciding factor.** A marketing site lives or dies by organic search and link previews. Server-rendered HTML arrives fully populated, so crawlers and social-card scrapers (which often don't execute JavaScript well or at all) see your real content immediately. With pure CSR, the initial response is an near-empty shell that gets filled in after the JS bundle loads — Googlebot can render that, but it's slower, less reliable, and a real risk for the smaller crawlers and previewers you don't control.\n\n**Content-heavy means rendering cost you don't want on the client.** If the content is mostly known at build time — landing pages, blog posts, product pages, pricing — static generation does the work once and serves plain HTML from a CDN. That gives you the best possible Time-to-First-Byte and First Contentful Paint, and a load on the visitor's device that CSR can't match, because the browser isn't downloading and executing a framework just to paint text and images.\n\n**Conversion follows speed.** Marketing traffic skews toward first-time visitors on cold caches and mobile networks — exactly the case where CSR's \"download bundle, then render\" penalty hurts most. Faster initial paint correlates directly with lower bounce and higher conversion, which is the whole point of the site.\n\nThe honest tradeoffs, so this isn't one-sided: SSR/SSG needs a build step or a server/edge runtime rather than dropping static files on any host, and frequently-changing content needs a rebuild or incremental regeneration strategy. Those are real but well-solved — incremental static regeneration and on-demand revalidation handle the \"content changes often\" case without going full CSR.\n\n**Practical recommendation:** pick a framework that does hybrid rendering — Next.js, Astro, or SvelteKit. Astro is especially strong for this profile because it ships zero JavaScript by default and lets you \"island\" in interactivity only where you need it (a calculator, a carousel, a contact form), which is the ideal shape for a content-heavy site. Statically generate every page you can, use SSR/ISR for the genuinely dynamic ones, and keep client-side rendering scoped to the interactive components rather than the page as a whole.\n\nThe only case where I'd flip to CSR-first is if this \"marketing site\" is really an app behind a login with little public, indexable content — then SEO stops mattering and an SPA is reasonable. That doesn't sound like what you're describing."
+      }
+    ]
+  }
+}

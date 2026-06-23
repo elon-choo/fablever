@@ -6,7 +6,9 @@
   "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs && node test/install-matrix.mjs && node test/privacy-canary/run.mjs",
+    "test:safety": "node test/install-matrix.mjs",
+    "test:privacy": "node test/privacy-canary/run.mjs",
     "test:mcp": "node test/mcp-test.js",
     "test:fusion": "node test/fusion-test.js",
     "test:orchestration": "node test/orchestration-test.js",

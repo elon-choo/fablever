@@ -55,6 +55,7 @@ repo — so you can check them against the prose rather than take this file's wo
 | **Cross-model decorrelation** | An off-by-default arm adds a different-weights reviewer (GPT/Gemini) to catch a class a same-family panel structurally can't. Zero overhead when off. | `fusion/fusion-server.js`, `whitepaper/01-what-this-is.md` §1.4 |
 | **Zero dependencies, supply-chain clean** | No npm deps, no `postinstall`/`prepare` scripts. **The default install reads zero credentials and sends no code/content anywhere**; its only network call is an anonymous once/24h version check (`git ls-remote`, reads just the public HEAD sha; `FABLE_UPDATE_CHECK=off`). Every key/content path (Fusion, xverify, model-freshness refresh) is opt-in and off by default. | `package.json`, `fusion/fusion-server.js`, `claude-code/hooks/fable-update-check.js`, `orchestration/lib/update-check.mjs` |
 | **Fail-safe, reversible** | Hooks fall open on error; `FABLE_PROFILE=off` disables; `install.sh --uninstall` restores prior settings deterministically. | `install.sh`, `claude-code/hooks/fable-subagent.js`, `claude-code/lib/mcp-remove.js` |
+| **Install safety & privacy — proven by test** | Install/uninstall across **10 synthetic settings fixtures** asserts uninstall restores `settings.json` deep-equal to the original (140 checks). A **privacy canary** (planted fake keys + secret file, `git`/`curl` shimmed) proves the default's whole network footprint is one anonymous `git ls-remote HEAD` — no key/code/canary leaks (16 checks). Both in a throwaway HOME, both in `npm test`. | `test/install-matrix.mjs`, `test/privacy-canary/run.mjs` |
 | **Adversarially reviewed, on the record** | 3 rounds × (Claude expert personas + GPT + Gemini) consensus, **with the attacks that failed recorded too**. | `docs/PUBLICATION-READINESS.md` |
 | **Provenance** | Distilled from Anthropic's *published* Fable prompting guidance (not reverse-engineered, not leaked content). | `docs/RESEARCH.md`, `NOTICE` |
 | **Transparent experiment trail** | The full dated experiment log is published — including the runs that **failed or went against the project** (the saturated-fixture loss, the escalation that backfired). | [`whitepaper/08-experiment-log.md`](whitepaper/08-experiment-log.md) |
@@ -120,7 +121,10 @@ Full list: [`whitepaper/06-limitations.md`](whitepaper/06-limitations.md). The l
 - The orchestration recall gain is **lens-taxonomy + draw-count**, not "parallel structure";
   the panel's structural win is precision, and on easy tasks it is pure cost.
 - **Open items, not hidden:** an archived provenance snapshot (D2) and token/wall-clock
-  cost-direction are unmet; a developer-facing productivity A/B has not been run.
+  cost-direction are unmet; a developer-facing productivity A/B **has now been run** (one-shot +
+  multi-turn) and found **no productivity gain** — a published null/negative, see
+  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/). The repo's "style not
+  capability, no magnitude claimed" position is now backed by a run, not just conceded.
 
 If you found a weakness not listed here, that is a contribution — it belongs in an issue, and
 under this repo's own rules it becomes a blocker until conceded, fixed, or rebutted.

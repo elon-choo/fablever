@@ -1,0 +1,7 @@
+{
+  "id": "res9",
+  "pair": "A1svA0",
+  "order": "o1",
+  "winnerArm": "A0",
+  "why": "Response B reframed the question to solve the underlying problem (server vs client state) and gave a specific, actionable toolkit recommendation with clear criteria for when to deviate, saving me from a common architectural mistake."
+}

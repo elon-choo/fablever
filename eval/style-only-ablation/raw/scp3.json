@@ -1,0 +1,33 @@
+{
+  "id": "scp3",
+  "dod": "scope-control",
+  "forbid": false,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 6,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 6,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 6,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "```js\nlet count=0; count++; console.log(count);\n```",
+  "G": "```javascript\nlet count=0; count++; console.log(count);\n```",
+  "F": "```javascript\nlet count=0; count++; console.log(count);\n```"
+}

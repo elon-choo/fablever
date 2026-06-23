@@ -1,0 +1,45 @@
+{
+  "n_tasks": 18,
+  "cap_turns": 4,
+  "paired_turns_to_done": {
+    "A1_fewer": 3,
+    "A0_fewer": 7,
+    "tie": 8,
+    "decided": 10,
+    "A1_win_pct_of_decided": 30,
+    "p_two_sided": 0.3438,
+    "wilson95": [
+      10.8,
+      60.3
+    ]
+  },
+  "mean_turns_to_done": {
+    "A0": 1.89,
+    "A1": 2.33
+  },
+  "resolved_within_cap_pct": {
+    "A0": 100,
+    "A1": 88.9
+  },
+  "mean_total_assistant_words": {
+    "A0": 1113.5,
+    "A1": 1393.28
+  },
+  "by_domain": {
+    "research": {
+      "a1Fewer": 3,
+      "a0Fewer": 2,
+      "tie": 3
+    },
+    "doc-planning": {
+      "a1Fewer": 0,
+      "a0Fewer": 4,
+      "tie": 3
+    },
+    "code": {
+      "a1Fewer": 0,
+      "a0Fewer": 1,
+      "tie": 2
+    }
+  }
+}

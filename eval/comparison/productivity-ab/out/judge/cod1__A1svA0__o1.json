@@ -1,0 +1,7 @@
+{
+  "id": "cod1",
+  "pair": "A1svA0",
+  "order": "o1",
+  "winnerArm": "A1s",
+  "why": "Response A's use of multiple, distinct test cases gave me higher confidence in the fix with less mental effort than B's single traced example."
+}

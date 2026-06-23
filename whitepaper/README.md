@@ -29,8 +29,9 @@ a capability one — it changes *how* a model works, not its reasoning ceiling.
 - Pushing *harder* (a second generation escalation) **lowered** recall to 16/18 — recorded
   as a failed attempt. **Simpler won.**
 
-**What it does NOT claim.** No developer-productivity magnitude (that needs a different,
-unrun A/B). Not "parallel structure beats a solo agent" (the controls refute it). Nothing
+**What it does NOT claim.** No developer-productivity magnitude — the productivity A/B **was run**
+(`../eval/comparison/productivity-ab/`) and found **no gain** (published null/negative). Not "parallel
+structure beats a solo agent" (the controls refute it). Nothing
 beyond a small author-planted fixture. The result is a **defect-catch** ceiling, not a
 productivity number — and that distinction is the entire discipline.
 

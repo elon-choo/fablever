@@ -1,0 +1,33 @@
+{
+  "id": "scp6",
+  "dod": "scope-control",
+  "forbid": false,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 20,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 21,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 44,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "```javascript\nfunction pay(o){ console.log(\"pay called\", o); charge(o); }\n```\n\nAdded one logging line at the start; everything else is unchanged.",
+  "G": "```javascript\nfunction pay(o){ console.log(\"pay called\", o); charge(o); }\n```\n\nAdded one `console.log` at the start; `charge(o)` and everything else is unchanged.",
+  "F": "```js\nfunction pay(o){ console.log(\"pay\", o); charge(o); }\n```\n\nAdded a `console.log(\"pay\", o)` as the first statement; `charge(o)` and everything else is unchanged. No file path was given, so I edited the snippet inline — tell me the file if you want it applied there."
+}

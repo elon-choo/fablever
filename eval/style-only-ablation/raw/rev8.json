@@ -1,0 +1,33 @@
+{
+  "id": "rev8",
+  "dod": "code-review",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 356,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 1
+    },
+    "G": {
+      "words": 232,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 253,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "The main problem with this line is a classic **DOM-based Cross-Site Scripting (XSS) vulnerability**.\n\n## Core issue\n\n```js\nelement.innerHTML = userInput; // render user content\n```\n\nAssigning untrusted `userInput` directly to `innerHTML` makes the browser parse it as HTML. If the input contains markup, it executes in the page's origin. Concrete problems:\n\n1. **XSS / script injection** — The attacker controls HTML. While `<script>` tags inserted via `innerHTML` don't auto-execute, trivial equivalents do, e.g.:\n   - `<img src=x onerror=\"alert(document.cookie)\">`\n   - `<svg onload=\"...\">`\n   - `<iframe src=\"javascript:...\">`\n   This means cookie/session theft, credential phishing, keylogging, CSRF token exfiltration, defacement, or full account takeover — anything JS can do in that origin.\n\n2. **No sanitization or encoding** — Raw input is trusted as safe HTML. There's no escaping, allowlist, or sanitizer in the path.\n\n3. **Wrong tool for the job (the comment lies)** — The comment says \"render user content,\" but if the intent is to display *text*, `innerHTML` is the wrong API entirely; it conflates \"text to show\" with \"HTML to parse.\" The comment masks the danger by making it sound benign.\n\n## Secondary problems\n\n4. **Trust assumption is unverified** — Nothing establishes that `userInput` is trusted/already-sanitized upstream. Even if it is \"supposed\" to be safe, this line has no guard, so any future caller passing raw input silently introduces a hole.\n\n5. **No CSP backstop mentioned** — There's no indication of a Content-Security-Policy that would mitigate inline-handler execution; this line relies entirely on input being safe.\n\n6. **Robustness/correctness** — Unescaped user text can also break layout/rendering unintentionally (stray `<`, `&`, unclosed tags), so even setting security aside it's a correctness bug for plain-text display.\n\n## The short version\nThe danger is real whenever `userInput` can be influenced by anyone other than the developer — including via URL params, form fields, API responses, or stored data from other users. Treat it as untrusted unless you can prove otherwise.\n\nYou asked me only to identify the problems, so I've left the code unchanged. If you want, I can point out the safe alternatives (e.g., `textContent` for text, or a vetted sanitizer like DOMPurify for rich HTML) without rewriting your surrounding code.",
+  "G": "**XSS (cross-site scripting) vulnerability** — that's the core problem.\n\nAssigning untrusted `userInput` to `.innerHTML` makes the browser parse it as HTML. An attacker can inject markup that executes script in the victim's page context. Specifics:\n\n- **Script execution via injected markup.** A payload like `<img src=x onerror=\"...\">` or `<svg onload=\"...\">` runs attacker JS. (Note: a bare `<script>` tag inserted via `innerHTML` does *not* auto-execute, but event-handler and other vectors do — so this is exploitable regardless.)\n- **Consequences:** session/cookie theft, credential phishing, DOM defacement, CSRF-style actions performed as the user, keylogging — full control of the page in that user's session.\n- **Trust assumption is wrong.** The comment \"render user content\" treats user input as safe-to-render HTML. User content should be treated as untrusted data, not markup.\n\nSecondary issues:\n\n- **No sanitization or encoding** anywhere in the line — the value goes straight from input to HTML sink.\n- **Wrong API for the intent.** If the goal is to display *text*, `innerHTML` is the wrong sink entirely (should be a text-content path); if the goal is to render *rich HTML*, there's no allowlist/sanitizer gate.\n- **Misleading comment.** \"render user content\" understates that it renders user-controlled *HTML/script*, which can hide the risk from future readers/reviewers.\n\nThe fix direction (not writing it, per your request): render as text, or sanitize through a vetted allowlist sanitizer before assignment — but the above is what's *wrong*.",
+  "F": "The core problem is a **cross-site scripting (XSS) vulnerability**. Assigning untrusted `userInput` to `innerHTML` makes the browser parse and render that string as live HTML, so an attacker who controls the input can inject markup that runs code in the page's origin.\n\nSpecific issues:\n\n1. **No sanitization or encoding.** The input goes straight to the DOM parser. A payload like `<img src=x onerror=\"stealCookies()\">` or `<svg onload=...>` executes immediately. (Note: a literal `<script>` injected this way won't run, which lulls people into thinking `innerHTML` is safe — but event-handler attributes, `javascript:` URLs, and similar vectors do fire, so it is not.)\n\n2. **Wrong API for the job.** If the goal really is to \"render user content\" as plain text, this should use `textContent` (or `innerText`), which never interprets HTML. If the goal is to render rich HTML, the input must be run through a vetted sanitizer (e.g. DOMParser-based allowlisting) before assignment — the comment \"render user content\" suggests the author hasn't distinguished these two cases.\n\n3. **Destructive side effects.** Setting `innerHTML` tears down and recreates all existing child nodes, which drops any attached event listeners and references to those children, and forces a full re-parse/reflow — a correctness and performance cost beyond the security hole.\n\n4. **No input-source / trust validation.** There's no check on what `userInput` contains or where it came from before it crosses into a sink that treats it as code.\n\nThe comment also understates the risk: \"render user content\" reads as benign intent, but this is the textbook `innerHTML`-with-untrusted-data sink."
+}

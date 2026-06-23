@@ -1,0 +1,38 @@
+{
+  "id": "cod3",
+  "dod": "code",
+  "A0": {
+    "resolved": true,
+    "done_turn": 1,
+    "effective_turns": 1,
+    "asst_turns": 1,
+    "asst_words": 258,
+    "convo": [
+      {
+        "role": "dev",
+        "text": "Optimize this O(n^2) dedup and report the improvement:\n\nfunction dedup(a){ return a.filter((x, i) => a.indexOf(x) === i); }\n\nGive me the faster version."
+      },
+      {
+        "role": "asst",
+        "text": "Use a `Set` — it makes membership/insertion O(1) average, turning the whole thing from O(n²) into O(n).\n\n```js\nfunction dedup(a) {\n  return [...new Set(a)];\n}\n```\n\nThat's the whole optimization. `Set` already deduplicates on insertion and preserves first-seen order, so spreading it back into an array gives you the same result your `filter` produced.\n\nIf you need to keep it as an explicit filter (e.g. for custom equality), the same idea applies with a seen-set:\n\n```js\nfunction dedup(a) {\n  const seen = new Set();\n  return a.filter(x => !seen.has(x) && seen.add(x));\n}\n```\n\n**The improvement**\n\n| | Original (`indexOf`) | `Set` version |\n|---|---|---|\n| Time | **O(n²)** — `indexOf` scans the array for every element | **O(n)** — one pass, O(1) lookups |\n| Space | O(n) (output) | O(n) (the set + output) |\n\nWhy it's faster: `a.indexOf(x)` walks the array from the start on every iteration, so n elements × up-to-n scan = n² comparisons. The `Set` replaces that linear scan with a hash lookup, collapsing it to a single linear pass.\n\n**Rough magnitude:** at n = 1,000 you go from ~1,000,000 comparisons to ~1,000 — about a 1000× drop in work; the gap widens linearly with n (at n = 10,000 it's ~10,000×).\n\n**One caveat** — these aren't *exactly* equivalent for `NaN`: `indexOf(NaN)` returns `-1`, so the original drops all `NaN`s entirely, whereas `Set` treats `NaN` as equal to itself and keeps one. The `Set` behavior is almost always the one you actually want. Equality is otherwise identical (`SameValueZero` vs `===` differ only on `NaN`)."
+      }
+    ]
+  },
+  "A1": {
+    "resolved": true,
+    "done_turn": 1,
+    "effective_turns": 1,
+    "asst_turns": 1,
+    "asst_words": 141,
+    "convo": [
+      {
+        "role": "dev",
+        "text": "Optimize this O(n^2) dedup and report the improvement:\n\nfunction dedup(a){ return a.filter((x, i) => a.indexOf(x) === i); }\n\nGive me the faster version."
+      },
+      {
+        "role": "asst",
+        "text": "```js\nfunction dedup(a){ return [...new Set(a)]; }\n```\n\nThis drops you from **O(n²) to O(n)**. The original calls `a.indexOf(x)` for every element, and each `indexOf` scans the array — so n elements × n-length scans = n² comparisons. A `Set` does insertion and membership checks in amortized O(1), so building it and spreading back to an array is a single linear pass.\n\nBoth versions preserve first-occurrence order and behave identically on primitives. One semantic difference to know: `Set` treats `NaN` as equal to `NaN` (so duplicate `NaN`s collapse correctly), whereas the `indexOf` version never dedupes `NaN` because `indexOf` uses strict equality and `NaN !== NaN`. The Set behavior is almost always what you actually want.\n\nRough impact: at n=10,000 you go from ~100M comparisons to ~10K operations — typically a few hundredfold faster, and the gap widens as the array grows."
+      }
+    ]
+  }
+}

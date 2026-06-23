@@ -1,0 +1,33 @@
+{
+  "id": "mkt4",
+  "dod": "marketing-copy",
+  "forbid": false,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": false
+  },
+  "metrics": {
+    "B": {
+      "words": 333,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 170,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 270,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "Here's ship-ready hero copy. The recommended version first, then drop-in alternates for the headline so you can A/B.\n\n---\n\n## Recommended hero\n\n**Eyebrow:**\nInvoicing for solo consultants\n\n**Headline:**\n# Get paid faster, without the busywork.\n\n**Subhead:**\nSend polished invoices in under a minute, automate the follow-ups, and watch the payments land — so you can spend your hours on billable work, not chasing them.\n\n**Primary CTA:** Start invoicing free\n**Secondary CTA:** See how it works\n\n**Trust line (under the buttons):**\nNo credit card required · Free on your first 3 invoices · Set up in 2 minutes\n\n**Supporting proof bar (3 quick stats or value props):**\n- ⚡ **1-minute invoices** — from blank to sent\n- 🔁 **Automatic reminders** — we nudge late clients, so you don't have to\n- 💳 **Get paid online** — card, ACH, and bank transfer built in\n\n---\n\n## Headline alternates (same subhead works for all)\n\n1. **Invoices done in a minute. Payments that chase themselves.**\n2. **Stop chasing invoices. Start getting paid.**\n3. **The invoicing tool built for an audience of one — you.**\n4. **From \"send invoice\" to \"payment received,\" on autopilot.**\n5. **Bill clients in minutes. Get paid in days, not weeks.**\n\n---\n\n## Notes for shipping\n\n- **Length:** Headline 1 is the safest bet — concrete benefit (\"get paid faster\") plus the core objection (\"without the busywork\"). Alternate #2 leans harder on the pain point if your audience skews frustrated-with-current-tool.\n- **Subhead** is intentionally specific (under a minute, automate follow-ups) — swap in a real number if you have it (\"Consultants get paid 11 days faster on average\").\n- **CTAs:** Keep the primary action-oriented and friction-free. If you don't have a free tier, change to \"Try it free for 14 days.\"\n- **Trust line:** Replace placeholders with whatever's true for you. If you have a logo wall or a star rating, that beats the stat bar.\n\nWant me to tailor the tone (more premium/agency vs. scrappy/indie), or draft the section that follows the hero?",
+  "G": "## Hero\n\n**Headline**\nGet paid faster. Without the busywork.\n\n**Subhead**\nSend polished invoices in under a minute, track what's owed at a glance, and chase late payments automatically — built for consultants who'd rather bill clients than wrestle spreadsheets.\n\n**Primary CTA:** Create your first invoice\n**Secondary CTA:** See how it works\n\n**Trust line (under the CTAs):** Free to start · No card required · Your first invoice in 60 seconds\n\n---\n\n### Swap-in alternates\n\n**Headlines**\n- Invoicing that takes minutes, not Sunday nights.\n- You do the work. We'll handle getting you paid.\n- From \"send invoice\" to \"payment received\" — faster.\n\n**Subhead (shorter variant)**\nCreate, send, and track invoices in one place — with automatic reminders that collect late payments so you don't have to ask twice.\n\nA note on fit: the lead headline leans on the universal pain (slow payment + admin drag); if your positioning is more about *speed of setup*, use \"Invoicing that takes minutes, not Sunday nights\" as the headline and keep the longer subhead.",
+  "F": "The hero copy is ready. It cleared the marketing-copy gate (3/3 deterministic checks passed). One item, brand voice (M-voice), is a human judgment call the check never auto-passes — flagged below for you to confirm.\n\n---\n\n**Eyebrow:** Invoicing for solo consultants\n\n**Headline:** Get paid in days, not \"just following up again.\"\n\n**Subhead:** Send polished invoices in under two minutes, automate the awkward payment reminders, and watch the money land — so you can spend your hours on billable work instead of chasing it.\n\n**Primary CTA:** Send your first invoice free\n**Secondary CTA:** See how it works (2 min)\n\n**Trust line:** No card required · Your first three invoices are on us · Set up in minutes\n\n---\n\nThe angle leads with the consultant's sharpest pain — chasing payment — rather than generic \"easy invoicing,\" and the headline borrows the exact phrase (\"just following up again\") they've typed too many times. One primary action, one low-commitment secondary.\n\nTwo alternate headlines if you want to A/B, same subhead works under each:\n- \"Stop chasing invoices. Start getting paid.\"\n- \"Your invoices, sent and settled — while you bill the next client.\"\n\nOne thing to confirm before shipping: brand voice. I wrote this slightly wry and direct (\"just following up again,\" \"the awkward payment reminders\"). If your brand is more buttoned-up and corporate, swap the headline for the second alternate above and change \"the awkward payment reminders\" to \"automated payment reminders.\" Also verify the trust line is true — drop \"Your first three invoices are on us\" if there's no free tier, since that's a concrete claim a visitor will hold you to."
+}

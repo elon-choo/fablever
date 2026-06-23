@@ -1,0 +1,7 @@
+{
+  "id": "res9",
+  "pair": "A1svA0",
+  "order": "o2",
+  "winnerArm": "A0",
+  "why": "Response A saved me work by correctly reframing the problem from 'Redux vs. Context' to 'server state vs. client state', providing a modern, actionable strategy that prevents common architectural mistakes."
+}

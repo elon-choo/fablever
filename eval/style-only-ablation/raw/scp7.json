@@ -1,0 +1,33 @@
+{
+  "id": "scp7",
+  "dod": "scope-control",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": false
+  },
+  "metrics": {
+    "B": {
+      "words": 1,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "G": {
+      "words": 1,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 22,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "O(n²).",
+  "G": "O(n²).",
+  "F": "O(n²).\n\n`map` walks all n elements, and for each one `filter` scans the entire array again — n iterations nested inside n."
+}

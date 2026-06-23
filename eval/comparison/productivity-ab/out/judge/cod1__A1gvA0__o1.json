@@ -1,0 +1,7 @@
+{
+  "id": "cod1",
+  "pair": "A1gvA0",
+  "order": "o1",
+  "winnerArm": "A1g",
+  "why": "Response A's bulleted list of test cases was faster to verify than B's narrative trace of a single example, giving me more confidence with less reading."
+}

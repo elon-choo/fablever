@@ -1,0 +1,33 @@
+{
+  "id": "rev1",
+  "dod": "code-review",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 309,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "G": {
+      "words": 190,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 253,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "The single biggest problem, plus several smaller ones:\n\n## Critical\n\n**SQL injection.** `id` is concatenated straight into the query string. This is the textbook vulnerability — nothing stops a caller from passing:\n- `\"1 OR 1=1\"` → returns *every* user\n- `\"1; DROP TABLE users\"` → destructive (depending on driver/multi-statement support)\n- `\"1 UNION SELECT ... \"` → exfiltrate other tables\n\nThe fix category (not writing it, just naming it) is a **parameterized/prepared query** — pass `id` as a bound parameter, never string-built.\n\n## Other real problems\n\n- **`SELECT *`** — pulls every column, including sensitive ones (password hash, tokens, PII) that almost certainly shouldn't leave the DB layer. It's also brittle: a schema change silently changes what this returns.\n- **No input validation** — `id` is never checked or coerced. `undefined`/`null`/object/empty-string all flow into the query (`WHERE id = undefined`), producing errors or garbage instead of a clean rejection.\n- **No error handling** — `db.query` can throw or reject; nothing catches it. Errors propagate raw to the caller, often leaking DB internals.\n- **Return shape is unmanaged** — the name says `getUser` (singular), but it returns whatever the driver yields (likely an array/result object). \"Not found\" (empty result) vs. \"found\" is not distinguished, and the caller is left to know the driver's quirks.\n- **Async is implicit** — `db.query` is presumably a Promise; the function neither `await`s nor documents that it returns one. Easy for a caller to forget to await.\n- **`db` is an implicit global** — not a parameter or import. Tight coupling that makes this hard to test and reason about.\n\nThe first item is the one that matters; the rest are quality/robustness issues. Note this is a quick bug scan, so I reviewed it directly — if you want a gate-scored adversarial verdict on it, say so and I'll route it through that flow.",
+  "G": "The critical one and a few real secondary issues:\n\n**1. SQL injection (critical).** `id` is concatenated straight into the query string. A caller passing `0 OR 1=1` dumps every user; `1; DROP TABLE users` or a sub-select can read/destroy arbitrary data. This is the headline bug — the query must be parameterized instead of string-built.\n\n**2. `SELECT *`.** Pulls every column, including sensitive ones (password hash, tokens, internal flags) that then flow to whatever the caller does with the result. It's also brittle: any schema change silently alters the return shape.\n\n**3. No input validation.** `id` is never checked or coerced to the expected type (e.g., integer). Even setting injection aside, garbage input goes directly to the DB.\n\n**4. No error handling.** `db.query` (presumably async) is returned raw — no try/catch, no rejection handling. A DB failure propagates uncontrolled to the caller.\n\n**5. No not-found handling.** Returns whatever the driver gives back (often an array/result object), so \"user doesn't exist\" is indistinguishable from a real user at this layer — the contract is ambiguous.\n\n\\#1 is the one that actually matters; the rest are quality/robustness issues worth noting but secondary.",
+  "F": "The critical problem is **SQL injection**: `id` is concatenated straight into the query string, so a caller passing `id = \"1 OR 1=1\"` dumps every user, and `id = \"1; DROP TABLE users--\"` (on a multi-statement driver) destroys the table. This is the one that matters; the rest are secondary.\n\nOther issues:\n\n- **No parameterization.** The fix for the injection — bind parameters / prepared statements — is simply absent. Everything flows through string concatenation.\n- **`SELECT *`.** Over-fetches every column, breaks silently when the schema changes, and leaks sensitive fields (password hashes, tokens) to whatever consumes the result.\n- **The name lies about the return shape.** `getUser` (singular) suggests one record, but the function returns the driver's raw result set with no `LIMIT 1` and no extraction of a single row. There's also no handling of the not-found case.\n- **Unquoted value breaks non-numeric ids.** Because nothing wraps the value, a string `id` produces syntactically invalid SQL — so it only \"works\" for bare integers, which is fragile and undocumented.\n- **No input validation.** `id` is never checked for type, null, or format before hitting the database.\n- **No error handling.** A `db.query` failure (or rejected promise, depending on the driver) propagates uncaught with no context.\n- **Hidden dependency on `db`.** It's an implicit global rather than injected or imported, which makes the function hard to test and couples it to module-load order.\n\nThe injection and `SELECT *` are the two I'd flag as must-fix; the rest are correctness and maintainability concerns."
+}

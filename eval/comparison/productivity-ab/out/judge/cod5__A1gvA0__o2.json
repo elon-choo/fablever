@@ -1,0 +1,7 @@
+{
+  "id": "cod5",
+  "pair": "A1gvA0",
+  "order": "o2",
+  "winnerArm": "A0",
+  "why": "Response A's trace table was faster to verify than B's prose, and its optional, self-contained code for handling `this` was a valuable, time-saving addition that anticipated a likely follow-up problem."
+}

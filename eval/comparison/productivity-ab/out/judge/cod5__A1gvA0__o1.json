@@ -1,0 +1,7 @@
+{
+  "id": "cod5",
+  "pair": "A1gvA0",
+  "order": "o1",
+  "winnerArm": "A1g",
+  "why": "Response A's description of the exact test case to run is more directly actionable than B's trace table, and its explanation of the bug was more thorough."
+}

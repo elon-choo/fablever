@@ -1,0 +1,31 @@
+{
+  "id": "cod2",
+  "dod": "code",
+  "blocked": false,
+  "raw_fail_ids": [],
+  "gate_pass": {
+    "A0": true,
+    "A1s": true,
+    "A1g": true
+  },
+  "proxy": {
+    "A0": {
+      "words": 234,
+      "asks_permission": false,
+      "overbuild_markers": 0
+    },
+    "A1s": {
+      "words": 124,
+      "asks_permission": false,
+      "overbuild_markers": 0
+    },
+    "A1g": {
+      "words": 124,
+      "asks_permission": false,
+      "overbuild_markers": 0
+    }
+  },
+  "A0": "The `indexOf` inside `filter` is the problem: it rescans the array for every element, so `n` elements × `n`-cost lookup = O(n²). A `Set` gives O(1) membership/insertion, dropping it to O(n).\n\n```js\nfunction dedup(a) {\n  return [...new Set(a)];\n}\n```\n\nThat's the whole thing — `Set` already keeps first-seen insertion order, which matches your original's behavior.\n\nIf you want to keep it explicit (or dedup by a key rather than by identity), the equivalent loop form is:\n\n```js\nfunction dedup(a) {\n  const seen = new Set();\n  const out = [];\n  for (const x of a) {\n    if (!seen.has(x)) { seen.add(x); out.push(x); }\n  }\n  return out;\n}\n```\n\n**Improvement**\n\n| | Original | Optimized |\n|---|---|---|\n| Time | O(n²) | O(n) |\n| Space | O(1) extra | O(n) extra |\n| 1k items | ~1M ops | ~1k ops |\n| 100k items | ~10B ops (seconds) | ~100k ops (ms) |\n\nThe tradeoff is O(n) extra memory for the `Set` — almost always worth it. At ~100k elements this goes from multi-second to milliseconds; the gap widens quadratically as input grows.\n\n**One caveat:** `Set` dedups by `SameValueZero` equality (same as `indexOf`, except `NaN` is now correctly treated as equal to itself — a minor improvement). For objects, both versions dedup by reference, not by value. If you need value-based dedup for objects, say the word and I'll give you a keyed version.",
+  "A1s": "The faster version replaces the per-element `indexOf` scan with a `Set`, dropping it from O(n²) to O(n):\n\n```javascript\nfunction dedup(a){ return [...new Set(a)]; }\n```\n\nBoth preserve first-seen order. The improvement: each `indexOf` call is a linear scan, so the original does ~n²/2 comparisons (e.g. ~50 billion for n=100k, effectively unrunnable), while the `Set` version does a single O(n) pass with O(1) average lookups — roughly an n-fold speedup that grows with input size.\n\nOne behavioral difference worth knowing: the original silently drops every `NaN` (because `indexOf` can't match `NaN`), whereas the `Set` version keeps a single `NaN`. The `Set` behavior is almost always what you actually want, but if some downstream code relied on the old quirk, that's the one thing to check.",
+  "A1g": "The faster version replaces the per-element `indexOf` scan with a `Set`, dropping it from O(n²) to O(n):\n\n```javascript\nfunction dedup(a){ return [...new Set(a)]; }\n```\n\nBoth preserve first-seen order. The improvement: each `indexOf` call is a linear scan, so the original does ~n²/2 comparisons (e.g. ~50 billion for n=100k, effectively unrunnable), while the `Set` version does a single O(n) pass with O(1) average lookups — roughly an n-fold speedup that grows with input size.\n\nOne behavioral difference worth knowing: the original silently drops every `NaN` (because `indexOf` can't match `NaN`), whereas the `Set` version keeps a single `NaN`. The `Set` behavior is almost always what you actually want, but if some downstream code relied on the old quirk, that's the one thing to check."
+}

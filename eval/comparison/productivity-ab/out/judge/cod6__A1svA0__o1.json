@@ -1,0 +1,7 @@
+{
+  "id": "cod6",
+  "pair": "A1svA0",
+  "order": "o1",
+  "winnerArm": "A1s",
+  "why": "Response A provided the exact test code to verify its fix, making it instantly actionable, while B only described its tests, requiring a follow-up."
+}

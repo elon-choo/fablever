@@ -86,7 +86,11 @@ in neither the generation nor the adjudication set; that is a refinement, not a 
   blocker for that specific claim.
 - **Token/wall-clock cost-direction.** Needs call-site instrumentation the Workflow runtime
   cannot provide. Open.
-- **Developer-facing productivity A/B.** Not run. The only thing that could ground T2.
+- **Developer-facing productivity A/B.** **Run** (`../eval/comparison/productivity-ab/`) — one-shot
+  forced-choice (n=30) and multi-turn turns-to-done (n=18), both found **no productivity gain** (a
+  published null/negative). It **bounds** T2 rather than grounding it: the proxies are LLM judge + LLM
+  oracle, which carry a completeness-bias that under-credits decisive brevity, and neither simulates a
+  long interactive coding session — so this *measures-and-does-not-find*, it does not refute.
 
 ---
 

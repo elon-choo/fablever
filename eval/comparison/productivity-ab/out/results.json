@@ -1,0 +1,53 @@
+{
+  "n_tasks": 30,
+  "by_domain": {
+    "research": 12,
+    "doc-planning": 12,
+    "code": 6
+  },
+  "gate_blocked_on_A1s": 11,
+  "A1g_vs_A0": {
+    "wins_X": 1,
+    "wins_Y": 3,
+    "ties": 26,
+    "decided": 4,
+    "X_win_pct": 25,
+    "p_two_sided": 0.625,
+    "wilson95": [
+      4.6,
+      69.9
+    ]
+  },
+  "A1s_vs_A0": {
+    "wins_X": 1,
+    "wins_Y": 9,
+    "ties": 20,
+    "decided": 10,
+    "X_win_pct": 10,
+    "p_two_sided": 0.0215,
+    "wilson95": [
+      1.8,
+      40.4
+    ]
+  },
+  "acceptance_complete_first_delivery_pct": {
+    "A0": 46.7,
+    "A1s": 63.3,
+    "A1g": 100
+  },
+  "mean_words_to_read": {
+    "A0": 510.23,
+    "A1s": 516,
+    "A1g": 595.5
+  },
+  "permission_ask_rate_pct": {
+    "A0": 43.3,
+    "A1s": 6.7,
+    "A1g": 6.7
+  },
+  "mean_overbuild_markers": {
+    "A0": 0,
+    "A1s": 0.07,
+    "A1g": 0.07
+  }
+}

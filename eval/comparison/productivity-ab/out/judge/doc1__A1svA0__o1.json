@@ -1,0 +1,7 @@
+{
+  "id": "doc1",
+  "pair": "A1svA0",
+  "order": "o1",
+  "winnerArm": "A1s",
+  "why": "Response A is immediately actionable because it opens with a specific, pragmatic recommendation (Loki primary, Elastic fallback) and provides a concrete, phased plan to validate that recommendation, requiring less rework from me to become a shippable document."
+}

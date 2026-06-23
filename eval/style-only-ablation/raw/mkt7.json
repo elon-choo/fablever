@@ -1,0 +1,33 @@
+{
+  "id": "mkt7",
+  "dod": "marketing-copy",
+  "forbid": false,
+  "accept": {
+    "B": false,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 117,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 68,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 79,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "Here's a value prop and supporting bullets for a no-code internal-tools builder:\n\n---\n\n**Value prop:**\nShip the internal tools your team needs in an afternoon, not a sprint—no engineers required.\n\n**Supporting bullets:**\n- **Connect what you already have.** Plug straight into your databases, APIs, and spreadsheets, then build admin panels, dashboards, and workflows on top with drag-and-drop—no glue code, no migrations.\n- **Built for real teams, not just prototypes.** Granular permissions, audit logs, and approval flows come standard, so the tool you launch on Friday is one IT actually trusts on Monday.\n\n---\n\nWant me to tailor it to a specific audience (ops teams, startups, enterprise IT) or match a particular tone—punchier, more technical, or more enterprise?",
+  "G": "Internal tools, built in hours not weeks — without writing code.\n\n- **Ship without engineering bandwidth:** drag-and-drop UI on top of your existing databases and APIs, so ops and support teams build the dashboards, admin panels, and CRUD apps they need without waiting on a dev sprint.\n- **Safe by default:** granular permissions, audit logs, and SSO come standard, so what your team builds stays governed and compliant.",
+  "F": "**Ship the internal tools your team needs in an afternoon, not a sprint — no engineers required.**\n\n- **Drag-and-drop on top of your real data.** Connect Postgres, REST, or a spreadsheet and build dashboards, admin panels, and approval flows visually — every table, button, and form wired to live records.\n- **Safe enough for ops, fast enough for everyone.** Role-based permissions, audit logs, and one-click sharing mean you hand a tool to the team without handing over database access."
+}

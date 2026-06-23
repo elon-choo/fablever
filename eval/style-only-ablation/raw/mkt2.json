@@ -1,0 +1,33 @@
+{
+  "id": "mkt2",
+  "dod": "marketing-copy",
+  "forbid": false,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 356,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 148,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 250,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "Here are three distinct angles, each with a couple of variants you can A/B:\n\n## 1. Permission / no-guilt (lowers the shame barrier)\nThe biggest reason lapsed users don't return is they feel behind or guilty. Remove that.\n- **\"No streak. No pressure. Just 3 minutes.\"**\n- **\"You don't have to start over.\"**\n- **\"Your mind's been busy. Let's give it a break.\"**\n\n## 2. Curiosity / what's new (gives a fresh reason)\nRe-engagement works better when there's a *reason* beyond \"we miss you.\"\n- **\"We added the one thing you asked for.\"**\n- **\"3 new things since you've been gone\"**\n- **\"Your app looks a little different now…\"**\n\n## 3. Benefit / felt-state (sells the outcome, not the app)\nReconnect them to *why* they downloaded it — how they want to feel.\n- **\"Remember how calm felt?\"**\n- **\"Sleep better tonight (in 10 minutes)\"**\n- **\"Still stressed? Same here. Here's 5 minutes.\"**\n\n---\n\n## Which to send\n\n**Send #1 — the permission/no-guilt angle, lead variant: \"No streak. No pressure. Just 3 minutes.\"**\n\nReasoning:\n- **It targets the actual churn cause.** People lapse from meditation apps mostly out of guilt and broken streaks, not lost interest. This angle removes the barrier instead of poking the wound (a plain \"we miss you\" can *increase* avoidance).\n- **It's the safest high-floor choice.** #3 (\"Remember how calm felt?\") is strong but emotionally heavier and can feel manipulative if overdone; #2 only works if you genuinely shipped something new — otherwise it underdelivers on open.\n- **The low-commitment \"3 minutes\" sets an easy first step**, which is what re-engagement needs — one tiny win, not a recommitment.\n\n**Test plan:** Make #1 the control. A/B it against #3 (\"Remember how calm felt?\") — that's your most likely challenger. Hold #2 until you have a real product update to anchor it. Whatever wins on *opens*, judge the final call on **session-starts**, not opens — a curiosity hook can win the open and lose the re-activation.\n\nOne caveat: confirm you actually have a 3-minute session to land them in. The subject line makes a promise; the in-app first screen has to keep it.",
+  "G": "Send **B**.\n\n**A — Curiosity/loss-aversion**\n`Your meditation streak is still here`\n\n**B — Benefit-forward, low-pressure**\n`A 3-minute reset for the day you're having`\n\n**C — Direct re-engagement**\n`We saved your spot — come back anytime`\n\n**Why B:** It leads with a concrete, low-friction benefit (3 minutes) and meets lapsed users where they are emotionally, without the mild guilt-trip of A (\"streak\") or the passivity of C. Lapsed users often churned *because* the app felt like one more obligation — B reframes meditation as relief, not a task, and the specific time cost lowers the barrier to one tap.\n\nA is a strong B-test variant if you want to measure loss-aversion. C is the weakest — \"we saved your spot\" is generic and gives no reason to act now.\n\nOne caveat: avoid \"streak\" language (A) if your churn data shows people quit from streak pressure — it can backfire.",
+  "F": "Send the no-guilt angle (#1). For lapsed meditation users, the biggest barrier to returning isn't lack of interest — it's the small shame of having \"fallen off.\" Removing that friction outperforms novelty or feature pitches in re-engagement flows.\n\n**Angle 1 — Permission / no guilt** (recommended)\n- Subject: *\"No guilt. Just three minutes today.\"*\n- Why it wins: speaks to the actual reason they stopped, lowers the cost of return to near zero, and the specific \"three minutes\" makes re-entry feel effortless rather than like recommitting to a habit.\n\n**Angle 2 — Curiosity / what's new**\n- Subject: *\"We've changed since you last meditated\"*\n- Good if you have a genuinely new feature or content library to point to; weak if the email just lands on the same old home screen, which reads as a bait-and-switch.\n\n**Angle 3 — Outcome reminder**\n- Subject: *\"Remember how a calm week felt?\"*\n- Reconnects them to the benefit, but it leans on nostalgia and can quietly remind them they failed to keep it up — a small risk of reinforcing the guilt that drove them away.\n\nSuggested test: ship #1 as the primary, hold #3 as the B variant. Keep #2 in reserve for when you actually have a new feature to anchor it to.\n\nOne adjustment worth making whichever you send: pair the subject with a preheader that names the single tap-to-start action (e.g., \"Open to a 3-minute reset — no streak required\"), so the inbox preview keeps the no-pressure promise intact."
+}

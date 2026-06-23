@@ -1,0 +1,33 @@
+{
+  "id": "rev4",
+  "dod": "code-review",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 313,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "G": {
+      "words": 284,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 240,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "This is a security‑sensitive snippet, so here's what's wrong with it — identification only, no rewrite:\n\n## Problems\n\n1. **Hardcoded signing secret** — `\"secret123\"` lives directly in source. Anyone with repo (or git‑history, or bundled‑build) access gets the key and can **forge arbitrary valid tokens**. The key also can't be rotated without a code change/redeploy. It belongs in an env var / secrets manager.\n\n2. **Trivially weak secret** — even setting aside that it's hardcoded, `\"secret123\"` is low‑entropy and brute‑forceable/dictionary‑crackable offline against any captured token. HMAC secrets should be long, random, high‑entropy.\n\n3. **No expiration** — `jwt.sign` is called with no `expiresIn` (no `exp` claim). The token is valid **forever**, so a single leaked token is a permanent credential — no natural revocation window.\n\n4. **Entire `user` object dumped into the payload** — `{user}` embeds the whole user object. JWT payloads are **base64‑encoded, not encrypted** — fully readable by anyone holding the token. This likely leaks PII / internal fields (email, roles, password hash, internal IDs). Only minimal claims (e.g. a user id) should go in.\n\n5. **Algorithm not pinned** — relies on the default (HS256) instead of explicitly setting `algorithm`. Not pinning it is a code smell and, depending on how the verify side is written, contributes to algorithm‑confusion risk.\n\n6. **Missing standard claims** — no `sub`, `iss`, or `aud`. Without these the verifier can't properly scope/validate who the token is for or who issued it.\n\n## Most critical\nItems **1–2** are the headline: a hardcoded, weak secret means the entire auth scheme is compromised — token forgery is trivial. **3** and **4** are serious secondary issues (no expiry + data leakage). The comment `// hardcoded` even flags #1, so it reads like a known shortcut that needs closing before this ships.\n\nWant me to note which of these would block a deploy vs. which are hardening, or is the list enough?",
+  "G": "Problems with this line:\n\n1. **Hardcoded secret in source** — `\"secret123\"` is committed to the codebase. Anyone with repo/source access (or anyone who finds it in a leaked bundle, git history, or stack trace) can forge valid tokens. The signing key must come from an environment variable / secret manager.\n\n2. **Trivially weak secret** — even if it weren't hardcoded, `\"secret123\"` is low-entropy and dictionary-guessable. An HS256 secret should be a long, random, high-entropy value, so the signature can't be brute-forced offline.\n\n3. **No expiration** — `jwt.sign` is called without `expiresIn` (or an `exp` claim), so the token never expires. A stolen or leaked token stays valid forever with no way to age it out.\n\n4. **Whole `user` object dumped into the payload** — a JWT payload is only base64-encoded and signed, *not encrypted*. Anyone holding the token can read every field. If `user` contains a password hash, email, role internals, or other PII/sensitive data, it's all exposed client-side.\n\n5. **No algorithm pinned** — relying on the default (HS256). If the verification side isn't equally strict about the allowed algorithm, this opens the door to algorithm-confusion / `alg: none` attacks. Algorithm should be explicit and enforced on verify.\n\n6. **No standard claims / context** — missing `iss`, `aud`, `sub`, etc. Without an audience/issuer to validate against, the token can be replayed across services that share the secret.\n\n7. **Synchronous signing** — calling `jwt.sign` without a callback runs synchronously and blocks the event loop. Minor compared to the above, but worth noting in a hot path.\n\nThe comment `// hardcoded` flags #1 but understates it — the bigger issues are the missing expiration (#3) and dumping the full user object into a readable payload (#4).",
+  "F": "The core problem is security: this line signs a JWT with a hardcoded, weak secret and no safety constraints. Specific issues:\n\n1. **Hardcoded secret** — `\"secret123\"` is embedded in source. Anyone with repo access (or a leaked commit, or a decompiled bundle) can forge valid tokens for any user. Secrets belong in environment variables or a secrets manager, never in code.\n\n2. **Weak secret** — even if it weren't hardcoded, `\"secret123\"` is short and low-entropy. HS256 signatures are brute-forceable offline when the secret is guessable like this. Should be a long random value (32+ bytes).\n\n3. **No expiration** — `jwt.sign` is called with no `expiresIn` / `exp` claim, so the token never expires. A leaked token is valid forever, with no way to age it out.\n\n4. **Entire `user` object in the payload** — a JWT payload is base64-encoded, *not* encrypted. Anything in `user` (password hash, email, roles, PII) is readable by anyone holding the token. Only put a minimal identifier and the claims you actually need.\n\n5. **No algorithm pinning / claims** — no explicit algorithm, issuer (`iss`), audience (`aud`), or subject. Without pinning the algorithm on the verifying side, this is the setup that enables `alg:none` and HS/RS confusion attacks; missing `aud`/`iss` means the token can't be scoped to its intended service.\n\nThe author's own `// hardcoded` comment flags #1, but #3 (no expiry) and #4 (dumping the full user object) are equally serious and easy to miss."
+}

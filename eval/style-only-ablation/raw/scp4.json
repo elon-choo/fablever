@@ -1,0 +1,33 @@
+{
+  "id": "scp4",
+  "dod": "scope-control",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 201,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "G": {
+      "words": 116,
+      "unsupported_claims": 1,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 110,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "Short answer: **it's a reasonable loose sanity check, but not \"correct\" if you mean truly validating an email.**\n\nWhat it does: requires one or more non-`@` chars, exactly one `@`, then one or more non-`@` chars. So it enforces the single most important structural rule — *exactly one `@`, with something non-empty on both sides.*\n\nWhere it's too permissive (accepts things that aren't valid emails):\n- **Whitespace** — `[^@]` matches spaces and tabs, so `john doe@exa mple.com` passes.\n- **Newlines** — `[^@]` also matches `\\n`, and `$` matches at end of input, so `a@b\\n` passes. (If you ever validate multi-field input, this can let junk through.)\n- **No domain dot / TLD** — `a@b` passes; there's no requirement for a `.something` domain.\n- **Malformed domains** — `a@.`, `a@-`, `a@..com` all pass.\n\nWhat it correctly rejects: zero `@` (`abc`), multiple `@` (`a@b@c`), empty local or domain part (`@b`, `a@`).\n\nVerdict: fine as a cheap \"looks vaguely like an email\" gate (and arguably better than many overcomplicated regexes since real RFC 5322 validation in regex is impractical). Not fine as actual validation — for that you'd send a confirmation email anyway. So: correct for catching gross mistakes, not correct as a true validator.",
+  "G": "It's correct **only as a loose sanity check**, not as a real email validator.\n\nWhat it actually asserts: there's exactly one `@`, with at least one non-`@` character on each side, and nothing else around it.\n\nWhere it's too loose (accepts non-emails):\n- `a@b` — no domain dot/TLD required\n- `john doe@example` — spaces are allowed (space isn't `@`)\n- `a@-.` , `a@.` — garbage domains pass\n- newlines technically don't pass (`$` anchors), but tabs/spaces do\n\nWhere it's too strict (rejects valid addresses):\n- quoted local parts that legally contain `@`, e.g. `\"a@b\"@example.com`\n\nSo: fine if your only goal is \"has one @ with stuff on both sides.\" Not fine if you need actual validity.",
+  "F": "It's adequate for a loose sanity check but not correct as a general email validator. It will accept many strings that aren't valid emails — there's nothing requiring a dot in the domain, so `a@b` passes; it allows spaces and most other characters (`john doe@x` passes); and it doesn't anchor anything about the local part or TLD. Conversely it would reject the rare-but-legal quoted local part containing an `@` (e.g. `\"a@b\"@example.com`).\n\nWhat it *does* get right: it guarantees exactly one `@` with at least one character on each side, anchored to the whole string. So as a cheap \"looks vaguely email-shaped\" gate it works; as actual validation it's too permissive."
+}

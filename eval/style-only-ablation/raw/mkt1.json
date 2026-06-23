@@ -1,0 +1,33 @@
+{
+  "id": "mkt1",
+  "dod": "marketing-copy",
+  "forbid": false,
+  "accept": {
+    "B": true,
+    "G": false,
+    "F": false
+  },
+  "metrics": {
+    "B": {
+      "words": 168,
+      "unsupported_claims": 1,
+      "unsupported_unbacked": 1,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 114,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 205,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "# Inbox Zero AI\n\n**Your inbox, already handled.**\n\nInbox Zero AI reads every email the moment it lands, writes you a one-line summary, and sorts it where it belongs — urgent, later, or never. No rules to build, no folders to babysit. Just open your inbox and see what actually needs you.\n\nStop scrolling through noise to find the three messages that matter. We triage the other ninety-seven, so your morning starts at done instead of overwhelmed.\n\nReach inbox zero by the time you've finished your coffee. **Connect your email — it's working in 60 seconds.**\n\n---\n\nA couple of options if you want to tune the angle:\n\n- **Headline alt (benefit-forward):** \"Spend 10 minutes on email, not 2 hours.\"\n- **Headline alt (bold/contrarian):** \"You'll never read a full inbox again.\"\n- **CTA alt:** \"Try it free — no card, no setup\" / \"Get your inbox to zero\"\n\nWant me to adapt the tone (more playful, more enterprise, more dev-focused) or write matching subheads for the feature sections?",
+  "G": "Here's hero copy for Inbox Zero AI:\n\n---\n\n**Your inbox, already handled.**\n\nInbox Zero AI reads every email the moment it lands, writes you a one-line summary, and sorts it where it belongs — urgent, later, or done. No rules to configure, no folders to babysit.\n\nOpen your inbox to clarity instead of chaos. Spend your mornings deciding, not digging.\n\n---\n\nA couple of variations on the headline if you want options:\n\n- **Stop reading email. Start clearing it.**\n- **The inbox that triages itself.**\n- **Zero effort. Zero backlog. Inbox Zero.**\n\nWant me to adjust the tone (more playful, more enterprise), tighten it for a specific length, or write matching subhead/CTA button copy?",
+  "F": "Hero copy for **Inbox Zero AI** — passed the marketing-copy delivery gate (3/3 deterministic checks; one item, brand voice, is a human call flagged below).\n\n---\n\n**Your inbox, already read.**\n\nInbox Zero AI reads every email the moment it lands, writes you a one-line summary, and sorts it where it belongs — reply now, read later, or safe to skip. The sorting you used to do by hand is done before you open the app.\n\nWhat's left takes minutes, not mornings. You skim the summaries, answer what matters, and let the rest fall into place. No rules to build, no folders to babysit — it learns what you care about from the choices you already make.\n\nSo the number actually hits zero. And for once, it stays there.\n\n---\n\nOne thing to confirm: **brand voice** (the gate's one unchecked item — it can't auto-verify tone). This draft is confident and a little dry-witted (\"no folders to babysit,\" \"not mornings\"). If your brand is more buttoned-up enterprise or more playful consumer, tell me and I'll adjust the register. I also kept it CTA-free since hero copy usually pairs with a separate button — say the word if you want a closing call to action baked in."
+}

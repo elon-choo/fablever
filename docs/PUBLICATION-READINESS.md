@@ -119,10 +119,12 @@ the verify loop, to decorrelate the same-family blind spot. Zero overhead when o
   public docs' humility, but the meta-claim itself never appears in the README or any
   launch post (OSS-3). The public face is the disclosed limitations list, not a claim
   of invulnerability.
-- **T2 (productivity) — DEMOTED.** "Demonstrably improves productivity" directly
-  contradicts B4 (no magnitude before a productivity A/B), and that productivity A/B has
-  not run (the defect-catch A/B has). **Demoted form:** *productivity improvement is a
-  hypothesis with mechanism support; magnitude is unmeasured and the bundled A/B can falsify it.* Moreover **cost-direction**
+- **T2 (productivity) — DEMOTED, now with negative evidence.** "Demonstrably improves productivity"
+  directly contradicts B4 (no magnitude before a productivity A/B). That productivity A/B has **now been
+  run** (`../eval/comparison/productivity-ab/`, one-shot + multi-turn) and found **no gain** — so T2 stays
+  demoted on *evidence*, not just caution. **Demoted form:** *productivity improvement is a hypothesis
+  with mechanism support; magnitude is unmeasured — and where it was measured (these two A/Bs) no gain
+  was found, bounding the claim.* Moreover **cost-direction**
   (does the panel beat a strong solo pass *per unit cost*?) is **not** established by
   mechanism either. The A/B's `caught_per_agent` is a first **agent-count proxy** for it,
   but true token/wall-clock cost-direction needs **call-site** instrumentation the Workflow

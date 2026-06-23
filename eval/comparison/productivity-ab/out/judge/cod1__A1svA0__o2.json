@@ -1,0 +1,7 @@
+{
+  "id": "cod1",
+  "pair": "A1svA0",
+  "order": "o2",
+  "winnerArm": "A0",
+  "why": "Response A's single, traced example was more efficient for me to verify than B's list of test cases, which required more effort to see which one actually demonstrated the fix."
+}

@@ -1,0 +1,7 @@
+{
+  "id": "cod3",
+  "pair": "A1svA0",
+  "order": "o2",
+  "winnerArm": "A0",
+  "why": "Response A's 'Caveats' section provided critical, actionable context on composite keys, SQL performance, and trade-offs, which saved me from having to figure out those real-world implementation details myself."
+}

@@ -1,0 +1,33 @@
+{
+  "id": "mkt6",
+  "dod": "marketing-copy",
+  "forbid": false,
+  "accept": {
+    "B": true,
+    "G": false,
+    "F": false
+  },
+  "metrics": {
+    "B": {
+      "words": 362,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 217,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 337,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "Here are a few cold-open variants — different angles, all short. The opener is the part that earns the next two sentences, so each keeps the focus on the CTO's problem, not your product.\n\n---\n\n**1. The \"incident before the alert\" angle (strongest for CTOs)**\n\n> Subject: your API was down before PagerDuty noticed\n>\n> Hi [Name] — most monitoring tells you an endpoint is up because it returns a 200. It doesn't tell you the 200 took 4 seconds, dropped a field your mobile client depends on, or started failing only for users in eu-west. By the time a customer emails support, you've already lost the morning.\n\n---\n\n**2. The peer/credibility angle**\n\n> Subject: the 2am page that wasn't actually a real outage\n>\n> Hi [Name] — every engineering team I talk to has the same complaint: half their on-call pages are noise, and the one that mattered showed up as a support ticket instead of an alert. We catch the schema drift, latency creep, and partial failures your uptime checks treat as \"green.\"\n\n---\n\n**3. The blunt one-liner (good for busy CTOs who skim)**\n\n> Subject: do you know your p99 right now?\n>\n> Hi [Name] — if a downstream API quietly added 800ms to your checkout flow today, how long until someone tells you? For most teams the answer is \"a customer.\" I'd like to change that for [Company].\n\n---\n\nA few notes on why these work, so you can adapt them:\n\n- **No \"I hope this finds you well\" / no company bio.** CTOs delete on the first generic line. Lead with their pain, not your existence.\n- **Specificity = credibility.** \"Returns 200 but dropped a field,\" \"p99,\" \"eu-west,\" \"schema drift\" signal you actually understand their stack. Swap in details true of your product.\n- **The opener's only job is to buy sentence two.** Keep the ask (a 15-min call, a demo link) for *after* you've landed the problem — don't crowd the open with it.\n\nWant me to tailor one to a specific vertical (fintech, e-commerce, B2B SaaS), match your product's exact features, or write the full body + CTA that follows the opener?",
+  "G": "Here's an opener built to earn a CTO's next 10 seconds — specific, no fluff, and it leads with their pain instead of your product:\n\n---\n\n**Subject:** the 2am page you didn't need\n\nHi {FirstName},\n\nMost API outages don't start as outages — they start as a p99 creeping from 200ms to 900ms three days before anything actually breaks, while your dashboards still glow green. By the time PagerDuty fires, you're debugging in production with the whole team watching.\n\n{Company}'s API surface has grown fast enough that I'd bet the gap between \"something's degrading\" and \"you find out\" is wider than you'd like.\n\n---\n\nA few notes on why it's built this way:\n\n- **The subject is curiosity-driven, not salesy** — no \"API monitoring solution\" in the inbox preview.\n- **It opens with their reality, not your tool.** The product is never named in the opener; you've earned the right to pitch it in the *next* paragraph.\n- **It's falsifiable and specific** (\"p99 creeping from 200ms to 900ms\") so it reads like someone who actually understands their stack, not a mail merge.\n\nIf you tell me the tool's sharpest differentiator (e.g., distributed tracing, synthetic checks, anomaly detection before threshold breach) and the company/industry you're targeting, I'll tighten the opener and write the CTA + follow-up to match.",
+  "F": "Here's an opener built for a CTO's inbox — specific, no fluff, and it earns the next sentence instead of asking for a meeting up front.\n\n**Primary (incident-cost angle):**\n\n> Subject: your API's p99 at 2am\n>\n> Hi {First} — most teams find out an endpoint is degrading when a customer tells them, not when it starts. If {Company} is running {N}+ public endpoints, you're probably one silent latency creep away from a churn conversation you didn't see coming. We catch that drift before your users do.\n\nWhy it works: it names a failure mode CTOs viscerally recognize (finding out from a customer), ties it to their actual surface area, and the value claim is concrete rather than \"improve observability.\"\n\nA few alternates depending on the angle you want to lead with:\n\n**Status-quo jab (for teams that already have monitoring):**\n> Hi {First} — you almost certainly already monitor uptime. The problem is uptime is green while your checkout API quietly answers in 4 seconds. That gap is where revenue leaks, and it's the gap we close.\n\n**Peer proof (if you have a recognizable logo):**\n> Hi {First} — {Competitor/Peer}'s team cut their mean-time-to-detect on API regressions from ~40 min to under 3 after switching to us. Given {Company}'s traffic, I'd bet the same blind spots are sitting in your stack right now.\n\n**Short and blunt (high-volume sequences):**\n> Hi {First} — quick one: when an API endpoint slows down at {Company}, who notices first — your dashboards or your customers? If the honest answer is \"customers,\" that's the whole reason I'm writing.\n\nTwo things that make any of these land harder: fill the `{N}`/`{Company}`/traffic merge fields with real recon (a public status page, job posts mentioning their stack, an API doc count) so it can't read as mass-blasted, and keep the opener to 2–3 sentences max — the goal is to earn the second paragraph, not to pitch the product. Want me to write the full body and CTA to pair with one of these?"
+}

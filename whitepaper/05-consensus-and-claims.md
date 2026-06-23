@@ -117,5 +117,6 @@ controls ([§3.2](03-results.md)). Nothing here moves a demoted thesis back up.
   guidance" claim.
 - **Token/wall-clock cost-direction** — needs call-site instrumentation the Workflow
   runtime cannot provide.
-- **A developer-facing productivity A/B** — unrun; the only thing that could ground T2.
+- **A developer-facing productivity A/B** — **now run** (`../eval/comparison/productivity-ab/`); one-shot
+  and multi-turn both found **no productivity gain** (null/negative), so it bounds rather than grounds T2.
 - Minor: RESEARCH source table → appendix; full README length trim.

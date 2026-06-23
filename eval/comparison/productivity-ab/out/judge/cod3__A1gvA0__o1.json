@@ -1,0 +1,7 @@
+{
+  "id": "cod3",
+  "pair": "A1gvA0",
+  "order": "o1",
+  "winnerArm": "A1g",
+  "why": "Response A's code is more performant (`findIndex` then `slice`) and thus more shippable than B's (`filter` then `slice`), saving me a performance review and rewrite."
+}

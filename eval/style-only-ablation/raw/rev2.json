@@ -1,0 +1,33 @@
+{
+  "id": "rev2",
+  "dod": "code-review",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 293,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 1
+    },
+    "G": {
+      "words": 232,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 256,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "This one line has a serious security hole. Here's what's wrong:\n\n## Critical: Arbitrary file read / path traversal (LFI)\n\n```js\napp.get(\"/file\",(req,res)=>res.sendFile(req.query.path));\n```\n\n`req.query.path` is fully attacker-controlled and passed straight into `res.sendFile()` with no validation, sanitization, or `root` confinement. Because `sendFile` accepts absolute paths, an attacker can read **any file the process can access**:\n\n- `GET /file?path=/etc/passwd`\n- `GET /file?path=/etc/shadow`\n- `GET /file?path=/proc/self/environ` (leaks env vars / secrets)\n- `GET /file?path=/app/.env` or the app's own source, `~/.ssh/id_rsa`, AWS creds, etc.\n\nThis is a textbook Local File Inclusion. The `root` option (which is what constrains `sendFile` to a safe base directory and blocks `../` traversal) is absent.\n\n## Other problems\n\n1. **No authentication/authorization** — the endpoint is wholly unprotected; anyone can hit it.\n\n2. **No error callback** — `sendFile(path[, options][, callback])` is called without the callback. Errors (missing file, permission denied) get forwarded to the default error handler, which can **leak stack traces / filesystem paths**, and failure modes aren't handled deliberately.\n\n3. **Missing-parameter crash** — if `?path=` is omitted, `req.query.path` is `undefined`. `sendFile(undefined)` throws a `TypeError` synchronously (\"path must be absolute or specify root\"), so the route errors on the trivial case.\n\n4. **Type confusion** — Express query parsing means `?path=a&path=b` yields an **array** and `?path[x]=y` yields an **object**. Passing a non-string to `sendFile` produces unexpected errors/behavior; there's no `typeof` guard.\n\n5. **No input validation/allowlist** — nothing restricts which files are servable. Even with a `root` set, you'd still want an allowlist or extension check depending on intent.\n\n6. **Encoding/null-byte tricks** — URL-encoded traversal (`%2e%2e%2f`) and null-byte injection should be assumed hostile; nothing here defends against them.\n\n**Bottom line:** the headline issue is the unauthenticated arbitrary file read. As written, this route effectively exposes the entire filesystem of the host to the internet.",
+  "G": "The critical problem and a few secondary ones:\n\n## Critical: Arbitrary file read (path traversal / LFI)\n`req.query.path` is attacker-controlled and passed straight to `res.sendFile` with no validation or confinement. Since `res.sendFile` resolves absolute paths, a request like `/file?path=/etc/passwd` (or any path reachable by the server process) returns that file. There's no allowlist, no base-directory restriction (the `root` option), and no `../` traversal check. This is a serious unauthenticated information-disclosure hole — likely the whole point of the review.\n\n## Secondary issues\n\n- **No authentication/authorization** — anyone can call the endpoint, compounding the read vulnerability.\n- **`sendFile` requires an absolute path** — with no `root` option set, any relative input throws `TypeError: path must be absolute`. So the endpoint both crashes on relative input *and* only \"works\" for absolute paths anywhere on disk.\n- **No input-type validation** — `req.query.path` may be `undefined` (request `/file` with no param), an array (`?path=a&path=b`), or an object (`?path[x]=y`) due to Express's query parsing. Each leads to a throw/type error.\n- **No error handling** — no callback or `.catch`, so `ENOENT`/permission errors propagate and error responses can leak filesystem structure/paths to the client.\n\nThe fix direction (not applied, per your request) would be to confine reads to a fixed directory via the `root` option, validate that the resolved path stays inside it, validate the input type, and add auth — but you asked only for the problems.",
+  "F": "The core problem: this is an **arbitrary file read / path traversal vulnerability**. Everything else is secondary.\n\n**1. Path traversal (critical).** `req.query.path` is attacker-controlled and handed straight to `res.sendFile` with no validation or base-directory confinement. A request like `/file?path=/etc/passwd` or `/file?path=../../../../etc/shadow` lets a caller read any file the Node process can access — source code, secrets, SSH keys, env files. This is the headline issue.\n\n**2. It's also just broken for relative paths.** Express's `res.sendFile` throws `TypeError: path must be absolute or specify root` when given a non-absolute path and no `{ root }` option. So `?path=foo.txt` errors out. The endpoint only \"works\" with absolute paths — which is exactly what makes the traversal trivial.\n\n**3. No input validation.** Missing `path` → `req.query.path` is `undefined` → `sendFile` throws. And because Express parses repeated query keys as arrays, `/file?path=a&path=b` makes `path` an array, another type error. None of these cases are guarded.\n\n**4. No error handling.** There's no callback and no surrounding try/catch or error middleware shown. `sendFile` failures (ENOENT, EACCES) get forwarded to the default error handler, which can leak stack traces and filesystem structure to the client.\n\n**5. No authentication or authorization.** The route is wide open — anyone who can reach the server can invoke it.\n\n**6. Information disclosure as a downstream effect.** Even partial errors (file exists vs. not, permission denied) leak information about the host's filesystem layout.\n\nProblems 2 and 3 are correctness bugs; problem 1 is the one that matters most and would typically be rated critical in any security review."
+}

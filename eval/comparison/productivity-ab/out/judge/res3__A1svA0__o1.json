@@ -1,0 +1,7 @@
+{
+  "id": "res3",
+  "pair": "A1svA0",
+  "order": "o1",
+  "winnerArm": "A1s",
+  "why": "Response A is more actionable because it recommends specific tools (Turborepo, Nx, Bazel) based on likely tech stacks, saving me a follow-up question."
+}

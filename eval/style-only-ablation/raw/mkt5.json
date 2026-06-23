@@ -1,0 +1,33 @@
+{
+  "id": "mkt5",
+  "dod": "marketing-copy",
+  "forbid": false,
+  "accept": {
+    "B": false,
+    "G": true,
+    "F": false
+  },
+  "metrics": {
+    "B": {
+      "words": 359,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "G": {
+      "words": 313,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    },
+    "F": {
+      "words": 224,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": null
+    }
+  },
+  "B": "## 3 Ad Angles — Meal-Prep Delivery for Busy Parents\n\n**Angle 1: Time Reclaimed (\"Get your evenings back\")**\n- **Hook:** \"What would you do with the 5 hours a week you spend cooking and cleaning up?\"\n- **Promise:** Dinner on the table in 6 minutes — no chopping, no recipe, no pile of dishes.\n- **Visual:** Parent reading to a kid on the couch at 6:45pm instead of standing at the stove.\n- **Best for:** Top-of-funnel cold audiences. Sells the outcome (family time), not the food.\n\n**Angle 2: Guilt Reversal (\"Stop feeling bad about takeout\")**\n- **Hook:** \"Third pizza night this week? It's not a willpower problem — it's a time problem.\"\n- **Promise:** Chef-cooked, dietitian-balanced meals your kids actually eat, cheaper than delivery.\n- **Visual:** Side-by-side — greasy takeout bag vs. a real plated meal; same 10 minutes.\n- **Best for:** Warm/mid-funnel. Speaks to the emotional pain (parent guilt) that drives the category.\n\n**Angle 3: Math / Value (\"Cheaper than the chaos\")**\n- **Hook:** \"$X per serving. Less than takeout, less than the groceries you throw away.\"\n- **Promise:** Fixed weekly cost, zero food waste, no 6pm \"what's for dinner\" panic.\n- **Visual:** Simple cost breakdown vs. takeout + wasted groceries.\n- **Best for:** Bottom-funnel / retargeting. Closes price-sensitive parents already considering you.\n\n## Which to run\n\n**Lead with Angle 1 (Time Reclaimed) as your primary cold-traffic creative.**\n\nReasoning: For busy parents, the core purchase driver is *time and mental load*, not food novelty or even price — and Angle 1 sells that benefit most directly with the broadest appeal. Angle 2 (guilt) converts well but is emotionally heavier and fatigues faster, so it's a strong #2 rotation. Angle 3 (math) is your closer — it underperforms cold but wins on retargeting once intent exists.\n\n**Suggested rollout:** Test Angle 1 vs. Angle 2 head-to-head on cold traffic (small budget, 4–5 days), then run Angle 3 exclusively as the retargeting layer for anyone who clicked but didn't buy.\n\nIf you tell me the price point, dietary focus (kids' meals, low-carb, etc.), and the platform (Meta vs. TikTok vs. Google), I can write actual headline/primary-text variants ready to paste in.",
+  "G": "**Run Angle 1 (Time/Guilt-relief).** It hits the sharpest pain for this audience and is the easiest to make scroll-stopping. Use the others as follow-up/retargeting creative.\n\n## Angle 1 — \"Get your evenings back\" (time + guilt relief)\n- **Core promise:** Real dinners on the table in 5 minutes, no chopping, no cleanup, no \"what's for dinner?\" dread.\n- **Hook:** *\"The 6pm scramble is over.\"* / *\"Stop choosing between a home-cooked meal and your sanity.\"*\n- **Emotional driver:** Reclaim the hour you lose every night; trade stress for time with your kids.\n- **Proof to attach:** Side-by-side \"5 min vs. 45 min\" timer, real parent testimonial.\n\n## Angle 2 — \"Food you'd actually be proud to serve\" (health/quality)\n- **Core promise:** Nutritionist-balanced, fresh (not frozen-mystery) meals your kids will actually eat.\n- **Hook:** *\"Fast food fast — without the fast food.\"*\n- **Emotional driver:** Parental pride + guilt removal around feeding kids well on busy nights.\n- **Proof to attach:** Ingredient transparency, kid-approved menu shots, macros.\n\n## Angle 3 — \"Cheaper than you think\" (value vs. takeout)\n- **Core promise:** Per-meal cost beats your weekly takeout/delivery habit, with less waste.\n- **Hook:** *\"You're already spending this on DoorDash — minus the nutrition.\"*\n- **Emotional driver:** Smart-parent rationalization; removes the price objection.\n- **Proof to attach:** Cost-per-serving math, \"vs. takeout\" comparison graphic.\n\n## Why Angle 1 first\nTime scarcity is the **most acute, universal pain** for busy parents — it's felt daily and emotionally, which drives higher click and conversion than health (aspirational, slower) or price (objection-handling, better mid-funnel). \n\n**Suggested test plan:** Lead with Angle 1 to cold audiences. Once you have engagers, retarget with Angle 2 (justifies the choice) and Angle 3 (kills the price objection at checkout). If you can only fund a real A/B test, pit **Angle 1 vs. Angle 3** — time-relief vs. value are the two strongest standalone purchase triggers.",
+  "F": "**Run Angle 1 (time/relief) as your primary.** It targets the sharpest, most universal pain — the weeknight dinner scramble every busy parent feels — and gives the most scroll-stopping hook (\"It's 5:47pm…\"). Relief from a daily, concrete moment converts better on cold traffic than aspiration (Angle 2) or rational justification (Angle 3).\n\nThen sequence the other two rather than dropping them:\n- **Angle 3 (cost) as secondary** — point it at price-sensitive and retargeting audiences who already know the brand but hesitate on spend. The takeout comparison gives them permission to buy.\n- **Angle 2 (health/guilt) as a variant** — hold it until you see which audience converts, then use it to deepen resonance with the parents who responded to Angle 1.\n\nThe three angles are in my previous message (hook / body / CTA for each). The deliverable passed the marketing-copy gate (3/3 deterministic checks: single clear CTA per angle, no unsourced stats, a recommendation present).\n\nOne thing the gate can't decide for you: **voice/tone fit**. The copy is written in a punchy, slightly wry direct-response register — if your brand is gentler or more premium, the hooks (\"soggy-fries regret,\" \"witching-hour scramble\") will need softening. Confirm that against your brand voice before it ships, and note the \"$60+ takeout\" figure is a placeholder estimate — swap in your real per-serving comparison before launch."
+}

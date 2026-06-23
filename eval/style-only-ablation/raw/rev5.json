@@ -1,0 +1,33 @@
+{
+  "id": "rev5",
+  "dod": "code-review",
+  "forbid": true,
+  "accept": {
+    "B": true,
+    "G": true,
+    "F": true
+  },
+  "metrics": {
+    "B": {
+      "words": 328,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 1
+    },
+    "G": {
+      "words": 270,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    },
+    "F": {
+      "words": 229,
+      "unsupported_claims": 0,
+      "unsupported_unbacked": 0,
+      "scope_violation": 0
+    }
+  },
+  "B": "Looking at that line, here's what's wrong:\n\n```javascript\nfor(const u of users){ await db.save(u); } // 10k users\n```\n\n**1. Serialized writes (the big one)**\nThe `await` is *inside* the loop, so each save fully completes before the next one starts. With 10k users, total time = the sum of 10k round-trip latencies. If each save is ~20ms, that's ~3–4 minutes of mostly idle waiting on network I/O. There's no batching and no concurrency.\n\n**2. No batching / bulk insert**\nThis issues 10,000 individual `save` calls — 10,000 separate DB round trips. Almost any database supports a bulk/batch insert that would do this in a handful of queries.\n\n**3. No error handling**\nIf *any* single `db.save(u)` rejects, the whole loop throws and aborts. There's no `try/catch`, no retry, no skip-and-continue.\n\n**4. Not atomic — partial-write hazard**\nFollowing from #3: if it fails at user #5,000, the first 5,000 are committed and the rest aren't. No transaction, no rollback. You're left in an inconsistent half-written state.\n\n**5. Not idempotent / not resumable**\nBecause of #4, re-running after a mid-way failure either re-saves the first 5,000 (possible duplicates) or requires manual bookkeeping. Nothing tracks progress.\n\n**6. No observability**\nA multi-minute loop over 10k items with zero logging or progress reporting — if it hangs, you can't tell where or why.\n\n**7. No flow control if you *did* parallelize**\nWorth flagging the trap: the naive \"fix\" of `Promise.all(users.map(u => db.save(u)))` would swing to the opposite extreme and fire 10k concurrent writes at once, exhausting the connection pool. The right shape is bounded concurrency or batching — neither of which is here.\n\n**8. Whole set held in memory**\n`users` implies all 10k records are materialized in memory at once. Depending on row size, streaming/paginating the source would be safer at larger scales.\n\nThe dominant issue is **#1 + #2** (serial, unbatched I/O); the most dangerous one is **#3 + #4** (a single failure leaves the job partially applied with no recovery path).",
+  "G": "This is a simple snippet review, so I'll answer directly rather than spin up the multi-agent review chain (that's for gate-scored verification, not a one-liner scan).\n\nProblems with `for(const u of users){ await db.save(u); } // 10k users`:\n\n1. **Sequential awaits — the headline problem.** Each `await` blocks until the previous save resolves, so 10k users = 10,000 serialized round-trips to the DB. Wall-clock time is the sum of every latency. At even 5ms/save that's ~50s of mostly-idle waiting.\n\n2. **No batching / bulk write.** 10k individual `save` calls instead of a bulk insert or multi-row upsert. You pay per-statement and per-round-trip overhead 10,000 times for work a single batched query could do.\n\n3. **No transaction / no atomicity.** If it throws at user 5,000, the first 4,999 are already committed and the rest aren't. You're left in a partial, inconsistent state with no rollback.\n\n4. **No error handling.** A single rejected `db.save` propagates out and aborts the entire loop. One bad record kills the whole run, and there's no try/catch, no retry, and no collection of which records failed.\n\n5. **Not resumable / no progress.** Because of #3 and #4, after a mid-run failure you can't tell where it stopped or cleanly restart — re-running risks duplicating the already-saved ones (unless `save` is idempotent, which isn't shown).\n\n6. **Whole set held in memory.** `users` is fully materialized (all 10k) rather than streamed — minor here, but it scales badly if the count grows.\n\nItems 1–4 are the substantive ones; the comment `// 10k users` is exactly what makes the sequential-await pattern a real problem rather than a cosmetic one.",
+  "F": "The main problem is that this saves 10,000 users **one at a time, sequentially** — and a few things follow from that.\n\n- **Sequential round-trips kill throughput.** Each `await` fully waits for the previous `db.save` to finish before starting the next. With 10k users you pay 10k network/disk round-trips back to back. This is the headline issue: it should be a bulk/batch insert (`insertMany`, `bulkWrite`, multi-row `INSERT`) or at least chunked concurrency, not a save-per-iteration loop.\n\n- **No error handling.** If any single `db.save(u)` rejects, the `await` throws and the loop aborts. You're left with a partial write — some users saved, some not — and no record of where it stopped or which one failed.\n\n- **Not atomic / no transaction.** Because it's 10k independent saves, a failure halfway leaves the database in an inconsistent in-between state. There's no rollback.\n\n- **No idempotency / resumability.** If you rerun after a partial failure, you'll either duplicate already-saved users or need external bookkeeping to know where to resume — neither is handled here.\n\n- **Unbounded memory.** `users` holds all 10k in memory at once; if this is meant to scale, there's no streaming or chunking.\n\nOne thing to note: the comment `// 10k users` is what makes this bad. For 3 users this loop would be perfectly fine — the problem is the pattern at that scale, not the syntax."
+}

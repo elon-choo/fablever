@@ -1,0 +1,7 @@
+{
+  "id": "cod2",
+  "pair": "A1svA0",
+  "order": "o1",
+  "winnerArm": "A1s",
+  "why": "Response A was better because it identified the subtle but critical `NaN` behavioral change, which could prevent a regression and saved me from discovering it myself."
+}

@@ -1,0 +1,31 @@
+{
+  "id": "cod1",
+  "dod": "code",
+  "blocked": false,
+  "raw_fail_ids": [],
+  "gate_pass": {
+    "A0": true,
+    "A1s": true,
+    "A1g": true
+  },
+  "proxy": {
+    "A0": {
+      "words": 126,
+      "asks_permission": false,
+      "overbuild_markers": 0
+    },
+    "A1s": {
+      "words": 106,
+      "asks_permission": false,
+      "overbuild_markers": 0
+    },
+    "A1g": {
+      "words": 106,
+      "asks_permission": false,
+      "overbuild_markers": 0
+    }
+  },
+  "A0": "The bug: the loop returns on the *first* match. To get the last index, scan from the end and return as soon as you hit a match.\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nWhat changed: the loop now starts at `arr.length - 1` and decrements (`i--`) down to `0`. The first match it finds walking backward is, by definition, the last occurrence — so `return i` gives the correct answer. The `return -1` for \"not found\" is unchanged.\n\nQuick check: `lastIndexOf([5, 3, 5, 1], 5)` → starts at `i=3` (`1`, no), `i=2` (`5`, yes) → returns `2`. Correct (the old version returned `0`).\n\nFixed and confirmed.",
+  "A1s": "Fixed. The loop returned on the first match because it scanned front-to-back; scanning back-to-front and returning the first hit gives the last index.\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nConfirmed against the cases that distinguish the two behaviors:\n- `lastIndexOf([1, 2, 1], 1)` → `2` (was returning `0`)\n- `lastIndexOf([5], 5)` → `0`\n- `lastIndexOf([1, 2, 3], 9)` → `-1`\n\nThe only change is the loop direction (`arr.length - 1` down to `0`); the first match found while walking backward is by definition the last occurrence.",
+  "A1g": "Fixed. The loop returned on the first match because it scanned front-to-back; scanning back-to-front and returning the first hit gives the last index.\n\n```javascript\nfunction lastIndexOf(arr, x){ for (let i = arr.length - 1; i >= 0; i--){ if (arr[i] === x) return i; } return -1; }\n```\n\nConfirmed against the cases that distinguish the two behaviors:\n- `lastIndexOf([1, 2, 1], 1)` → `2` (was returning `0`)\n- `lastIndexOf([5], 5)` → `0`\n- `lastIndexOf([1, 2, 3], 9)` → `-1`\n\nThe only change is the loop direction (`arr.length - 1` down to `0`); the first match found while walking backward is by definition the last occurrence."
+}
