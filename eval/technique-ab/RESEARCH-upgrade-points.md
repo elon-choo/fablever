@@ -138,9 +138,18 @@ these tools productive*, grounding the priorities in real voice, not just our re
 what `fablize`'s per-task router does. **Why it's the big one:** it simultaneously resolves three of *our own*
 measured problems — the evidence-loop **over-pads when applied to everything** (our 12–4 quality loss), the
 style **costs ~14%/call everywhere** (route → pay only where it helps), and plan-first **won only on hard
-multi-step** (route → don't tax easy tasks). Our currently-running `surgical-evidence` experiment is, in
+multi-step** (route → don't tax easy tasks). Our `surgical-evidence` experiment was, in
 effect, a first probe of "scope the discipline" — routing generalizes it. **Test:** a lightweight classifier
-(render / multi-step / debug / simple) that gates which discipline fires; measure quality + cost vs always-on.
+(confirm / multi-step / debug / simple) that gates which discipline fires; measure quality + cost vs always-on.
+**RESULT — now run, a BOUNDED NULL ([`RESULTS-routing.md`](RESULTS-routing.md)):** a routed classifier
+(93% accurate) is **~22% leaner** than always-on (138 vs 177 words) and trends above baseline (8–3, n.s.) —
+but it does **NOT** beat always-on on single-shot quality (6–9, n.s.). The reason matters: **in a single shot,
+always-on heavy discipline is cheap — the model ignores the disciplines that don't fit** (all three injected
+onto "write `add(a,b)`" still produced a short function). So routing's *single-shot* benefit is **leanness,
+not quality**. The cost that actually motivates routing — always-on injection compounding over a *long
+session* (the harness paradox) — is invisible at n=1 turn. **This relocates the claim:** don't headline
+routing as a quality win; its measured benefit is cost, and its real test is the **out-of-band holdout**
+(#7), not a single-shot A/B. A useful, honest downgrade of the "#1 headline."
 
 ### 2. Auto-seed generator (an `/init-deep` for fablever) — **evidence-backed**
 **Idea:** a command that generates hierarchical `AGENTS.md` convention files from the codebase. **Why:** our

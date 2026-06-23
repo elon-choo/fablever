@@ -1,0 +1,15 @@
+{
+  "id": "d3",
+  "cat": "simple",
+  "route": "NONE",
+  "routeOK": true,
+  "prompt": "Write a function `isEven(n)` that returns whether n is even.",
+  "A": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+  "B": "Outline: one function using modulo; handle the integer contract with a check line.\n\n```js\nfunction isEven(n) {\n  return n % 2 === 0;\n}\n```\n\nCheck: `isEven(4) === true`, `isEven(7) === false`, `isEven(0) === true`, `isEven(-2) === true` — all hold; modulo is O(1).\n\n함수 `isEven(n)`을 `n % 2 === 0`으로 작성했고, 위 입력→출력 4건으로 짝수·홀수·0·음수 케이스가 모두 통과함을 확인했습니다. 정수가 아닌 입력(예: `2.5`)이나 `NaN`은 별도 검증 없이 그대로 `false`를 반환하는데, 정수 입력이라는 일반적 계약을 가정한 것이라 의도된 동작입니다.",
+  "C": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+  "w": {
+    "A": 24,
+    "B": 79,
+    "C": 24
+  }
+}

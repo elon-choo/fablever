@@ -40,6 +40,7 @@ their own merits here** — judged by **GPT-5.5 via the Codex CLI**, a different
 | **Local-context seeding** (convention in a local `AGENTS.md`) | adherence: no-seed **11%** → local-seed **78%** → generic "follow conventions" nudge **22%** | **ADOPT** — a specific local file beats a vague nudge |
 | **↳ Auto-generated seed** (generator reads the code, writes the `AGENTS.md`) | adherence: no-seed 33% → auto-seed **88.9%** → hand-written 100% (regex: auto **100%** vs hand 78%) | **ADOPT** — auto-generation preserves the lift; closes the auto-discovery gap → shippable feature |
 | **Evidence loop** (no "done" without a shown check) | as a **2nd rewrite pass**: hit the metric but GPT-5.5 preferred the leaner baseline **12–4** (length 217→384). **Refined (inline, 1st-pass):** unsupported→**0%**, length *halved* 224→117, beats baseline **15–2** (p=0.0023) & the original loop **17–0**; pooled vs baseline **26–6 (p=0.0005)** | **ADOPT the inline packaging, NOT a 2nd pass** — the discipline belongs in the first generation |
+| **Task-type routing** (route discipline by task type vs apply all always) | routed is **~22% leaner** than always-on (138 vs 177w) and trends > baseline (8–3, n.s.) **but does NOT beat always-on on single-shot quality** (6–9, n.s.) — because in one shot the model ignores ill-fitting disciplines, so always-on is cheap | **BOUNDED NULL** — routing's single-shot benefit is leanness, not quality; the long-session cost that motivates it needs the holdout (below), not a single-shot A/B |
 
 Full writeup + provenance note: [`eval/technique-ab/`](eval/technique-ab/). These validate *the ideas*; wiring
 any of them into the install is a separate gated change.
@@ -50,9 +51,11 @@ of the tools people actually rally behind (lazycodex/oho, insane-search, slides-
 independent corroboration: **fablize** attacks fablever's *exact* thesis and reached the same split (procedure
 transfers, capability doesn't) via 19 A/B + 26 sessions — and its `MEASUREMENT_PROTOCOL.md` names the one
 thing fablever hasn't measured (the "harness paradox": does always-on verification *cost* long-session
-attention?). Prioritized, evidence-screened candidates: **task-type routing**, **auto-generated local seed**,
-and **out-of-band holdout measurement** — each gated behind its own A/B, two of which are now running
-(`run-surgical-evidence.mjs`, `run-autoseed.mjs`).
+attention?). Prioritized, evidence-screened candidates were each put through their own A/B: **auto-generated local seed**
+(ADOPT — auto reaches 88.9% adherence), the **evidence-loop refinement** (ADOPT the inline packaging,
+26–6 pooled), and **task-type routing** (a **bounded null** — leaner than always-on but not better single-shot
+quality; its real cost case lives in long sessions). That last result is what makes **out-of-band holdout
+measurement** the highest-leverage remaining upgrade: the one cost a single-turn A/B structurally cannot see.
 
 ## What was NOT tested (open, not hidden)
 

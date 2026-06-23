@@ -1,0 +1,15 @@
+{
+  "id": "d1",
+  "cat": "simple",
+  "route": "NONE",
+  "routeOK": true,
+  "prompt": "Write a function `add(a, b)` that returns their sum.",
+  "A": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+  "B": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+  "C": "`add.py`에 파일 쓰기 권한이 거절돼서, 함수만 바로 드립니다.\n\n```python\ndef add(a, b):\n    return a + b\n```\n\n`a`와 `b`를 받아 그 합을 반환합니다. 숫자뿐 아니라 `+`가 정의된 타입(문자열·리스트 등)에도 동작합니다. 파일로 저장이 필요하면 경로만 알려주시면 만들어 드리겠습니다.",
+  "w": {
+    "A": 24,
+    "B": 24,
+    "C": 37
+  }
+}

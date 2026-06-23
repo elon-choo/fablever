@@ -1,0 +1,15 @@
+{
+  "id": "d4",
+  "cat": "simple",
+  "route": "NONE",
+  "routeOK": true,
+  "prompt": "Write a function `maxOf(arr)` that returns the largest number in an array.",
+  "A": "```javascript\nfunction maxOf(arr) {\n  return Math.max(...arr);\n}\n```\n\n`Math.max`에 스프레드로 배열 요소를 펼쳐 가장 큰 값을 반환합니다. 빈 배열을 넘기면 `Math.max()`가 `-Infinity`를 돌려주는데, 그 경우 오류를 던지고 싶다면 이렇게 하면 됩니다:\n\n```javascript\nfunction maxOf(arr) {\n  if (arr.length === 0) throw new Error(\"empty array\");\n  return Math.max(...arr);\n}\n```\n\n매우 큰 배열(약 10만 개 이상)에서는 스프레드가 콜 스택 한계에 걸릴 수 있어, 그럴 땐 `arr.reduce((a, b) => Math.max(a, b))`를 쓰는 편이 안전합니다.",
+  "B": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+  "C": "```javascript\nfunction maxOf(arr) {\n  if (arr.length === 0) return undefined;\n  return Math.max(...arr);\n}\n```\n\n빈 배열일 때 `Math.max()`는 `-Infinity`를 반환하므로, 그 경우 `undefined`로 막았습니다. 입력이 항상 비어있지 않다고 보장된다면 본문은 `return Math.max(...arr);` 한 줄로 충분합니다.\n\n매우 큰 배열(수만 개 이상)이라면 `...arr` 스프레드가 호출 스택 한계에 걸릴 수 있는데, 그 경우엔 `arr.reduce((m, n) => n > m ? n : m, -Infinity)`로 바꾸면 됩니다.",
+  "w": {
+    "A": 70,
+    "B": 24,
+    "C": 63
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "c3",
+  "cat": "debug",
+  "route": "INVESTIGATE",
+  "routeOK": true,
+  "prompt": "This memoize returns stale results — diagnose the root cause and fix:\n\nfunction memo(fn){let c;return()=>c??(c=fn());}",
+  "A": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+  "B": "## 구현할 부분 (짧은 outline)\n1. 루트 원인 한 줄로 특정\n2. 재현으로 확인\n3. `computed` 플래그로 수정\n4. input→output 체크 첨부\n\n## 루트 원인\n`c ?? (c = fn())` 는 **캐시된 값 그 자체를 \"계산했는가?\"의 신호로 재사용**한다. `??`는 `null`/`undefined`만 \"비어있음\"으로 보므로, `fn()`이 `null` 또는 `undefined`를 반환하면 `c`가 nullish인 상태로 남아 **매 호출마다 `fn()`을 다시 실행**한다. 즉 nullish 반환값에 대해 메모이즈가 통째로 무력화된다 — \"계산 안 됨\"과 \"계산해서 null이 나옴\"을 구분하지 못하는 sentinel 충돌이다. (`0`/`''`/`false`는 `??`가 통과시키므로 정상 캐시됨 — 문제는 nullish 한정.)\n\n## 확인 (재현)\n```js\nfunction memo(fn){let c;return()=>c??(c=fn());}\nlet n=0; const g=memo(()=>{n++;return null;});\ng(); g(); g();\n// 기대: n===1 (한 번만 계산)\n// 실제: n===3  ← fn이 3번 호출됨, 캐시 미작동 확인\n```\n\n## 수정\n값이 아니라 **별도 boolean 플래그로 \"계산 여부\"를 추적**한다.\n```js\nfunction memo(fn){let c,done=false;return()=>done?c:(done=true,c=fn());}\n```\n\n## 체크\n```js\nlet n=0; const g=memo(()=>{n++;return null;});\ng(); g(); g();\nconsole.assert(n===1, 'nullish도 한 번만 계산');        // n===1 ✓\n\nlet m=0; const h=memo(()=>++m);\nconsole.assert(h()===1 && h()===1 && m===1, '정상값 캐시 유지'); // ✓\n```\n복잡도: 첫 호출 O(fn), 이후 O(1). 클로저당 상태 2개(`c`,`done`).\n\n---\n\n`??` 메모이즈가 `null`/`undefined` 반환값에서 캐시를 못 잡아 매번 `fn`을 재실행하던 게 근본 원인이었고, 값 대신 `done` 플래그로 계산 여부를 추적하도록 고쳤습니다. 위 두 assert로 nullish·정상값 양쪽 모두 1회 계산만 일어남을 확인했습니다.\n\nDecision trail:\n- 증상을 \"stale\"로만 보지 않고 sentinel 충돌(nullish 미캐시)로 특정 — `n===3` 재현 로그가 근거.\n- 수정은 sentinel 객체 대신 `done` boolean 선택(가장 작은 변경, 한 줄 유지) — 위 체크 두 assert가 통과 근거.\n- Not verified / where to look: 멀티 인자·인자 의존 메모이즈는 이 `memo`의 범위 밖(0-arg 전용)이라 미검증 — 인자별 캐시가 필요하면 별도 키 기반 구현이 필요하다.",
+  "C": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+  "w": {
+    "A": 24,
+    "B": 267,
+    "C": 24
+  }
+}

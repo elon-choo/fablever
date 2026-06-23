@@ -32,6 +32,7 @@ Opus in both arms; the only variable is the technique.
 | **↳ Auto-generated seed** | a generator reading existing code reaches **88.9%** adherence vs the hand-written ceiling **100%** (regex: auto **100%** vs hand 78%); no-seed 33% | **ADOPT** — auto-generation preserves the lift; closes local-seed's untested auto-discovery gap → a shippable feature | [`RESULTS-autoseed.md`](RESULTS-autoseed.md) |
 | **Evidence loop** (full rewrite pass) | hit its metric but GPT-5.5 preferred the leaner baseline **12–4** (length 217→384) | **DO NOT adopt as a 2nd pass** — over-pads | [`RESULTS-evidence-loop.md`](RESULTS-evidence-loop.md) |
 | **↳ Evidence loop, refined (inline)** | baking the discipline into the **first pass** cuts unsupported→**0%**, *halves* length (224→117w), and beats baseline **15–2** (p=0.0023) + the original loop **17–0**; pooled vs baseline **26–6 (p=0.0005)** | **ADOPT the inline packaging** — the discipline belongs in the first pass, not a rewrite | [`RESULTS-surgical-r2.md`](RESULTS-surgical-r2.md), [`RESULTS-surgical-evidence.md`](RESULTS-surgical-evidence.md) |
+| **Task-type routing** | routed (93% accurate) is **~22% leaner** than always-on but does **not** beat it on single-shot quality (6–9, n.s.); trends > baseline (8–3, n.s.) | **BOUNDED NULL** — single-shot benefit is leanness, not quality; the long-session cost that motivates routing needs an out-of-band holdout, not a 1-turn A/B | [`RESULTS-routing.md`](RESULTS-routing.md) |
 
 ### What each result means for fablever
 
@@ -54,6 +55,14 @@ Opus in both arms; the only variable is the technique.
   *halves* the reply length, and the judge prefers it **15–2** over baseline (p=0.0023) and **17–0** over the
   original loop (pooled vs baseline **26–6, p=0.0005**). The full loop's failure was the *second pass itself*.
   This is the "surgical" answer the first round predicted — found, and confirmed at significance.
+- **Task-type routing is an honest bounded null.** The research's "#1 headline" — inject a discipline only
+  where it fits, not on every task — is **leaner** when run (routed ~22% fewer words than always-on) but does
+  **not** beat always-on on single-shot quality (6–9, n.s.). Why: in one shot the model simply ignores the
+  disciplines that don't fit, so always-on is *cheap* and routing's win is only length. The cost that truly
+  motivates routing — always-on injection compounding across a long session (the "harness paradox") — is
+  structurally invisible to a single-turn A/B. So the result **relocates** the claim rather than killing it:
+  routing's measured benefit is leanness; its quality case (if any) needs the **out-of-band holdout** the
+  research flags as the highest-leverage next eval — not another single-shot run.
 
 ## Where these came from — upgrade research
 
@@ -85,4 +94,5 @@ node run-autoseed.mjs          # generate AGENTS.md from code -> A/B/D adherence
 node run-evidence-loop.mjs     # the original full-rewrite loop (the negative)
 node run-surgical-evidence.mjs # round 1: four lighter packagings vs baseline
 node run-surgical-r2.mjs       # round 2: confirm the inline winner (3-way, pooled)
+node run-routing.mjs           # task-type routing vs always-on vs baseline (the bounded null)
 ```

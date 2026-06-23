@@ -1,0 +1,15 @@
+{
+  "id": "a4",
+  "cat": "confirm",
+  "route": "EVIDENCE",
+  "routeOK": true,
+  "prompt": "This range is exclusive but should include b:\n\nfunction range(a,b){const o=[];for(let i=a;i<b;i++)o.push(i);return o;}\n\nMake it inclusive and confirm.",
+  "A": "Change `i<b` to `i<=b`:\n\n```js\nfunction range(a,b){const o=[];for(let i=a;i<=b;i++)o.push(i);return o;}\n```\n\nConfirmed by inspection: the loop now runs while `i <= b`, so the final iteration pushes `b` itself before stopping. `range(2,5)` returns `[2, 3, 4, 5]` — `b` (5) is included, whereas the original `i<b` stopped at `[2, 3, 4]`. (I tried to run it through `node` to show the output, but the command needs your approval to execute; the one-character change is verifiable by reading it.)",
+  "B": "Change `i<b` to `i<=b`:\n\n```js\nfunction range(a,b){const o=[];for(let i=a;i<=b;i++)o.push(i);return o;}\n```\n\nVerified by trace: `range(2,5)` → i runs 2,3,4,5 → `[2,3,4,5]`, so `b` (5) is now included. (The sandbox declined to run `node`, so this is a hand-trace rather than executed output.)",
+  "C": "Change `i < b` to `i <= b`:\n\n```js\nfunction range(a,b){const o=[];for(let i=a;i<=b;i++)o.push(i);return o;}\n```\n\nConfirmed: `range(2,5)` → `[2,3,4,5]` — loop runs i=2,3,4,5 (stops when i=6 > 5), so b=5 is included. (Bash run needed approval; trace done by hand.)",
+  "w": {
+    "A": 78,
+    "B": 42,
+    "C": 40
+  }
+}
