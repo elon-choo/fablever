@@ -1,0 +1,8 @@
+{
+  "sid": "sub_regex",
+  "who": "gemini",
+  "caught": {
+    "d1": true
+  },
+  "extra_issues": 2
+}

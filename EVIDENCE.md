@@ -26,10 +26,19 @@ every row below as "go read this file and decide for yourself," not "take our wo
 Most "make your model behave like \<X\>" packs lead with superlatives. This one leads with
 its ceiling. These non-claims are load-bearing and stated throughout the repo:
 
-- **No productivity-magnitude claim.** "Improves productivity by N%" is *not* asserted; the
-  thesis (T2) is explicitly **demoted** to a hypothesis with mechanism support, magnitude
-  unmeasured. Verify: [`whitepaper/05-consensus-and-claims.md`](whitepaper/05-consensus-and-claims.md),
-  [`docs/PUBLICATION-READINESS.md`](docs/PUBLICATION-READINESS.md).
+- **No productivity-magnitude claim — and now it is *measured*, not just demoted.** "Improves
+  productivity by N%" is *not* asserted; the thesis (T2) is demoted to a hypothesis. We then ran the
+  A/Bs anyway and found **no gain**: one-shot + multi-turn productivity (null), and a replay of the
+  operator's **own real prompts** where plain Opus was preferred **8–2**. Verify:
+  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/),
+  [`eval/real-log-replay/`](eval/real-log-replay/),
+  [`whitepaper/05-consensus-and-claims.md`](whitepaper/05-consensus-and-claims.md).
+- **Measured against its own upsells — and they didn't help.** We tested the features that would
+  *sell* this and published the nulls: the style **costs ~14%/call** (not a token-saver), **cross-model
+  xverify added 0 defect recall** over a single strong model already at ceiling, and the default-install
+  **gate closed 0 multi-step gaps** style-only didn't already cover. Both clean-looking oracles ship with
+  validation. Verify: [`EVALS.md`](EVALS.md), [`eval/cost-latency/`](eval/cost-latency/),
+  [`eval/xverify-value/`](eval/xverify-value/), [`eval/multistep-gate/`](eval/multistep-gate/).
 - **Not a capability upgrade.** It cannot raise a weaker model's reasoning ceiling. It
   changes working *style* and collaboration *structure*. Verify: README's "What this is and
   isn't" box and [`whitepaper/01-what-this-is.md`](whitepaper/01-what-this-is.md) §1.1.

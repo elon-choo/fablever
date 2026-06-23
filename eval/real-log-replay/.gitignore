@@ -1,0 +1,3 @@
+# Real prompts and replies from the operator's own logs NEVER get committed.
+prompts.local.jsonl
+raw.local/

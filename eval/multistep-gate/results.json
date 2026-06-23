@@ -1,0 +1,15 @@
+{
+  "n_tasks": 20,
+  "total_checkpoints": 75,
+  "checkpoint_completeness": {
+    "F_style_only": 100,
+    "D_with_gate": 100
+  },
+  "overall_acceptance": {
+    "F_style_only": 100,
+    "D_with_gate": 100
+  },
+  "tasks_gate_improved": 0,
+  "tasks_gate_regressed": 0,
+  "p_gate_helps": null
+}

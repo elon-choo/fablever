@@ -1,0 +1,14 @@
+{
+  "task": "h6",
+  "grade": {
+    "c1": true,
+    "c2": true,
+    "c3": false,
+    "c4": true,
+    "c5": false,
+    "complete": false
+  },
+  "expect": "c3=false (no pessimistic), c5=false (no detection), complete=false",
+  "pass": true,
+  "summary": "c3=false c5=false complete=false → PASS"
+}

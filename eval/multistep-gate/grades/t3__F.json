@@ -1,0 +1,10 @@
+{
+  "tid": "t3",
+  "arm": "F",
+  "grade": {
+    "c1": true,
+    "c2": true,
+    "c3": true,
+    "complete": true
+  }
+}

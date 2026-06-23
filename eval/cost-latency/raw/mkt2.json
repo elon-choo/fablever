@@ -1,0 +1,25 @@
+{
+  "id": "mkt2",
+  "B": {
+    "text": "Here are three distinct angles, each pulling a different psychological lever:\n\n**1. Curiosity / low-pressure (\"the gentle nudge\")**\n> **Your cushion misses you 🧘**\n- *Variant:* \"Still here whenever you're ready\"\n- **Lever:** Warmth, zero guilt. Frames return as easy and welcome.\n\n**2. Benefit / self-interest (\"the reminder of why\")**\n> **3 minutes today = a calmer week**\n- *Variant:* \"Remember how good 10 minutes felt?\"\n- **Lever:** Concrete, tiny ask. Reconnects them to the outcome they originally wanted.\n\n**3. Loss-aversion / personalized (\"the streak/progress hook\")**\n> **You were on a 12-day streak. Pick it back up?**\n- *Variant:* \"Your progress is saved — start where you left off\"\n- **Lever:** Sunk-cost + continuity. Strongest pull, but only honest if you actually have their data.\n\n## Which to send\n\n**Lead with #2 (\"3 minutes today = a calmer week\").**\n\nReasoning:\n- **Lapsed users feel guilt, not loss.** The reason most people quit meditation apps is they \"fell off\" and feel slightly bad about it. #3's streak angle can *amplify* that guilt and backfire (\"I already blew it\"). #1 is safe but forgettable.\n- **#2 reframes the barrier.** The lapsed user's objection is \"I don't have time / I can't keep it up.\" A 3-minute promise dissolves that in the subject line itself — the lowest-friction re-entry.\n- **It's honest and universal.** Works whether or not you have per-user streak data, so no segmentation risk.\n\n**Caveat / better-than-guessing move:** If you have the data, **A/B test #2 against #3**, but *only send #3 to users who had a genuine streak ≥7 days* (the segment for whom loss-aversion is real and flattering, not shaming). Send #1 to your coldest cohort (90+ days inactive) where any heavy ask reads as pushy.\n\nWant me to draft the body copy for the winner, or write the full A/B test plan with segments and success metrics?",
+    "input_tokens": 7289,
+    "output_tokens": 796,
+    "cache_creation_input_tokens": 8405,
+    "cache_read_input_tokens": 15621,
+    "cost": 0.1488125,
+    "duration_ms": 15038,
+    "duration_api_ms": 17233,
+    "num_turns": 1
+  },
+  "F": {
+    "text": "Here are three distinct angles, each with a primary subject line and a variant.\n\n**Angle 1 — Guilt-free empathy (lower the barrier to return).**\n- \"Your mind misses you — no catch-up required\"\n- \"Pick up right where you left off (one breath counts)\"\n\n**Angle 2 — Curiosity / what's new since they left.**\n- \"We added 40 new sleep stories while you were gone\"\n- \"Your meditation app looks different now\"\n\n**Angle 3 — Personal stakes / gentle FOMO with proof.**\n- \"You logged 12 days of calm. Want them back?\"\n- \"Most people who return start with just 3 minutes\"\n\nSend Angle 1 (\"Your mind misses you — no catch-up required\").\n\nLapsed wellness users typically churn because the app started to feel like another obligation, so the biggest lever is removing shame and friction, not adding pressure. Angle 1 does both: it's warm, it explicitly says no catch-up is needed, and it promises a tiny re-entry. Angle 3 can outperform it *if* you can personalize with real usage data (the \"12 days\" number must be accurate per user) — treat it as your A/B challenger. Angle 2 is the weakest for re-engagement because \"what's new\" assumes they care about the product before you've re-earned their attention; save it for users who lapsed more recently.\n\nIf you run a test, pit Angle 1 against a data-personalized Angle 3 and measure reply/open-to-session rate, not just opens.",
+    "input_tokens": 7597,
+    "output_tokens": 1102,
+    "cache_creation_input_tokens": 10710,
+    "cache_read_input_tokens": 15636,
+    "cost": 0.181055,
+    "duration_ms": 18417,
+    "duration_api_ms": 19732,
+    "num_turns": 1
+  }
+}

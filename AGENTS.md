@@ -62,8 +62,14 @@ fixture, **not** a productivity number. Recompute offline: **`node eval/ultra/sc
 ## What this repo deliberately does NOT claim
 
 - **No productivity-magnitude claim.** "Improves productivity by N%" is not asserted anywhere. The
-  developer-productivity A/B **was run** (one-shot + multi-turn) and found **no gain** — a published
-  null/negative, not a hidden gap. (`eval/comparison/productivity-ab/`)
+  developer-productivity A/B **was run** (one-shot + multi-turn) and found **no gain**; a replay of the
+  operator's **own real prompts** preferred plain Opus **8–2**. Published nulls, not hidden gaps.
+  (`eval/comparison/productivity-ab/`, `eval/real-log-replay/`)
+- **Not free, and not magic on its own features.** The style **costs ~14%/call** (a measured token
+  overhead that amortizes — not a token-saver); **cross-model "xverify" added 0 defect recall** over a
+  single strong model already at ceiling on 34 planted defects; and the default-install **gate closed 0
+  multi-step gaps** style-only didn't already cover (oracle validated by negative control). Each is a
+  published negative. (`eval/cost-latency/`, `eval/xverify-value/`, `eval/multistep-gate/`, index: `EVALS.md`)
 - **Not a capability upgrade.** It cannot raise a weaker model's reasoning ceiling — that lives in the
   weights. It changes working *style* and acceptance *structure*. (`whitepaper/01-what-this-is.md`)
 - **No quality-ceiling claim for the gate.** See boundary #2 above — proven against T-vs-P, conceded.

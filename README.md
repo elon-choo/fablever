@@ -364,6 +364,10 @@ node test/install-matrix.mjs           # SAFETY: 10 synthetic ~/.claude fixtures
                                        #   uninstall restores settings.json deep-equal to the original (140 checks)
 node test/privacy-canary/run.mjs       # PRIVACY: planted secrets + git/curl shimmed — proves the default
                                        #   makes one anonymous `git ls-remote HEAD` and leaks no key/code (16 checks)
+cat eval/cost-latency/RESULTS.md       # the published nulls/negatives (read the runners before running them):
+cat eval/xverify-value/RESULTS.md      #   cost ~14%/call, cross-model adds 0 defect recall,
+cat eval/multistep-gate/RESULTS.md     #   gate adds 0 multi-step completeness over style-only,
+cat eval/real-log-replay/RESULTS.md    #   plain preferred 8–2 on your own one-shot prompts. Index: EVALS.md
 node tools/fable-leaktest.js           # behavioral baseline from your own logs
 node tools/fable-leaktest.js --since <install-date>   # did the profile move the needle?
 ```

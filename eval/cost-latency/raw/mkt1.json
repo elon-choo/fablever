@@ -1,0 +1,25 @@
+{
+  "id": "mkt1",
+  "B": {
+    "text": "# Inbox Zero AI\n\n**Your inbox, already handled.**\n\nInbox Zero AI reads every message the moment it lands, writes you a one-line summary, and sorts it where it belongs — urgent, reply-needed, or safe to skip. No rules to build, no folders to babysit. It just learns how you work.\n\nOpen your inbox to a clean, ranked list instead of a pile. Spend your morning on the three emails that matter, not the three hundred that don't.\n\nReach inbox zero by the time you've finished your coffee — and stay there.\n\n---\n\nA few variations on the headline, in case you want a different angle:\n- **\"Stop reading email. Start clearing it.\"**\n- **\"The inbox that triages itself.\"**\n- **\"300 emails in. 3 that matter out.\"**\n\nWant a punchier/shorter version, a more enterprise tone, or a sub-headline + CTA button pairing to go with it?",
+    "input_tokens": 7289,
+    "output_tokens": 394,
+    "cache_creation_input_tokens": 8416,
+    "cache_read_input_tokens": 15621,
+    "cost": 0.1388785,
+    "duration_ms": 7865,
+    "duration_api_ms": 9098,
+    "num_turns": 1
+  },
+  "F": {
+    "text": "Here's the hero copy — it passed the marketing-copy delivery gate (3/3 deterministic checks).\n\n---\n\n**Reach inbox zero before your coffee gets cold.**\n\nInbox Zero AI reads every new message, writes a one-line summary, and sorts it into what needs you now, what can wait, and what you can safely ignore. You open your email to a clear plan instead of a pile.\n\nIt learns which senders matter, drafts replies in your voice, and clears the noise on its own — so the hour you used to lose to triage goes back to the work only you can do.\n\nConnect your inbox in two minutes. Free for your first 30 days.\n\n---\n\nOne thing the gate flags for you to confirm: **voice/tone match**. The check can't verify this — it's the one taste call only you can make. The copy above is pitched at a confident, slightly playful B2C/prosumer tone (the \"before your coffee gets cold\" headline). If your brand is more enterprise or buttoned-up, swap the headline for something like \"Clear your inbox in minutes, not hours\" and I'll adjust the rest to match.\n\nThe closing two lines are a soft CTA — drop them if your hero section already has a button, since they'd compete with it.",
+    "input_tokens": 8910,
+    "output_tokens": 1530,
+    "cache_creation_input_tokens": 30939,
+    "cache_read_input_tokens": 66521,
+    "cost": 0.4260635,
+    "duration_ms": 29932,
+    "duration_api_ms": 30958,
+    "num_turns": 3
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "bug2",
+  "B": {
+    "text": "The sandbox is declining to execute here, so I can't show you a live run without you approving those calls. Rather than keep prompting, here's the confirmation by tracing the logic exactly as it executes:\n\n**Case A — `retry(fn, 5, 100)`, fn fails twice then succeeds on the 3rd call:**\n\n| `i` | fn outcome | `i === n-1`? | action |\n|----|-----------|--------------|--------|\n| 0 | throws \"fail 1\" | 0 ≠ 4 | `sleep(100 · 2⁰)` = **100 ms** |\n| 1 | throws \"fail 2\" | 1 ≠ 4 | `sleep(100 · 2¹)` = **200 ms** |\n| 2 | returns \"ok\" | — | returns `\"ok\"`, loop exits |\n\n→ Gaps between attempts are `~0, ~100, ~200 ms` — delay doubles each retry, exactly exponential. ✅\n\n**Case B — `retry(fn, 3, 10)`, fn always throws:**\n\n| `i` | fn outcome | `i === n-1`? | action |\n|----|-----------|--------------|--------|\n| 0 | throws \"always-1\" | 0 ≠ 2 | `sleep(10)` |\n| 1 | throws \"always-2\" | 1 ≠ 2 | `sleep(20)` |\n| 2 | throws \"always-3\" | **2 = 2** | **`throw e`** — rejects |\n\n→ Rejects with the *last* error after exactly `n` attempts, with **no trailing sleep** after the final failure. ✅\n\nBoth invariants the original had are preserved (returns first success; throws the last error after `n` tries); the only added behavior is the growing wait between attempts.\n\nOne note worth flagging: pure `2**i` backoff means every caller retries on an identical schedule, which can cause a [thundering herd](https://en.wikipedia.org/wiki/Thundering_herd_problem) against a recovering service. If that matters, add jitter and a cap:\n\n```js\nconst sleep = ms => new Promise(r => setTimeout(r, ms));\n\nasync function retry(fn, n, base = 100, cap = 30_000) {\n  for (let i = 0; i < n; i++) {\n    try {\n      return await fn();\n    } catch (e) {\n      if (i === n - 1) throw e;\n      const delay = Math.min(cap, base * 2 ** i);\n      await sleep(Math.random() * delay);   // \"full jitter\"\n    }\n  }\n}\n```\n\nWant me to keep it plain, or go with the jittered/capped version?",
+    "input_tokens": 8591,
+    "output_tokens": 3954,
+    "cache_creation_input_tokens": 19568,
+    "cache_read_input_tokens": 106398,
+    "cost": 0.39132599999999995,
+    "duration_ms": 59462,
+    "duration_api_ms": 60835,
+    "num_turns": 4
+  },
+  "F": {
+    "text": "Done. The fix adds an `await sleep(...)` between attempts where the original had nothing, with the delay doubling each round.\n\n```js\nconst sleep = ms => new Promise(r => setTimeout(r, ms));\n\nasync function retry(fn, n, base = 100) {\n  for (let i = 0; i < n; i++) {\n    try { return await fn(); }\n    catch (e) {\n      if (i === n - 1) throw e;       // last attempt: throw, no wait\n      await sleep(base * 2 ** i);     // 100ms, 200ms, 400ms, ...\n    }\n  }\n}\n```\n\nConfirmation of the behavior change:\n\n- The delay is `base * 2**i`, so with `base=100` it waits 100ms before the 2nd attempt, 200ms before the 3rd, 400ms before the 4th — genuine exponential backoff.\n- The wait sits inside the `catch`, after the `i === n-1` check, so it only fires when another attempt actually follows. The final failure still throws immediately with no pointless trailing sleep — matching the original's terminal behavior.\n\nIf you also want to avoid thundering-herd collisions when many clients retry at once, add jitter to the delay: `await sleep(base * 2 ** i * (0.5 + Math.random()))`. I left it out since you asked specifically for exponential backoff.",
+    "input_tokens": 7597,
+    "output_tokens": 1072,
+    "cache_creation_input_tokens": 10754,
+    "cache_read_input_tokens": 15636,
+    "cost": 0.180785,
+    "duration_ms": 14567,
+    "duration_api_ms": 15432,
+    "num_turns": 1
+  }
+}

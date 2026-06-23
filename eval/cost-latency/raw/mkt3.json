@@ -1,0 +1,25 @@
+{
+  "id": "mkt3",
+  "B": {
+    "text": "Here's a value prop and supporting bullets for a no-code internal-tools builder:\n\n---\n\n**Build the internal tools your team needs in an afternoon — no engineers required.**\n\n- **Connect your data, drag to build:** Plug into your existing databases, APIs, and spreadsheets, then assemble dashboards, admin panels, and CRUD apps with prebuilt components — no code to write or maintain.\n- **Stop waiting on the eng backlog:** Ops, support, and finance teams ship their own tools in hours instead of filing tickets that sit for weeks — freeing developers for core product work.\n\n---\n\nWant me to tailor it for a specific audience (e.g., ops teams vs. developers), adjust the tone, or produce a few headline variations to test?",
+    "input_tokens": 7946,
+    "output_tokens": 248,
+    "cache_creation_input_tokens": 8401,
+    "cache_read_input_tokens": 15621,
+    "cost": 0.1383685,
+    "duration_ms": 6364,
+    "duration_api_ms": 7674,
+    "num_turns": 1
+  },
+  "F": {
+    "text": "Build the internal tools your team needs in an afternoon, not a sprint—no engineering backlog required.\n\n- **Drag-and-drop, connected to your real data:** Assemble dashboards, admin panels, and CRUD apps visually, wired directly to your databases and APIs—no frontend code to write or maintain.\n- **Ship safely without a dev bottleneck:** Ops and support teams build their own tools, while granular permissions, audit logs, and access controls keep IT in control.",
+    "input_tokens": 7597,
+    "output_tokens": 421,
+    "cache_creation_input_tokens": 10706,
+    "cache_read_input_tokens": 15636,
+    "cost": 0.164006,
+    "duration_ms": 7965,
+    "duration_api_ms": 9043,
+    "num_turns": 1
+  }
+}

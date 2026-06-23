@@ -1,0 +1,12 @@
+{
+  "n_defects": 34,
+  "recall_single_claude_pct": 100,
+  "recall_claude_x2_pct": 100,
+  "recall_cross_model_pct": 100,
+  "defects_newly_caught_by_second_claude": 0,
+  "defects_newly_caught_by_gemini": 0,
+  "defects_only_cross_model_caught": 0,
+  "extra_issues_single": 154,
+  "extra_issues_claude_x2": 300,
+  "extra_issues_cross_model": 229
+}

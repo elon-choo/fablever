@@ -1,0 +1,10 @@
+{
+  "sid": "sub_compare",
+  "who": "gemini",
+  "caught": {
+    "d1": true,
+    "d2": true,
+    "d3": true
+  },
+  "extra_issues": 5
+}

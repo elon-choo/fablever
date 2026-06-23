@@ -1,0 +1,14 @@
+{
+  "n_replayed": 22,
+  "n_projects": 22,
+  "F_wins": 2,
+  "B_wins": 8,
+  "position_bias_ties": 12,
+  "decided": 10,
+  "F_win_pct": 20,
+  "p": 0.1094,
+  "ci": [
+    5.7,
+    51
+  ]
+}

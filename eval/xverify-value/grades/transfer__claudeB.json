@@ -1,0 +1,10 @@
+{
+  "sid": "transfer",
+  "who": "claudeB",
+  "caught": {
+    "d1": true,
+    "d2": true,
+    "d3": true
+  },
+  "extra_issues": 17
+}

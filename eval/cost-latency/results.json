@@ -1,0 +1,97 @@
+{
+  "n_all": 16,
+  "n_single_turn": 11,
+  "multi_turn_excluded": [
+    {
+      "id": "doc2",
+      "B_turns": 1,
+      "F_turns": 5
+    },
+    {
+      "id": "bug1",
+      "B_turns": 3,
+      "F_turns": 3
+    },
+    {
+      "id": "bug2",
+      "B_turns": 4,
+      "F_turns": 1
+    },
+    {
+      "id": "bug3",
+      "B_turns": 3,
+      "F_turns": 1
+    },
+    {
+      "id": "mkt1",
+      "B_turns": 1,
+      "F_turns": 3
+    }
+  ],
+  "all": {
+    "n": 16,
+    "out_mean": {
+      "B": 1569,
+      "F": 2178
+    },
+    "out_med": {
+      "B": 1684,
+      "F": 1447.5
+    },
+    "cost_mean": {
+      "B": 0.195,
+      "F": 0.2574
+    },
+    "cost_med": {
+      "B": 0.1728,
+      "F": 0.1897
+    },
+    "dur_mean": {
+      "B": 25013,
+      "F": 31992
+    },
+    "cache_create": {
+      "B": 10227,
+      "F": 14659
+    },
+    "cache_read": {
+      "B": 28345,
+      "F": 30958
+    }
+  },
+  "single_turn": {
+    "n": 11,
+    "out_mean": {
+      "B": 1396,
+      "F": 1380
+    },
+    "out_med": {
+      "B": 1637,
+      "F": 1386
+    },
+    "cost_mean": {
+      "B": 0.1654,
+      "F": 0.1893
+    },
+    "cost_med": {
+      "B": 0.1721,
+      "F": 0.1882
+    },
+    "dur_mean": {
+      "B": 22686,
+      "F": 22409
+    },
+    "cache_create": {
+      "B": 8411,
+      "F": 10718
+    },
+    "cache_read": {
+      "B": 15621,
+      "F": 15636
+    }
+  },
+  "style_block_input_overhead_tokens": 2307,
+  "cost_premium_pct_single_turn": 14.45,
+  "F_fewer_output_tokens_single": "5/11",
+  "F_cheaper_single": "0/11"
+}

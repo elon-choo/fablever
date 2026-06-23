@@ -1,0 +1,10 @@
+{
+  "sid": "download",
+  "who": "gemini",
+  "caught": {
+    "d1": true,
+    "d2": false,
+    "d3": true
+  },
+  "extra_issues": 8
+}

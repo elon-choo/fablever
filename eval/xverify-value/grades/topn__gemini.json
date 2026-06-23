@@ -1,0 +1,9 @@
+{
+  "sid": "topn",
+  "who": "gemini",
+  "caught": {
+    "d1": true,
+    "d2": true
+  },
+  "extra_issues": 6
+}
