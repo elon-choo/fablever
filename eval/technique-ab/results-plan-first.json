@@ -1,0 +1,13 @@
+{
+  "n": 12,
+  "plan_first_B_wins": 9,
+  "direct_A_wins": 1,
+  "ties": 2,
+  "decided": 10,
+  "B_win_pct": 90,
+  "p": 0.0215,
+  "ci": [
+    59.6,
+    98.2
+  ]
+}

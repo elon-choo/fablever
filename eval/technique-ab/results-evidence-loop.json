@@ -1,0 +1,23 @@
+{
+  "n": 16,
+  "unsupported_unbacked_pct": {
+    "A_fablever": 18.8,
+    "B_with_loop": 12.5
+  },
+  "shows_evidence_pct": {
+    "A_fablever": 56.3,
+    "B_with_loop": 75
+  },
+  "quality_gpt5_5": {
+    "B_loop_wins": 4,
+    "A_plain_wins": 12,
+    "ties": 0,
+    "decided": 16,
+    "B_win_pct": 25,
+    "p": 0.0768
+  },
+  "mean_words": {
+    "A": 217,
+    "B": 384
+  }
+}

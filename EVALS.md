@@ -29,6 +29,20 @@ recompute offline. Everything is published, including the results that went agai
 | **Multi-step gate value** | does the default-install gate beat style-only on multi-part tasks? | **NO — both 100%** complete on 20 tasks / 75 checkpoints; gate closed **0** gaps (style-only already complete). Oracle validated by negative control. | [`eval/multistep-gate/`](eval/multistep-gate/) |
 | **Real-log replay** | on the operator's OWN real prompts, does fablever win? | **JUDGE-DEPENDENT (important).** Same Opus replies, two judges: **Gemini prefers plain 8–2** (n.s.), but **GPT-5.5 prefers fablever 14–3** (p=0.013). The one-shot preference *flips on judge choice* — so it is **not** a robust fablever negative, and the Gemini-only number understated it. Raw stays private. | [`eval/real-log-replay/`](eval/real-log-replay/) |
 
+## Technique A/Bs — generic ideas, independently tested (not library ports)
+
+Three well-known engineering techniques (seen in popular harnesses, but **re-implemented and A/B-tested on
+their own merits here** — judged by **GPT-5.5 via the Codex CLI**, a different lab from the Opus generator):
+
+| technique tested | result | verdict |
+|---|---|---|
+| **Plan-first artifact** (plan before executing) | on hard 5-part tasks, plan-then-execute beat direct **9–1** (90%, **p=0.022**) | **ADOPT** for hard multi-step work |
+| **Local-context seeding** (convention in a local `AGENTS.md`) | adherence: no-seed **11%** → local-seed **78%** → generic "follow conventions" nudge **22%** | **ADOPT** — a specific local file beats a vague nudge |
+| **Evidence loop** (no "done" without a shown check) | cut unsupported claims 18.8%→12.5% (deterministic win) **but** GPT-5.5 preferred the leaner baseline **12–4** (length 217→384 words) | **DO NOT adopt as-is** — over-pads; needs a surgical version |
+
+Full writeup + provenance note: [`eval/technique-ab/`](eval/technique-ab/). These validate *the ideas*; wiring
+any of them into the install is a separate gated change.
+
 ## What was NOT tested (open, not hidden)
 
 - **A long interactive *coding* session** (many tool calls + subagents over a session) — fablever's

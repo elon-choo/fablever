@@ -1,0 +1,18 @@
+{
+  "id": "el4",
+  "prompt": "Optimize this O(n^2) dedup and report the improvement:\n\nfunction dedup(a){return a.filter((x,i)=>a.indexOf(x)===i);}",
+  "A": "O(n²)의 원인은 `filter` 안에서 매 원소마다 `indexOf`가 다시 전체 배열을 선형 탐색하기 때문입니다(n번의 O(n) 탐색 = O(n²)). `Set`은 해시 기반이라 삽입·조회가 평균 O(1)이므로 전체가 O(n)으로 떨어집니다.\n\n```js\nfunction dedup(a){return [...new Set(a)];}\n```\n\n개선 결과:\n- **시간복잡도 O(n²) → O(n)** (평균). 원소 1만 개면 약 1억 번 비교가 1만 번 수준으로 줄어, 큰 배열에서 수백~수천 배 빨라집니다.\n- **순서 보존 동일** — `Set`은 삽입 순서를 유지하므로 원본처럼 \"첫 등장\" 순서가 그대로 남습니다.\n\n한 가지 동작 차이만 짚어둡니다(인지하고 쓰면 됩니다): 원본은 `indexOf`가 `===` 비교라 `NaN`을 절대 못 찾아 **모든 `NaN`을 제거**합니다. 반면 `Set`은 `NaN`을 동일하게 취급해 **`NaN` 하나는 남깁니다**. 일반적으로는 Set 동작이 더 자연스럽지만, 기존 동작(NaN 전부 제거)에 의존하고 있었다면 차이가 생깁니다. `+0`/`-0`은 양쪽 다 같게 처리하므로 차이 없습니다.\n\n원시값 배열이면 위 한 줄로 끝이고, 객체를 특정 키로 dedup해야 하면 `Map`을 쓰면 됩니다(`[...new Map(a.map(o=>[o.id,o])).values()]`).",
+  "B": "I attempted to run the code to verify the empirical claims, but the Node execution wasn't approved, so I can't produce a measured benchmark. Below is the corrected reply: complexity/operation-count claims keep their argument, correctness claims now carry worked input→output traces, and the unmeasurable wall-clock multiplier is marked UNVERIFIED with a snippet the reader can run.\n\n---\n\nO(n²)의 원인은 `filter` 안에서 매 원소마다 `indexOf`가 다시 전체 배열을 선형 탐색하기 때문입니다(원소 n개 각각에 대해 최악 O(n) 탐색 → n·O(n) = O(n²)). `Set`은 해시 기반이라 삽입·조회가 평균 O(1)이고 원소를 한 번씩만 넣으므로 전체가 평균 O(n)입니다.\n\n```js\nfunction dedup(a){return [...new Set(a)];}\n```\n\n개선 결과:\n\n- **시간복잡도 O(n²) → O(n)** (평균) — 위 복잡도 논증에 근거. 연산 횟수로 보면 원소 1만 개의 비교 횟수가 약 10^8(=10000²)에서 약 10^4 수준으로 줄어듭니다(복잡도 기반 추정).\n- 실제 벽시계 속도 향상 배수(예: \"수백~수천 배\")는 **이 답변에서 미검증**입니다 — 상수 인자·해시 오버헤드·JS 엔진에 따라 달라지므로 단정할 수 없습니다. 본인 환경에서 직접 측정하세요:\n\n```js\nconst N=1e4, arr=Array.from({length:N},(_,i)=>i);\nconsole.time('old'); arr.filter((x,i)=>arr.indexOf(x)===i); console.timeEnd('old');\nconsole.time('new'); [...new Set(arr)]; console.timeEnd('new');\n```\n\n**순서 보존 동일** — 예시 입력→출력 트레이스:\n\n입력 `[3,1,3,2,1,2,3]`\n- 원본 `filter`: 첫 등장 인덱스만 통과(i0→3, i1→1, i3→2 유지, 나머지 drop) → `[3,1,2]`\n- `Set`: 삽입 순서 유지 → `[3,1,2]` (동일)\n\n(`Set`의 삽입 순서 유지는 ECMAScript 명세상 보장됩니다.)\n\n**동작 차이 — `NaN`** (예시 입력→출력):\n\n입력 `[NaN,1,NaN]`\n- 원본: `indexOf`가 `===` 비교라 `indexOf(NaN)`이 항상 `-1` → 인덱스와 절대 안 맞아 **모든 `NaN` 제거** → `[1]`\n- `Set`: `SameValueZero`로 `NaN`끼리 동일 취급 → **`NaN` 하나 남김** → `[NaN,1]`\n\n기존 동작(`NaN` 전부 제거)에 의존하고 있었다면 차이가 생깁니다.\n\n**`+0`/`-0`** (예시 입력→출력):\n\n입력 `[0,-0,1]`\n- 원본: `indexOf(-0)`이 `0`과 `===`로 일치(`-0===0`은 `true`)해 `-0`을 drop → `[0,1]`\n- `Set`: `SameValueZero`로 `+0`/`-0` 동일 → `[0,1]`\n\n양쪽 다 `0`을 하나로 합치므로 차이 없습니다.\n\n직접 확인용(위 세 트레이스를 한 번에 검증):\n\n```js\nconst eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);\nconst old=a=>a.filter((x,i)=>a.indexOf(x)===i), neo=a=>[...new Set(a)];\nconsole.log(eq(old([3,1,3,2,1,2,3]), neo([3,1,3,2,1,2,3]))); // true (순서 동일)\nconsole.log(old([NaN,1,NaN]).length, neo([NaN,1,NaN]).length); // 1 2 (NaN 차이)\nconsole.log(eq(old([0,-0,1]), neo([0,-0,1]))); // true (+0/-0 차이 없음)\n```\n\n원시값 배열이면 위 한 줄로 끝입니다. 객체를 특정 키로 dedup해야 하면 `Map`을 쓰면 됩니다:\n\n```js\n[...new Map(a.map(o=>[o.id,o])).values()]\n```\n\n단, 이 방식은 같은 `id`가 여러 번 나오면 **마지막** 객체가 남습니다(`Map.set`이 덮어쓰기 때문). 원시값 버전이 \"첫 등장\"을 남기는 것과 반대이므로, 첫 등장을 남겨야 한다면 이 한 줄로는 안 됩니다.",
+  "mA": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": false,
+    "words": 132
+  },
+  "mB": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": true,
+    "words": 361
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "n": 9,
+  "adherence_oracle_gpt5_5_pct": {
+    "A_none": 11.1,
+    "B_local_seed": 77.8,
+    "C_generic_nudge": 22.2
+  },
+  "adherence_regex_pct": {
+    "A_none": 33.3,
+    "B_local_seed": 77.8,
+    "C_generic_nudge": 33.3
+  }
+}

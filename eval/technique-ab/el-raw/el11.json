@@ -1,0 +1,18 @@
+{
+  "id": "el11",
+  "prompt": "This capitalize breaks on empty strings:\n\nfunction cap(s){return s[0].toUpperCase()+s.slice(1);}\n\nFix it and confirm it's safe.",
+  "A": "빈 문자열에서 `s[0]`가 `undefined`가 되고 `.toUpperCase()`가 `TypeError`로 터지는 게 원인입니다. 길이 0일 때 그대로 반환하도록 가드를 넣으면 됩니다.\n\n```javascript\nfunction cap(s){return s ? s[0].toUpperCase()+s.slice(1) : s;}\n```\n\n안전성 확인:\n- `cap(\"\")` → `\"\"` 반환 (이전엔 `TypeError`). 빈 문자열일 때 `s`가 falsy라 그대로 `\"\"`를 돌려줍니다.\n- `cap(\"a\")` → `\"A\"`, `cap(\"hello\")` → `\"Hello\"` — 기존 정상 동작 유지.\n- 멀티바이트/한글(`cap(\"가\")` → `\"가\"`)도 `toUpperCase`가 그대로 통과시켜 깨지지 않습니다.\n\n한 가지 짚자면, 이 가드는 `null`/`undefined`가 들어와도 그 값을 그대로 반환합니다(throw 안 함). 만약 그런 입력 자체를 호출부 버그로 보고 빨리 터뜨리고 싶다면 가드를 `typeof s === \"string\" && s.length`로 바꾸는 선택지도 있는데, 명시된 버그(빈 문자열)에는 위 한 줄로 충분합니다.",
+  "B": "I was not able to execute the code in this environment (the run was denied), so I can't show a live execution log. Below is the corrected reply, where each \"works/safe\" claim is backed by a step-by-step evaluation trace, the over-broad \"멀티바이트\" claim is scoped to what the trace actually supports, and the unverified case is marked explicitly.\n\n---\n\n빈 문자열에서 `s[0]`가 `undefined`가 되고 `.toUpperCase()`가 `TypeError`로 터지는 게 원인입니다.\n\n원인 트레이스 (`cap(\"\")`, 원본):\n- `s = \"\"` → `\"\"[0]`는 빈 문자열 인덱싱이라 `undefined`\n- `undefined.toUpperCase()` → `TypeError: Cannot read properties of undefined (reading 'toUpperCase')`\n\n길이 0일 때 그대로 반환하도록 가드를 넣으면 됩니다.\n\n```javascript\nfunction cap(s){return s ? s[0].toUpperCase()+s.slice(1) : s;}\n```\n\n안전성 확인 (각 항목은 단계별 평가 트레이스. **실행 로그가 아니라** JS 의미론 기반 트레이스입니다):\n\n- `cap(\"\")` → `\"\"`: `Boolean(\"\")`은 `false` → 삼항식이 else 분기 → `s`(`\"\"`) 반환. 이전 `TypeError` 해소.\n- `cap(\"a\")` → `\"A\"`: `\"a\"`는 truthy → `\"a\"[0]=\"a\"` → `.toUpperCase()=\"A\"` → `\"a\".slice(1)=\"\"` → `\"A\"+\"\"=\"A\"`.\n- `cap(\"hello\")` → `\"Hello\"`: truthy → `\"h\".toUpperCase()=\"H\"`, `\"hello\".slice(1)=\"ello\"` → `\"Hello\"`.\n- 기존 정상 동작 유지: truthy 입력에서 true 분기 식 `s[0].toUpperCase()+s.slice(1)`은 원본과 **문자 그대로 동일**합니다. 따라서 가드는 falsy 입력의 동작만 바꾸고 truthy 입력 동작은 변경하지 않습니다.\n- `cap(\"가\")` → `\"가\"` (한글, BMP 단일 UTF-16 코드유닛): truthy → `\"가\"[0]=\"가\"`, 한글은 대소문자 매핑이 없어 `.toUpperCase()`가 `\"가\"` 그대로, `slice(1)=\"\"` → `\"가\"`. 트레이스상 throw 없음.\n- **UNVERIFIED — 서로게이트 페어(이모지 등 astral-plane 문자, 예 `cap(\"😀\")`)**: 이 경우 `s[0]`는 상위 서로게이트 반쪽만 잡습니다. 깨지지 않는다는 보장을 이 답변에서 실행으로 확인하지 못했으니, 그 입력이 중요하면 직접 `node`로 돌려 확인하세요. 위의 \"멀티바이트 OK\"는 한글/BMP 예시까지만 검증된 주장입니다.\n\n한 가지 짚자면, 이 가드는 `null`/`undefined`가 들어와도 그 값을 그대로 반환합니다(throw 안 함).\n- 트레이스: `cap(null)` → `Boolean(null)=false` → `null` 반환. `cap(undefined)` → `false` → `undefined` 반환. (단, `cap(0)` → `0`, `cap(NaN)` → `NaN`처럼 falsy 비문자열도 동일하게 그대로 반환됩니다 — 이 동작은 위 트레이스 외에 별도 실행 검증은 하지 않았습니다.)\n\n만약 그런 입력 자체를 호출부 버그로 보고 빨리 터뜨리고 싶다면 가드를 `typeof s === \"string\" && s.length`로 바꾸는 선택지도 있습니다(이 대안의 동작은 트레이스/실행으로 확인하지 않았습니다). 명시된 버그(빈 문자열)에는 위 한 줄로 충분합니다.",
+  "mA": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": false,
+    "words": 105
+  },
+  "mB": {
+    "unbacked": 0,
+    "claims": 0,
+    "evidence": true,
+    "words": 337
+  }
+}
