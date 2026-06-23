@@ -129,11 +129,14 @@ Full list: [`whitepaper/06-limitations.md`](whitepaper/06-limitations.md). The l
   the extra findings are real defects, not noise).
 - The orchestration recall gain is **lens-taxonomy + draw-count**, not "parallel structure";
   the panel's structural win is precision, and on easy tasks it is pure cost.
-- **Open items, not hidden:** an archived provenance snapshot (D2) and token/wall-clock
-  cost-direction are unmet; a developer-facing productivity A/B **has now been run** (one-shot +
-  multi-turn) and found **no productivity gain** — a published null/negative, see
-  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/). The repo's "style not
-  capability, no magnitude claimed" position is now backed by a run, not just conceded.
+- **Open items, not hidden:** token/wall-clock **cost-direction has now been measured**
+  (`eval/cost-latency/`, ~14%/call, amortizing) and a developer-facing productivity A/B **has now
+  been run** (one-shot + multi-turn) and found **no gain** — published nulls, see
+  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/) and
+  [`eval/real-log-replay/`](eval/real-log-replay/). Still genuinely not run: a **multi-participant
+  human study** and a **long interactive coding session** (multi-turn + subagents) — the single-turn
+  evals here do not simulate it. The repo's "style not capability, no magnitude claimed" position is
+  now backed by runs, not just conceded; index in [`EVALS.md`](EVALS.md).
 
 If you found a weakness not listed here, that is a contribution — it belongs in an issue, and
 under this repo's own rules it becomes a blocker until conceded, fixed, or rebutted.
