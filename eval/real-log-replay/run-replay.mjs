@@ -144,16 +144,21 @@ function report() {
   const decided = F + B;
   const out = { n_replayed: n, n_projects: nProjects, F_wins: F, B_wins: B, position_bias_ties: tie, decided, F_win_pct: decided ? +(100 * F / decided).toFixed(1) : null, p: decided ? +binomTwoSided(F, decided).toFixed(4) : null, ci: wilson(F, decided) };
   fs.writeFileSync(path.join(HERE, 'results.json'), JSON.stringify(out, null, 2));
+  const g = readJSON(path.join(HERE, 'results-gpt.json')); // GPT-5.5 cross-judge of the SAME cached replies (judge-gpt.mjs)
   const L = ['# Real-log replay — fablever (F) vs plain Opus (B) on the operator\'s OWN prompts\n',
-    `${out.n_replayed} self-contained prompts sampled across ${out.n_projects} real projects, replayed through both arms, blind forced-choice (Gemini-2.5-pro, both orders; order-inconsistent = position-bias tie). **Privacy:** raw prompts and replies never leave the machine — only these aggregates are committed.\n`,
-    '| | F (fablever) | B (plain) | order-bias ties | decided | F win-% | p | 95% CI |',
+    `${out.n_replayed} self-contained prompts sampled across ${out.n_projects} real projects, replayed through both arms, then the SAME cached replies blind forced-choice judged by **two different-lab judges**, both orders (order-inconsistent = position-bias tie). **Privacy:** raw prompts and replies never leave the machine — only these aggregates are committed.\n`,
+    '| judge | F (fablever) | B (plain) | order-bias ties | decided | F win-% | p | 95% CI |',
     '|---|---|---|---|---|---|---|---|',
-    `| forced-choice | ${out.F_wins} | ${out.B_wins} | ${out.position_bias_ties} | ${out.decided} | ${out.F_win_pct ?? '–'}% | ${out.p ?? '–'} | [${out.ci[0]}, ${out.ci[1]}]% |`,
+    `| **Gemini-2.5-pro** | ${out.F_wins} | ${out.B_wins} | ${out.position_bias_ties} | ${out.decided} | ${out.F_win_pct ?? '–'}% | ${out.p ?? '–'} | [${out.ci[0]}, ${out.ci[1]}]% |`,
+    g ? `| **GPT-5.5** (via codex) | ${g.F_wins} | ${g.B_wins} | ${g.position_bias_ties} | ${g.decided} | ${g.F_win_pct ?? '–'}% | ${g.p ?? '–'} | [${g.ci[0]}, ${g.ci[1]}]% |` : '| **GPT-5.5** | _(run `node judge-gpt.mjs`)_ | | | | | | |',
+    '',
+    '## The headline: this result is JUDGE-DEPENDENT',
+    g ? `On the **identical** Opus replies, **Gemini preferred plain ${out.B_wins}–${out.F_wins}** while **GPT-5.5 preferred fablever ${g.F_wins}–${g.B_wins}** (p=${g.p}). The two frontier judges *disagree*, and one of them (a non-Anthropic model judging an Anthropic-derived style) prefers fablever significantly. So the earlier single-judge read — "plain wins one-shot" — was **not robust**; it was a property of the Gemini judge, not of the replies.` : `Re-judge with GPT-5.5 (\`node judge-gpt.mjs\`) to test whether the Gemini preference is judge-specific.`,
     '',
     '## Honest scope & reading',
-    '- **Filtered subsample.** Only prompts that stand alone (no "fix that", no missing-file reference, no multi-turn context) can be replayed — so this is the *self-contained slice* of real work, not the full distribution. Conversational follow-ups and context-dependent asks (where fablever\'s persistence across a session matters most) are exactly what this CANNOT measure, so it bounds the effect, if anything, downward.',
-    '- **Single-turn.** Each prompt is replayed once with no follow-up, so it shares the productivity A/Bs\' bias: terser deliverables can read as less complete to an LLM judge.',
-    `- **Observed:** on these ${out.n_replayed} real one-shot prompts, plain Opus was preferred **${out.B_wins}–${out.F_wins}** among the ${out.decided} decided (fablever ${out.F_win_pct}% win, p=${out.p}, n.s.); ${out.position_bias_ties} were position-bias ties. So on single-shot real work fablever does **not** win — consistent with the productivity A/Bs and the style-only ablation (terser deliverables read as less complete to an LLM judge). This is the expected outcome for a **style/discipline** layer rather than a capability boost; fablever's measured value lives in scope discipline and persistence across a session, neither of which a one-shot replay can capture.`,
+    '- **Filtered subsample.** Only prompts that stand alone (no "fix that", no missing-file reference, no multi-turn context) can be replayed — the *self-contained slice* of real work, not the full distribution.',
+    '- **Single-turn.** Each prompt is replayed once with no follow-up.',
+    '- **What the disagreement means.** A forced-choice between a terse, scope-disciplined reply (fablever) and a fuller, more scaffolded one (plain) is a **taste call**, and frontier LLM judges have *different* tastes: Gemini rewards completeness/scaffolding, GPT-5.5 rewards the decisive concise answer. Neither single number is "the truth" — so the honest read is **a wash that flips on judge choice**, not a fablever negative. If anything, that a non-Anthropic judge significantly prefers fablever is a point *for* it that the Gemini-only result hid. Every other forced-choice eval in this repo that used a single Gemini judge (the style-only ablation, the productivity A/Bs) inherits this caveat and would need the same cross-judge to be trusted in either direction.',
     '',
     '_Illustrative (SYNTHETIC, not from the logs): "Why is my flex child overflowing its container?" / "Should this retry use a fixed or exponential delay?" — the kind of standalone ask that qualifies._',
   ];

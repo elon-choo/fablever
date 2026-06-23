@@ -27,7 +27,7 @@ recompute offline. Everything is published, including the results that went agai
 | **Cost & latency** | does the style cost more tokens / time? | **Costs ~14%/call more** (a measured ~2.3k-token style block; output length ~neutral, latency identical). One-time, cache-amortized → worst-case figure. A *published* cost negative. | [`eval/cost-latency/`](eval/cost-latency/) |
 | **Cross-model (xverify) value** | does a 2nd-lab reviewer catch defects one model misses? | **NO — single Opus caught 34/34 planted defects** (incl. subtle: DST, ReDoS, float-money); cross-model & a 2nd Claude pass each added **0** recall, only more noise. Grader validated. | [`eval/xverify-value/`](eval/xverify-value/) |
 | **Multi-step gate value** | does the default-install gate beat style-only on multi-part tasks? | **NO — both 100%** complete on 20 tasks / 75 checkpoints; gate closed **0** gaps (style-only already complete). Oracle validated by negative control. | [`eval/multistep-gate/`](eval/multistep-gate/) |
-| **Real-log replay** | on the operator's OWN real prompts, does fablever win? | **NO — plain preferred 8–2** of decided (one-shot, n=22, p=0.11 n.s.). Consistent with the productivity nulls. Raw stays private; only aggregates committed. | [`eval/real-log-replay/`](eval/real-log-replay/) |
+| **Real-log replay** | on the operator's OWN real prompts, does fablever win? | **JUDGE-DEPENDENT (important).** Same Opus replies, two judges: **Gemini prefers plain 8–2** (n.s.), but **GPT-5.5 prefers fablever 14–3** (p=0.013). The one-shot preference *flips on judge choice* — so it is **not** a robust fablever negative, and the Gemini-only number understated it. Raw stays private. | [`eval/real-log-replay/`](eval/real-log-replay/) |
 
 ## What was NOT tested (open, not hidden)
 
@@ -53,14 +53,18 @@ weaker reviewer's misses).
 
 ## The honest one-paragraph summary
 
-fablever does **not** make Claude smarter, faster, or cheaper — and we now have the runs to say so, not
-just the caution. Measured: it **costs ~14%/call** (a style-block overhead that amortizes); on enumerable
-**defect-catch** a strong single model is already at ceiling, so **cross-model verification adds 0 recall**;
-on **multi-step** tasks style-only is already 100% complete, so the **gate adds nothing** there; and on the
-operator's **own one-shot prompts** plain Opus is preferred 8–2. All published. What fablever *does* have
-evidence for is narrow and behavioral: a delivery gate that beats shipping the **unchecked first draft**
-(27–0), near-total **scope discipline** (0% vs plain's 42% violations) that a naive "be concise" prompt
-*fails* to deliver (it backfires 1–14), and an install that is **safe** (uninstall = no-op, 140/140) and
-**private** (one anonymous ping, 16/16). Recommend **style-only** to start — it is the safest install and
-already complete on the hard tasks; add the gate only for the unchecked-claim / external-delivery case;
-reserve cross-model verification for high-stakes *judgment* review, not defect-catch.
+fablever does **not** make Claude smarter or cheaper — and we have the runs to say so, not just caution.
+Measured: it **costs ~14%/call** (a style-block overhead that amortizes); on enumerable **defect-catch** a
+strong single model is already at ceiling, so **cross-model verification adds 0 recall**; on **multi-step**
+tasks style-only is already 100% complete, so the **gate adds nothing** there. **One big caveat, found the
+honest way:** the forced-choice *quality* judgments here used a single Gemini judge — and when we re-judged
+the real-log replay with **GPT-5.5**, the result **flipped from plain-preferred 8–2 to fablever-preferred
+14–3 (p=0.013)**. So the one-shot "fablever doesn't win" reads are **judge-dependent**, not robust; a
+non-Anthropic frontier judge significantly prefers fablever, and the same cross-judge check is owed to the
+style-only ablation and productivity A/Bs before either direction is trusted. What fablever has *robust*
+(judge-independent, deterministic) evidence for stays narrow and behavioral: a delivery gate that beats
+shipping the **unchecked first draft** (27–0), near-total **scope discipline** (0% vs plain's 42%
+violations) that a naive "be concise" prompt *fails* to deliver (it backfires 1–14), and an install that is
+**safe** (uninstall = no-op, 140/140) and **private** (one anonymous ping, 16/16). Recommend **style-only**
+to start; add the gate only for the unchecked-claim / external-delivery case; reserve cross-model
+verification for high-stakes *judgment* review, not defect-catch.

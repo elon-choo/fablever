@@ -1,0 +1,14 @@
+{
+  "judge": "gpt-5.5 (via codex)",
+  "n_replayed": 22,
+  "F_wins": 14,
+  "B_wins": 3,
+  "position_bias_ties": 5,
+  "decided": 17,
+  "F_win_pct": 82.4,
+  "p": 0.0127,
+  "ci": [
+    59,
+    93.8
+  ]
+}

@@ -26,13 +26,14 @@ every row below as "go read this file and decide for yourself," not "take our wo
 Most "make your model behave like \<X\>" packs lead with superlatives. This one leads with
 its ceiling. These non-claims are load-bearing and stated throughout the repo:
 
-- **No productivity-magnitude claim — and now it is *measured*, not just demoted.** "Improves
-  productivity by N%" is *not* asserted; the thesis (T2) is demoted to a hypothesis. We then ran the
-  A/Bs anyway and found **no gain**: one-shot + multi-turn productivity (null), and a replay of the
-  operator's **own real prompts** where plain Opus was preferred **8–2**. Verify:
-  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/),
-  [`eval/real-log-replay/`](eval/real-log-replay/),
-  [`whitepaper/05-consensus-and-claims.md`](whitepaper/05-consensus-and-claims.md).
+- **No productivity-magnitude claim — measured, and the one-shot judgments proved judge-dependent.**
+  "Improves productivity by N%" is *not* asserted (T2 demoted). We ran the A/Bs: one-shot + multi-turn
+  productivity (no gain). The real-prompt replay first showed plain preferred **8–2 under a Gemini judge** —
+  but re-judging the **same** replies with **GPT-5.5 flipped it to fablever 14–3 (p=0.013)**. So that
+  one-shot "no win" was the judge's taste, not a robust property; both judges are published, and the same
+  cross-judge check is owed to every other single-Gemini-judged forced-choice eval here. Verify:
+  [`eval/real-log-replay/`](eval/real-log-replay/) (`results.json` = Gemini, `results-gpt.json` = GPT-5.5),
+  [`eval/comparison/productivity-ab/`](eval/comparison/productivity-ab/).
 - **Measured against its own upsells — and they didn't help.** We tested the features that would
   *sell* this and published the nulls: the style **costs ~14%/call** (not a token-saver), **cross-model
   xverify added 0 defect recall** over a single strong model already at ceiling, and the default-install

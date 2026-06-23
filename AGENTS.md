@@ -61,10 +61,12 @@ fixture, **not** a productivity number. Recompute offline: **`node eval/ultra/sc
 
 ## What this repo deliberately does NOT claim
 
-- **No productivity-magnitude claim.** "Improves productivity by N%" is not asserted anywhere. The
-  developer-productivity A/B **was run** (one-shot + multi-turn) and found **no gain**; a replay of the
-  operator's **own real prompts** preferred plain Opus **8–2**. Published nulls, not hidden gaps.
-  (`eval/comparison/productivity-ab/`, `eval/real-log-replay/`)
+- **No productivity-magnitude claim — and the one-shot judgments turned out judge-dependent.** "Improves
+  productivity by N%" is not asserted. The developer-productivity A/B was run (one-shot + multi-turn, no
+  gain). The real-prompt replay first showed plain preferred 8–2 **under a Gemini judge** — but re-judging
+  the *same* replies with **GPT-5.5 flipped it to fablever 14–3 (p=0.013)**. So the one-shot "no win" reads
+  are a property of the judge, not robust; published with both judges, and the cross-judge check is owed to
+  the other Gemini-judged forced-choice evals. (`eval/real-log-replay/`, `eval/comparison/productivity-ab/`)
 - **Not free, and not magic on its own features.** The style **costs ~14%/call** (a measured token
   overhead that amortizes — not a token-saver); **cross-model "xverify" added 0 defect recall** over a
   single strong model already at ceiling on 34 planted defects; and the default-install **gate closed 0
