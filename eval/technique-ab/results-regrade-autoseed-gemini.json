@@ -1,0 +1,14 @@
+{
+  "judge": "gemini-3.1-pro-preview",
+  "n": 9,
+  "gemini": {
+    "A_none": 22.2,
+    "B_hand_seed": 100,
+    "D_auto_seed": 88.9
+  },
+  "gpt5_5": {
+    "A": 33.3,
+    "B": 100,
+    "D": 88.9
+  }
+}

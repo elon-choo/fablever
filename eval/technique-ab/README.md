@@ -46,7 +46,11 @@ Opus in both arms; the only variable is the technique.
   nothing. The specificity is the value. **Follow-up — the auto-discovery caveat is now closed:** a generator
   that reads the module's existing code and writes the `AGENTS.md` itself reaches **88.9%** adherence (vs the
   hand-written **100%** ceiling; **100%** on the regex check) — so the lift is reachable *automatically*. That
-  turns the observation into a shippable `/init-deep`-style feature.
+  turns the observation into a shippable `/init-deep`-style feature (the `fable-seed` skill). **Because that
+  skill shipped, its oracle was re-checked by a second lab: Gemini 3.1 pro re-grading the same outputs
+  reproduces the pattern almost exactly — auto-seed D = 88.9% under *both* labs, hand-seed 100%, no-seed low
+  (22–33%)** — so the adherence lift is judge-robust, not a codex-oracle artifact
+  ([`RESULTS-regrade-autoseed-gemini.md`](RESULTS-regrade-autoseed-gemini.md)).
 - **The evidence-loop arc — a negative that resolved into a win by fixing the packaging.** As a full *second*
   rewrite pass the loop hit its metric but nearly doubled length and the judge preferred the leaner baseline
   (12–4) — fablever's whole value is terse decisiveness, and a pass that pads it is a net loss. The lesson was
@@ -119,4 +123,5 @@ node run-overbuild.mjs         # ablate "Don't over-build" (full Fable vs style-
 node run-leadoutcome.mjs       # ablate "Lead with the outcome"
 node run-reportstop.mjs        # ablate "Report findings, then stop"
 node rejudge-evidence-gemini.mjs  # judge-robustness: re-judge shipped inline directive with Gemini 3.1 pro
+node regrade-autoseed-gemini.mjs  # judge-robustness: re-grade shipped fable-seed adherence with Gemini 3.1 pro
 ```
