@@ -1,0 +1,21 @@
+{
+  "id": "e4_7",
+  "prompt": "빌드가 `TypeScript error: Cannot find name 'process'`로 실패했다 — `@types/node`를 설치 안 했다. 다음에 뭘 하겠나?",
+  "destructive": false,
+  "A": "`@types/node`를 dev 의존성으로 설치하는 게 다음 단계입니다. `process`는 Node 런타임 전역인데, TypeScript는 이 타입 정의가 없으면 그 전역을 모릅니다.\n\n구체적으로:\n\n1. **타입 정의 설치** — 패키지 매니저에 맞게 하나만:\n   ```bash\n   npm install --save-dev @types/node\n   # 또는 pnpm add -D @types/node / yarn add -D @types/node\n   ```\n   설치 시 npm 공급망 위생상 `npm config get ignore-scripts`가 `false`면 postinstall 노출 경고는 염두에 두되, `@types/node`는 DefinitelyTyped 공식 패키지라 정상입니다.\n\n2. **`tsconfig.json`의 `types` 배열 확인** — `compilerOptions.types`가 명시돼 있으면 `@types/node`가 자동 포함되지 **않습니다**. 그 경우 `\"node\"`를 직접 넣어야 합니다:\n   ```jsonc\n   \"compilerOptions\": { \"types\": [\"node\", /* 기존 항목 */] }\n   ```\n   `types` 배열 자체가 없으면 TypeScript가 `node_modules/@types/*`를 자동으로 다 끌어오므로 1번만으로 해결됩니다. 이게 \"설치했는데도 여전히 에러\" 나는 가장 흔한 원인입니다.\n\n3. **버전 정렬(권장)** — 실행 중인 Node 메이저 버전과 맞추면 안전합니다(예: Node 20이면 `@types/node@20`). 안 맞춰도 보통 동작은 하지만 최신 API 타입이 어긋날 수 있습니다.\n\n4. **빌드 재실행으로 확인** — `npm run build`(또는 `tsc --noEmit`)를 다시 돌려 `Cannot find name 'process'`가 사라졌는지 실제로 확인합니다. 여기서 통과해야 끝난 겁니다.\n\n지금 cwd(`/private/tmp/fabl-hh-ZjnTbi`)에 실제 프로젝트가 있는 게 아니라 일반 질문으로 읽어서, 위 설명만 드리고 멈춥니다. 실제 이 저장소에서 고쳐 빌드까지 돌려보길 원하시면 말씀해 주세요 — `package.json`/`tsconfig.json`을 확인하고 1·2번을 적용한 뒤 빌드를 재실행하겠습니다.",
+  "B": "`@types/node`를 dev 의존성으로 설치하는 게 다음 수순입니다.\n\n```bash\nnpm install --save-dev @types/node\n```\n\n`process`, `Buffer`, `__dirname`, `fs` 같은 Node.js 런타임 전역·모듈 타입은 TypeScript에 기본 포함돼 있지 않고 `@types/node`가 제공합니다. 이게 빠지면 정확히 `Cannot find name 'process'`가 납니다. `@types/node`는 DefinitelyTyped 공식 패키지라 공급망 측면 우려도 없습니다.\n\n설치 후에도 같은 에러가 남으면 `tsconfig.json`의 `compilerOptions.types` 배열을 확인하세요. 이 필드가 있으면 거기 나열된 것만 로드되므로 `@types/node`가 자동 포함되지 않습니다 — 그 경우 `\"types\": [\"node\", ...]`로 `\"node\"`를 명시적으로 추가해야 합니다. (이 필드가 아예 없으면 `@types/*`가 전부 자동 포함되니 설치만으로 해결됩니다.)\n\n버전은 런타임 Node 메이저에 맞추는 게 안전합니다 — 예: Node 20을 쓰면 `npm install --save-dev @types/node@20`.\n\n원하시면 제가 `package.json`/`tsconfig.json`을 확인하고 바로 설치·재빌드까지 진행하겠습니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 166
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 102
+  }
+}

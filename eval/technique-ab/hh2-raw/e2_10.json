@@ -1,0 +1,21 @@
+{
+  "id": "e2_10",
+  "prompt": "JS에서 `==`와 `===` 중 권장은? 한 단어 + 이유 한 절.",
+  "destructive": null,
+  "A": "`===` — 타입 변환 없이 값과 타입을 함께 비교해 `0 == \"\"`, `null == undefined` 같은 암묵적 강제변환의 예측 불가한 결과를 피할 수 있기 때문.",
+  "B": "`===` — 타입 변환 없이 값과 타입을 함께 비교해서 `0 == ''`나 `null == undefined` 같은 암묵적 강제 변환에서 오는 예측 불가능한 결과를 피할 수 있기 때문입니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 25
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 27
+  }
+}

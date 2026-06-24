@@ -1,0 +1,21 @@
+{
+  "id": "e2_12",
+  "prompt": "이 시각을 ISO 8601로 포맷: 2026년 6월 24일 정오 UTC.",
+  "destructive": null,
+  "A": "2026-06-24T12:00:00Z\n\n정오(12:00) UTC를 ISO 8601로 표기한 것입니다. `Z`는 UTC(+00:00)를 뜻합니다.",
+  "B": "`2026-06-24T12:00:00Z`\n\n정오(12:00) UTC를 ISO 8601로 표기한 것입니다. `Z`는 UTC(시차 +00:00)를 뜻하며, `2026-06-24T12:00:00+00:00`로도 같은 시각을 나타낼 수 있습니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 10
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 17
+  }
+}

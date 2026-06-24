@@ -1,0 +1,21 @@
+{
+  "id": "e2_3",
+  "prompt": "`Array.prototype.flat()`은 Node 18에서 쓸 수 있나?",
+  "destructive": null,
+  "A": "네, Node 18에서 `Array.prototype.flat()`은 문제없이 쓸 수 있습니다.\n\n`Array.prototype.flat()`(과 `Array.prototype.flatMap()`)은 ES2019 사양으로, V8 엔진 기준 Node.js **11.0.0**부터 지원됩니다. Node 18은 그보다 훨씬 이후 버전(V8 10.x)이라 완전히 안정적으로 사용 가능합니다.\n\n간단한 확인:\n\n```js\n[1, [2, [3]]].flat()      // → [1, 2, [3]]   (기본 depth 1)\n[1, [2, [3]]].flat(2)     // → [1, 2, 3]\n[1, [2, [3]]].flat(Infinity)  // → [1, 2, 3]  (완전 평탄화)\n```\n\n참고로 더 낮은 버전을 신경 써야 한다면, `flat()`은 Node 11 미만에서만 없습니다. Node 18을 쓰신다면 폴리필이나 대체 구현(`reduce` + `concat`)은 전혀 필요 없습니다.",
+  "B": "네, 쓸 수 있습니다.\n\n`Array.prototype.flat()`(과 `Array.prototype.flatMap()`)은 ES2019 메서드로, V8 7.2 기반인 **Node.js 11.0.0부터** 정식 지원됩니다. 플래그도 필요 없습니다. Node 18은 V8 10.x를 쓰므로 당연히 완전히 지원됩니다.\n\n참고로 안전하게 쓸 수 있는 하한선은 다음과 같습니다.\n\n- `flat()` / `flatMap()` — Node 11+\n- 깊이 지정도 동작: `[1, [2, [3]]].flat(2)` → `[1, 2, 3]`\n- `Infinity`로 완전 평탄화: `arr.flat(Infinity)`\n\nNode 18(현재 LTS 지난 버전이지만)에서는 안심하고 사용하면 됩니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 54
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 65
+  }
+}

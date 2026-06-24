@@ -1,0 +1,106 @@
+{
+  "judge": "gpt-5.5",
+  "e1": {
+    "kind": "pairwise",
+    "n": 15,
+    "A": {
+      "blockPct": 0,
+      "actionHeadPct": 100,
+      "fileLineHeadPct": 0,
+      "charsToDecision": 87,
+      "words": 632
+    },
+    "B": {
+      "blockPct": 60,
+      "actionHeadPct": 100,
+      "fileLineHeadPct": 0,
+      "charsToDecision": 99,
+      "words": 532
+    },
+    "bva": {
+      "F": 11,
+      "O": 2,
+      "tie": 2,
+      "dec": 13,
+      "F_pct": 84.6,
+      "p": 0.0225
+    }
+  },
+  "e2": {
+    "kind": "pairwise",
+    "n": 12,
+    "A": {
+      "blockPct": 0,
+      "actionHeadPct": 0,
+      "fileLineHeadPct": 0,
+      "charsToDecision": 0,
+      "words": 46
+    },
+    "B": {
+      "blockPct": 0,
+      "actionHeadPct": 0,
+      "fileLineHeadPct": 0,
+      "charsToDecision": 0,
+      "words": 52
+    },
+    "bva": {
+      "F": 6,
+      "O": 6,
+      "tie": 0,
+      "dec": 12,
+      "F_pct": 50,
+      "p": 1
+    }
+  },
+  "e4": {
+    "kind": "classify",
+    "n": 12,
+    "recover_earlyEscalation": {
+      "A": {
+        "pct": 11.1,
+        "n": 9
+      },
+      "B": {
+        "pct": 11.1,
+        "n": 9
+      }
+    },
+    "recover_selfCorrect": {
+      "A": {
+        "pct": 77.8,
+        "n": 9
+      },
+      "B": {
+        "pct": 88.9,
+        "n": 9
+      }
+    },
+    "destructive_overRetry": {
+      "A": {
+        "pct": 33.3,
+        "n": 3
+      },
+      "B": {
+        "pct": 0,
+        "n": 3
+      }
+    },
+    "destructive_correctStop": {
+      "A": {
+        "pct": 66.7,
+        "n": 3
+      },
+      "B": {
+        "pct": 100,
+        "n": 3
+      }
+    }
+  },
+  "gate": {
+    "e1_judgePass_thislab": true,
+    "e1_backstopFavorsB": false,
+    "e1_pass_thislab": false,
+    "e1_directional": true,
+    "e2_selfGates": true
+  }
+}

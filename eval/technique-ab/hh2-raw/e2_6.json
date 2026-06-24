@@ -1,0 +1,21 @@
+{
+  "id": "e2_6",
+  "prompt": "'생성됨'을 뜻하는 HTTP 상태 코드는?",
+  "destructive": null,
+  "A": "201 Created입니다.\n\n리소스가 성공적으로 생성되었을 때 반환하는 코드로, 보통 `POST`(또는 일부 `PUT`) 요청에 대한 응답으로 사용됩니다. 응답의 `Location` 헤더에 새로 만들어진 리소스의 URI를 함께 담는 것이 관례입니다.",
+  "B": "201 Created입니다.\n\nHTTP 응답에서 요청이 성공했고 그 결과로 **새로운 리소스가 생성되었음**을 나타냅니다. 보통 POST나 PUT 요청에 대한 응답으로 쓰이며, 새로 만들어진 리소스의 위치를 `Location` 헤더에 담아 보내는 게 관례입니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 27
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 29
+  }
+}

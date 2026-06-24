@@ -1,0 +1,21 @@
+{
+  "id": "e4_5",
+  "prompt": "DB를 쿼리했더니 `relation \"users\" does not exist` — 실제 테이블은 `app_users`다. 다음에 뭘 하겠나?",
+  "destructive": false,
+  "A": "바로 다음 한 걸음은 **쿼리의 `users`를 `app_users`로 바꿔 다시 실행**하는 겁니다. 다만 이름만 갈아끼우고 끝내기 전에 두 가지를 먼저 확인하겠습니다.\n\n1. **테이블 이름·스키마 실측 확인.** 추측으로 `app_users`가 맞다고 단정하지 않고, 카탈로그에서 직접 본다:\n   ```sql\n   SELECT table_schema, table_name\n   FROM information_schema.tables\n   WHERE table_name ILIKE '%user%';\n   ```\n   `app_users`가 어느 스키마에 있는지(예: `public.app_users`인지), 비슷한 이름의 다른 테이블(`users_old`, 뷰, 다른 스키마의 동명 테이블)이 있는지 같이 봅니다. 이름 불일치의 원인이 \"테이블명이 다르다\"가 아니라 \"스키마/search_path가 다르다\"일 수도 있어서입니다.\n\n2. **컬럼이 기대와 같은지 확인.** 테이블명만 다른 건지, 구조까지 다른 건지 봐야 원래 쿼리의 `SELECT`/`WHERE`가 그대로 동작합니다:\n   ```sql\n   SELECT column_name, data_type\n   FROM information_schema.columns\n   WHERE table_name = 'app_users';\n   ```\n\n그다음 원래 쿼리에서 `users` → `app_users`로 교체해 재실행합니다.\n\n확인되면 한 가지 더 짚을 게 있습니다. `users`라는 잘못된 이름이 **이 쿼리 한 곳만의 문제인지, 코드베이스·다른 쿼리·마이그레이션에도 퍼져 있는지**입니다. 만약 이게 애플리케이션 코드나 저장된 쿼리에서 나온 거라면 `grep`으로 `\"users\"` 참조를 훑어 같은 오류가 다른 데서도 터질지 미리 봅니다. 반대로 일회성 수동 쿼리였다면 거기까지 갈 필요 없이 1·2번으로 끝냅니다.\n\n혹시 실제로 연결된 DB가 있고 제가 직접 확인하길 원하시면 접속 방법(연결 문자열이나 사용하는 클라이언트)을 알려주세요 — 그러면 위 확인을 직접 돌려보겠습니다.",
+  "B": "바로 `users`를 `app_users`로 바꿔 재실행하는 게 1차 행동이지만, 그 전에 \"왜 `users`라고 썼는지\"의 출처부터 확인하겠다. 단순히 내가 손으로 친 쿼리의 테이블명 가정이 틀린 거면 이름만 고치고 끝이지만, 그 `users`가 앱 코드·ORM 매핑·마이그레이션에서 나온 이름이면 런타임에서 같은 에러가 또 터지므로 이름만 바꾸고 넘어가면 안 된다.\n\n순서는 이렇게:\n\n1. **실제 스키마 확인** — `\\dt *.*` 또는 `SELECT table_schema, table_name FROM information_schema.tables WHERE table_name IN ('users','app_users')` 로 `app_users`가 어느 스키마에 있는지, 그리고 `users`가 정말 없는 건지 아니면 **다른 스키마에 있는데 `search_path`가 안 맞아서** \"does not exist\"로 보이는 건지 가른다. (PostgreSQL의 이 에러는 \"테이블명이 틀렸다\"와 \"search_path/스키마가 틀렸다\" 둘 다에서 나온다.) 겸사겸사 `app_users`가 테이블인지 뷰인지도 본다.\n\n2. **`users`라는 이름의 출처 추적** — 그 이름이 내 ad-hoc 쿼리에서 나온 거냐, 아니면 애플리케이션 코드/ORM 모델/마이그레이션 파일에서 나온 거냐. 코드 쪽에서 `users`를 참조하고 있으면 그건 환경 간 스키마 불일치(예: 마이그레이션 누락, 혹은 `app_users`로 리네임됐는데 코드가 안 따라간 상태)라는 더 큰 신호다.\n\n3. **분기 처리** — (a) 수기 쿼리 오타면 `app_users`로 교체 후 재실행하고 끝. (b) `search_path` 문제면 스키마를 명시(`schema.app_users`)하거나 `search_path`를 바로잡는다. (c) 코드/마이그레이션 불일치면 그쪽을 reconcile해야 진짜로 닫힌다.\n\n핵심은, \"이름만 `app_users`로 바꿔서 쿼리가 돌아갔다\"를 해결로 착각하지 않는 것이다. 그건 증상만 우회한 거고, 불일치의 출처가 코드 쪽이면 같은 문제가 앱에서 재현된다.\n\n지금 이 작업 디렉터리엔 DB 연결도 대상 repo도 없어서 위 1·2번을 실제로 실행하진 못한다. 연결 정보나 코드베이스 경로를 주면 information_schema 조회와 `users` 참조 grep을 바로 돌려 출처를 확정하겠다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 154
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 220
+  }
+}

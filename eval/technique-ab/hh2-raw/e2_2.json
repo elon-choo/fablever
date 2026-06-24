@@ -1,0 +1,21 @@
+{
+  "id": "e2_2",
+  "prompt": "이걸 화살표 함수로 바꿔줘: function add(a,b){ return a+b; }",
+  "destructive": null,
+  "A": "`const add = (a, b) => a + b;`",
+  "B": "화살표 함수로 바꾸면 이렇게 됩니다:\n\n```js\nconst add = (a, b) => a + b;\n```\n\n`return` 한 줄짜리라 중괄호와 `return`을 생략해 암시적 반환으로 줄였습니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 9
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 14
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "e2_1",
+  "prompt": "JavaScript의 `??` 연산자가 뭘 하는지 한 문장으로.",
+  "destructive": null,
+  "A": "`??`(널 병합 연산자)는 왼쪽 값이 `null` 또는 `undefined`일 때만 오른쪽 값을 반환하고, 그 외에는 왼쪽 값을 그대로 반환합니다 (`0`이나 `''` 같은 falsy 값은 유지).",
+  "B": "`??`(널 병합 연산자)는 왼쪽 값이 `null` 또는 `undefined`일 때만 오른쪽 값을 반환하고, 그 외에는(`0`, `''`, `false`처럼 falsy해도) 왼쪽 값을 그대로 돌려주는 연산자입니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 24
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 22
+  }
+}

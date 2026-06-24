@@ -1,0 +1,21 @@
+{
+  "id": "e2_11",
+  "prompt": "dev 의존성을 설치하는 npm 명령은?",
+  "destructive": null,
+  "A": "개발 의존성을 설치하는 npm 명령은 다음과 같습니다.\n\n**특정 패키지를 dev 의존성으로 추가**\n\n```bash\nnpm install --save-dev <패키지명>\n# 줄임 표현\nnpm i -D <패키지명>\n```\n\n이렇게 하면 `package.json`의 `devDependencies`에 기록됩니다. (예: `npm i -D jest eslint`)\n\n**이미 있는 package.json의 dev 의존성까지 모두 설치**\n\n```bash\nnpm install\n```\n\n`npm install`은 기본적으로 `dependencies`와 `devDependencies`를 **둘 다** 설치합니다. 만약 dev 의존성을 빼고 운영용만 설치하려면 `npm install --omit=dev` (구버전은 `--production`)를 씁니다.\n\n참고로 보안 위생상, 출처가 불분명한 패키지를 `-D`로라도 설치할 때는 `postinstall` 스크립트로 자격증명이 새는 공급망 공격이 있으니 `npm config get ignore-scripts` 값을 한 번 확인하시는 걸 권합니다.",
+  "B": "`npm install --save-dev <패키지명>` 입니다. 줄여서 `npm i -D <패키지명>` 으로도 씁니다.\n\n몇 가지 관련 용법:\n\n- **새 dev 의존성 추가**: `npm install --save-dev jest` → `package.json`의 `devDependencies`에 기록됩니다.\n- **이미 있는 dev 의존성 포함 전체 설치**: 프로젝트 클론 후 그냥 `npm install` 하면 `dependencies`와 `devDependencies`를 **모두** 설치합니다 (개발 환경 기본 동작).\n- **dev 의존성을 빼고 운영용만 설치**: `npm install --omit=dev` (구버전은 `npm install --production`). 즉 dev를 \"제외\"할 때 별도 플래그가 필요하고, 기본값은 dev 포함입니다.\n\n요약하면, 특정 패키지를 dev 의존성으로 추가할 때는 `-D`/`--save-dev` 플래그를 쓰고, 이미 정의된 dev 의존성을 설치하는 건 평범한 `npm install` 이면 됩니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 76
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 96
+  }
+}

@@ -34,6 +34,7 @@ Opus in both arms; the only variable is the technique.
 | **↳ Evidence loop, refined (inline)** | baking the discipline into the **first pass** cuts unsupported→**0%**, *halves* length (224→117w), and beats baseline **15–2** (p=0.0023) + the original loop **17–0**; pooled vs baseline **26–6 (p=0.0005)** | **ADOPT the inline packaging** — the discipline belongs in the first pass, not a rewrite | [`RESULTS-surgical-r2.md`](RESULTS-surgical-r2.md), [`RESULTS-surgical-evidence.md`](RESULTS-surgical-evidence.md) |
 | **Task-type routing** | routed (93% accurate) is **~22% leaner** than always-on but does **not** beat it on single-shot quality (6–9, n.s.); trends > baseline (8–3, n.s.) | **BOUNDED NULL** — single-shot benefit is leanness, not quality; the long-session cost that motivates routing needs an out-of-band holdout, not a 1-turn A/B | [`RESULTS-routing.md`](RESULTS-routing.md) |
 | **Directive audit** (ablate 3 shipped directives) | full-Fable vs style-minus-one-line: over-build **10–5**, lead-outcome **6–10**, report-stop **10–4** — **none p<0.05**; pooled **26–19** (57.8%, p=0.37) | **BOUNDED NULL ×3** — no flagship directive is single-shot significant; the per-directive value is longitudinal (→ #7 holdout), and this is *not* a license to cut | [`RESULTS-directive-audit.md`](RESULTS-directive-audit.md) |
+| **Handoff / Context-Reload block** | both labs *prefer* the `[Handoff Summary]` packaging — GPT-5.5 **11–2** (84.6%, p=0.022), Gemini **15–0** (100%, p<0.001) — but an arm-neutral backstop shows arm A surfaces the decision **just as early** (chars→decision 87 vs 99); on short tasks the block **self-gates (0% emission)** | **SHIP the on-demand skill · HOLD always-on** — a packaging *preference*, not a measured reload-speed gain; the visible block is unblindable to the judge, so the always-on case needs the #7 holdout | [`RESULTS-handoff.md`](RESULTS-handoff.md), [`RESULTS-rejudge-handoff-gemini.md`](RESULTS-rejudge-handoff-gemini.md) |
 
 ### What each result means for fablever
 
@@ -81,6 +82,23 @@ Opus in both arms; the only variable is the technique.
   zero. The honest conclusion is not "cut them" but "their value is where this harness can't see": the
   longitudinal **#7 holdout** is the only instrument that can settle keep-vs-cut. Until it runs, the directives
   stay (2/3 trend positive, none shown harmful). Full synthesis: [`RESULTS-directive-audit.md`](RESULTS-directive-audit.md).
+- **The Handoff / Context-Reload block is a *preferred packaging*, not a *measured speed-up* — and the gate
+  caught the difference before it could reach production.** The idea: open a long or multi-session report with a
+  fixed top-of-report `[Handoff Summary]` (context / what changed / the single decision, pinned to a `file:line`)
+  so an operator juggling many projects reloads in one glance. Forced-choice judges *loved* it — GPT-5.5 11–2
+  and Gemini a unanimous **15–0**. But a win that large on an *unblindable* manipulation is the warning sign,
+  not the proof: an arm-neutral deterministic backstop (does the report surface the decision earlier, measured
+  on natural phrasing that fairly credits arm A too) found the base Fable style **already surfaces the decision
+  just as early** (chars-to-decision ~87 A vs ~99 B; both 100% in-head). So the judges were rewarding the
+  *recognizable block*, not faster reload — exactly the circular-metric trap this repo guards against. The
+  pre-registered gate was therefore strengthened (before any data) to require the judge win **and** the
+  arm-neutral backstop in the same direction **and** short-task self-gating; the backstop conjunct fails, so the
+  block is **not eligible for the always-on style**. It *does* self-gate cleanly (0% block emission on short
+  throwaway tasks) and the packaging is genuinely preferred, so it ships as the **opt-in `fable-handoff`
+  skill** — where the unblindable-confound and the always-on cost don't apply. The always-on case, like the
+  directive audit's, now rests entirely on the **#7 out-of-band holdout**. A 21-agent adversarial review of the
+  harness caught the judge-rubric confound (and empirically refuted three false confounds) before the run.
+  Full synthesis: [`RESULTS-handoff.md`](RESULTS-handoff.md), [`RESULTS-rejudge-handoff-gemini.md`](RESULTS-rejudge-handoff-gemini.md).
 
 ## Where these came from — upgrade research
 

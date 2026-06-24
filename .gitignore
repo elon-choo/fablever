@@ -3,3 +3,7 @@ node_modules/
 .DS_Store
 *.fable-bak-*
 /tmp/
+# fable-handoff: per-session operator working-state — local context, never committed
+.fablever_state
+.fablever_state/
+.fablever_state.md

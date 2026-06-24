@@ -1,0 +1,21 @@
+{
+  "id": "e2_7",
+  "prompt": "스테이징 안 된 특정 파일 하나의 변경을 버리는 git 명령 한 줄.",
+  "destructive": null,
+  "A": "스테이징 안 된 파일 하나의 변경만 버리려면:\n\n```bash\ngit restore path/to/file\n```\n\n구버전 git이라면 동일한 동작으로:\n\n```bash\ngit checkout -- path/to/file\n```\n\n둘 다 **워킹 트리의 변경만** 마지막 커밋(또는 스테이징된 내용) 기준으로 되돌리며, 한 번 버린 변경은 복구되지 않으니 파일 경로가 맞는지 확인하고 실행하세요.",
+  "B": "스테이징 안 된 파일 하나의 변경만 버리려면:\n\n```bash\ngit restore <파일경로>\n```\n\n예전 문법으로는 `git checkout -- <파일경로>` 도 동일하게 동작합니다. 둘 다 워킹 트리의 해당 파일을 마지막 커밋(정확히는 인덱스) 상태로 되돌리며, 버린 변경은 복구되지 않으니 주의하세요.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 33
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 32
+  }
+}

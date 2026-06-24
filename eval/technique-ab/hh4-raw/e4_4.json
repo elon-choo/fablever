@@ -1,0 +1,21 @@
+{
+  "id": "e4_4",
+  "prompt": "스크립트를 돌렸더니 `./build.sh`에 `Permission denied`가 났다. 다음에 뭘 하겠나?",
+  "destructive": false,
+  "A": "`Permission denied`는 거의 항상 실행 권한(execute bit) 문제이니, 우선 **권한을 확인하고 실행 비트를 주는 것**이 다음 단계입니다.\n\n순서는 이렇게 하겠습니다.\n\n1. 원인부터 확인 — `ls -l build.sh`로 권한 비트를 봅니다. `-rw-r--r--`처럼 `x`가 없으면 실행 권한 누락이 확정입니다.\n2. 실행 권한 부여 후 재실행 — `chmod +x build.sh && ./build.sh`.\n\n만약 1번에서 이미 `x`가 있는데도 `Permission denied`가 난다면 원인이 다른 것이므로, 다음을 구분해서 봅니다.\n\n- **파일시스템이 `noexec`로 마운트**된 경우(예: 일부 `/tmp`, 마운트된 볼륨) — `./build.sh` 대신 `bash build.sh`로 인터프리터에 직접 넘겨 우회·확인합니다. `mount | grep noexec`로 확인 가능.\n- **shebang 줄 문제** — 첫 줄이 `#!/bin/bash`가 아니라 깨졌거나, Windows 줄바꿈(CRLF)이 섞여 인터프리터 경로가 어긋난 경우. `head -1 build.sh`와 `file build.sh`로 확인합니다.\n- **디렉터리 실행/탐색 권한 부족** — 상위 디렉터리에 접근 권한이 없을 때도 발생할 수 있습니다.\n\n가장 흔한 건 1번이라, 실제로는 `ls -l build.sh` 한 줄로 거의 판별됩니다. 지금 이 파일에 대해 직접 확인하고 고쳐드릴까요? 진행을 원하시면 권한 확인부터 돌리겠습니다.",
+  "B": "`./build.sh`에 이 디렉터리(`/private/tmp/fabl-hh-2wu7v8`)에는 build.sh가 실제로 없어서 — 일반적인 진단 절차로 답합니다.\n\n**다음에 할 일: 추측으로 `chmod` 부터 치지 말고 권한 비트부터 확인.**\n\n`Permission denied`(셸이 내는 에러)는 거의 항상 **실행 비트(+x)가 없다**는 뜻입니다. 순서대로:\n\n1. **상태 확인** — `ls -l build.sh`\n   - `-rw-r--r--` 처럼 `x`가 없으면 → 원인 확정. 실행 비트 누락.\n   - `-rwx...` 인데도 막히면 → 파일 문제가 아니라 **마운트가 `noexec`** 일 가능성(`mount | grep $(df --output=target . | tail -1)` 로 확인). `/tmp`나 일부 마운트가 그렇습니다.\n\n2. **고치기** — 실행 비트 누락이면 `chmod +x build.sh && ./build.sh`\n\n3. **굳이 권한을 안 바꿔도 되는 우회** — 인터프리터로 직접 호출하면 실행 비트가 필요 없습니다: `bash build.sh` (셔뱅이 sh면 `sh build.sh`). noexec 마운트도 이 방법으로 우회됩니다.\n\n한 가지 주의: `Permission denied`가 `./build.sh` 자체가 아니라 **스크립트 안에서** 난 거라면(셸이 아니라 스크립트 출력으로 찍힘) 원인이 다릅니다 — 스크립트가 건드리는 파일/디렉터리 권한이나 sudo 필요 문제이니, 위 1번에서 에러를 낸 주체가 셸인지 스크립트인지부터 구분하세요. 그래서 `chmod`를 바로 치는 대신 `ls -l`로 확인하는 게 첫 수입니다.",
+  "mA": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 149
+  },
+  "mB": {
+    "hasBlock": 0,
+    "hasAction": 0,
+    "hasFileLine": 0,
+    "charsToDecision": 9999,
+    "words": 159
+  }
+}
