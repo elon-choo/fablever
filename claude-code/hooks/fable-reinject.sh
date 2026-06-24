@@ -36,6 +36,14 @@ sid="$(printf '%s' "$INPUT"   | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[
 sid="${sid//[^A-Za-z0-9_-]/_}"   # sanitize: sid only ever indexes a /tmp marker filename (no path traversal)
 tpath="$(printf '%s' "$INPUT" | grep -o '"transcript_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*:[[:space:]]*"//; s/"$//')"
 
+# --- holdout suppression (OPT-IN measurement only; inert unless FABLE_MEASURE=on) ---
+# When a measurement campaign is running, sessions assigned to the untreated 'off' arm carry a marker
+# (written by measurement/holdout.js); skip injection so that arm is a true baseline. Default: no-op.
+m="$(printf '%s' "${FABLE_MEASURE}" | tr 'A-Z' 'a-z')"   # normalize identically to holdout.js / fable-subagent.js
+case "$m" in
+  on|1|true) [ -n "$sid" ] && [ -f "${PROFILE_DIR}/holdout/${sid}.off" ] && exit 0 ;;
+esac
+
 # --- model-aware gate: skip entirely for Fable/Mythos-class models ---
 if [ -n "$tpath" ] && [ -f "$tpath" ]; then
   model="$(tail -n 120 "$tpath" 2>/dev/null | grep -o '"model"[[:space:]]*:[[:space:]]*"[^"]*"' | tail -1)"

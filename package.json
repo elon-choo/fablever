@@ -16,6 +16,8 @@
     "test:model": "node test/model-test.mjs",
     "test:install": "bash test/install-test.sh",
     "leaktest": "node tools/fable-leaktest.js",
+    "measure:collect": "node measurement/collect.mjs",
+    "measure:analyze": "node measurement/analyze.mjs",
     "ultra:score": "node eval/ultra/score.mjs",
     "model:check": "node orchestration/lib/model-freshness.mjs check",
     "model:status": "node orchestration/lib/model-freshness.mjs status",

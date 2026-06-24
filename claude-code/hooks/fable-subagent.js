@@ -30,6 +30,13 @@ try {
       const raw = fs.readFileSync(0, 'utf8');
       if (raw) {
         const ev = JSON.parse(raw);
+        // holdout suppression (OPT-IN measurement only; inert unless FABLE_MEASURE=on): off-arm sessions
+        // run untreated, so their subagents get no injection either. Default: no-op.
+        const measure = (process.env.FABLE_MEASURE || '').toLowerCase();
+        if (measure === 'on' || measure === '1' || measure === 'true') {
+          const sid = String(ev.session_id || ev.sessionId || '').replace(/[^A-Za-z0-9_-]/g, '_');
+          if (sid && fs.existsSync(path.join(dir, 'holdout', sid + '.off'))) process.exit(0);
+        }
         const t = ev.subagent_type || ev.agentType || ev.subagentType ||
           (ev.hookSpecificOutput && ev.hookSpecificOutput.subagentType) || '';
         // Exact-match the calibrated orchestration agent types (incl. CC's built-in Explore/Plan).
