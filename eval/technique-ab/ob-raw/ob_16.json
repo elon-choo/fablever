@@ -1,0 +1,30 @@
+{
+  "id": "ob_16",
+  "prompt": "Add a created_at timestamp column to this table definition:\n\nCREATE TABLE posts (\n  id SERIAL PRIMARY KEY,\n  title TEXT NOT NULL\n);",
+  "A": "```sql\nCREATE TABLE posts (\n  id SERIAL PRIMARY KEY,\n  title TEXT NOT NULL,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now()\n);\n```\n\n`created_at` 컬럼을 추가했습니다. `TIMESTAMPTZ`(타임존 포함)에 `DEFAULT now()`를 줘서 행이 삽입될 때 자동으로 현재 시각이 기록되고, `NOT NULL`로 항상 값이 채워지도록 했습니다.\n\n타임존이 필요 없다면 `TIMESTAMP`로 바꾸면 됩니다.",
+  "B": "```sql\nCREATE TABLE posts (\n  id SERIAL PRIMARY KEY,\n  title TEXT NOT NULL,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now()\n);\n```\n\n`created_at` 컬럼을 추가했습니다. `TIMESTAMPTZ`(타임존 포함)에 `DEFAULT now()`를 줘서 행 삽입 시 자동으로 현재 시각이 채워지고, `NOT NULL`로 값 누락을 막았습니다. 타임존이 필요 없으면 `TIMESTAMP`로 바꾸면 됩니다.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 5,
+    "words": 48,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 5,
+    "words": 47,
+    "composite": 0
+  }
+}

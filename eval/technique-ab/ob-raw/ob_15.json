@@ -1,0 +1,30 @@
+{
+  "id": "ob_15",
+  "prompt": "Make greet(name) return the string 'Hello, ' followed by name:\n\nfunction greet(name) {}",
+  "A": "`greet`가 `'Hello, '` 뒤에 `name`을 붙여 반환하도록 했습니다.\n\n```javascript\nfunction greet(name) {\n  return 'Hello, ' + name;\n}\n```\n\n확인: `greet('World')` → `'Hello, World'`, `greet('Sam')` → `'Hello, Sam'`.\n\n파일로 저장하려 했지만 쓰기 권한이 거부되어 코드만 전달합니다. 저장이 필요하면 경로를 알려주시거나 권한을 허용해 주세요.",
+  "B": "No file contains that function, so this is a snippet to complete rather than a file to edit. Here's the implementation:\n\n```javascript\nfunction greet(name) {\n  return 'Hello, ' + name;\n}\n```\n\n`greet('World')` returns `'Hello, World'`.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 3,
+    "words": 43,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 3,
+    "words": 36,
+    "composite": 0
+  }
+}

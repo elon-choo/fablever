@@ -1,0 +1,20 @@
+{
+  "id": "rs_12",
+  "prompt": "I think this might double-count. Am I right?\n\nlet total=0; for(const o of orders){ total += o.amount; total += o.tax; }",
+  "A": "결론부터: 이 코드 자체는 같은 값을 두 번 더하지 않습니다. `o.amount`와 `o.tax`는 서로 다른 필드라서, 루프는 주문마다 \"금액 + 세금\"을 더하는 정상적인 합산입니다. 기계적인 이중 계산은 없습니다.\n\n다만 당신이 걱정하는 이중 계산이 발생할 수 있는 **단 하나의 조건**이 있습니다 — `amount`가 이미 세금이 포함된 값(gross)일 때입니다. 그 경우 `o.tax`를 또 더하면 세금이 두 번 잡혀서 합계가 부풀려집니다. 반대로 `amount`가 세전(net) 금액이면 이 코드가 맞습니다.\n\n확인 방법은 한 줄이면 됩니다 — 아무 주문 하나에서 `o.amount`, `o.tax`, 그리고 결제/청구된 실제 총액을 비교해 보세요:\n\n- `amount + tax === 실제 청구액` → 코드 정상 (amount는 세전).\n- `amount === 실제 청구액` (tax가 이미 포함) → 이 코드는 세금 이중 계산. `total += o.tax` 줄을 빼야 합니다.\n\n즉 \"이중 계산인가?\"의 답은 코드가 아니라 `amount` 필드의 정의에 달려 있습니다. 데이터 한 건만 찍어보면 바로 판별됩니다.",
+  "B": "짧게 답하면: 코드 구조 자체는 중복 합산이 아니지만, **`amount`가 세금 포함 금액이면 그때 중복**입니다. 그게 맞는지가 핵심입니다.\n\n이 루프는 주문마다 `o.amount`와 `o.tax`를 각각 정확히 한 번씩 더합니다. 같은 값을 두 번 더하는 구조적 버그는 없어요. 문제는 데이터 의미에 달려 있습니다.\n\n- `amount` = 세전 소계(subtotal), `tax` = 세금 별도 → `amount + tax`는 올바른 총액. **중복 아님.**\n- `amount` = 이미 세금이 포함된 총액(gross) → `tax`를 또 더하므로 **세금이 이중 계산됨.**\n\n그러니 당신의 의심이 맞으려면 `amount`가 tax-inclusive여야 합니다. 확인 방법은 한 건만 찍어보면 됩니다 — 예를 들어 `amount: 100, tax: 10`인 주문에서 기대 총액이 `110`이면 정상, 실제 세전 소계가 `90`이어야 하는데 `amount`가 `100`(이미 세금 포함)이라면 이중 계산입니다.\n\n`orders`의 샘플 한 건이나 `amount` 필드 정의를 알려주면 어느 쪽인지 바로 확정해 드리겠습니다.",
+  "mA": {
+    "hasRewrite": 0,
+    "codeBlocks": 0,
+    "fixLang": 0,
+    "intervention": 0,
+    "words": 130
+  },
+  "mB": {
+    "hasRewrite": 0,
+    "codeBlocks": 0,
+    "fixLang": 0,
+    "intervention": 0,
+    "words": 120
+  }
+}

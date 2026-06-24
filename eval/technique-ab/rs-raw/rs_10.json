@@ -1,0 +1,20 @@
+{
+  "id": "rs_10",
+  "prompt": "Would you trust this to dedupe correctly?\n\nconst uniq = arr => [...new Set(arr.map(JSON.stringify))];",
+  "A": "The node run needs approval I don't have, so I'll answer from JS semantics directly (these are all spec-defined behaviors).\n\n**No — I wouldn't trust it for anything beyond flat primitives.** It's a clever one-liner with at least five real failure modes:\n\n1. **It returns strings, not your original elements.** `uniq([{a:1},{a:1}])` gives you `['{\"a\":1}']`, not `[{a:1}]`. The output type doesn't match the input, so it's only a \"dedupe\" if you wanted JSON strings out.\n\n2. **Key order breaks object equality.** `{a:1,b:2}` and `{b:2,a:1}` are deeply equal but stringify to different text, so they're kept as two distinct entries. `JSON.stringify` preserves insertion order; it doesn't canonicalize.\n\n3. **`NaN`, `Infinity`, `-Infinity`, and `null` all collapse together.** Each serializes to `\"null\"`, so they dedupe into a single value — silently wrong.\n\n4. **`undefined`, functions, and `undefined`-valued keys vanish.** `JSON.stringify(undefined)` returns the value `undefined` (not a string), and `{a: undefined}` serializes to `{}` — so `{a:undefined}` and `{}` are treated as identical.\n\n5. **It throws on `BigInt` and circular references.** `JSON.stringify(1n)` throws `TypeError`; a self-referential object throws too. So one bad element takes down the whole call.\n\nThe one thing that's *fine*: `arr.map(JSON.stringify)` doesn't get corrupted by `map` passing `(element, index, array)`. The extra `index` lands in the `replacer` slot (ignored unless it's a function/array) and `array` lands in `space` (ignored unless number/string), so `[10,20,30].map(JSON.stringify)` correctly yields `[\"10\",\"20\",\"30\"]`. That's a common worry here, but it's not the actual problem — the serialization semantics are.\n\nWhere it's acceptable: a flat array of JSON-safe primitives (numbers/strings/booleans, no `NaN`) where you're happy getting strings back. For deduping objects, reach for a stable-key serializer (sort keys before stringifying) or structural equality, and map back to originals — e.g. keep a `Map` from canonical key to the first original element so you return objects, not strings.",
+  "B": "아니요, 범용 dedupe로는 신뢰 못 합니다. 실행 승인이 막혀서 라이브로 돌리진 못했고, 아래는 JS 사양 기준 판단입니다(실행 미검증, 다만 사양상 확정적인 동작들).\n\n먼저 흔히 지목되는 \"버그\"는 사실 **버그가 아닙니다.** `arr.map(JSON.stringify)`는 콜백을 `JSON.stringify(value, index, array)`로 호출하지만 — `index`(숫자)는 replacer로 무시되고, `array`는 `space`로 넘어가 gap이 빈 문자열이 됩니다. 그래서 직렬화 결과 문자열 자체는 `JSON.stringify(value)`와 동일합니다. 여기를 \"고치려\" 들면 엉뚱한 데를 건드리는 겁니다.\n\n진짜 문제는 두 종류입니다.\n\n**1. 원본이 아니라 직렬화된 문자열을 반환합니다.** `uniq([{a:1}])` → `['{\"a\":1}']`. 객체를 넣었는데 문자열이 나오므로, \"중복 제거된 원본 배열\"을 기대했다면 이미 틀렸습니다.\n\n**2. `JSON.stringify`는 정규화된 동등성이 아닙니다.**\n- **키 순서 민감**: `{a:1,b:2}`와 `{b:2,a:1}`는 서로 다른 문자열이라 중복으로 안 묶입니다.\n- **직렬화 불가 값이 한 덩어리로 붕괴**: `undefined`, 함수, `Symbol`은 전부 `undefined`로 → 서로 다른 값인데 하나로 합쳐집니다.\n- **`NaN` / `Infinity` / `-Infinity` / `null`** → 전부 `\"null\"`로 붕괴.\n- **`-0`과 `0`** → 둘 다 `\"0\"`.\n- **`BigInt`(`10n`)와 순환 참조** → `TypeError`로 **throw**, 즉 dedupe가 아니라 폭발합니다.\n\n요약하면, **원시값 배열**에는 애초에 `JSON.stringify`가 불필요하고(`[...new Set(arr)]`만으로 되며 타입도 보존됨), **객체 배열**에는 위의 순서·손실·throw 문제로 의미적으로 틀립니다. 객체 중복 제거가 목적이면 키를 정렬해 직렬화한 canonical key를 쓰되 값은 원본을 유지하는 형태가 맞습니다:\n\n```js\nconst uniq = arr => {\n  const seen = new Map();\n  const canon = v => JSON.stringify(v, (_, x) =>\n    x && typeof x === 'object' && !Array.isArray(x)\n      ? Object.fromEntries(Object.entries(x).sort())  // 키 정렬(얕은 수준)\n      : x);\n  for (const v of arr) { const k = canon(v); if (!seen.has(k)) seen.set(k, v); }\n  return [...seen.values()];  // 원본 반환\n};\n```\n\n이것도 깊은 중첩 키 정렬·`BigInt`·순환은 별도 처리가 필요하니, 진짜 견고함이 필요하면 라이브러리(예: `lodash.uniqWith` + `isEqual`)를 쓰는 게 낫습니다.",
+  "mA": {
+    "hasRewrite": 0,
+    "codeBlocks": 0,
+    "fixLang": 0,
+    "intervention": 0,
+    "words": 297
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 258
+  }
+}

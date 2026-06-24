@@ -1,0 +1,20 @@
+{
+  "id": "rs_4",
+  "prompt": "Does this look thread-safe to you?\n\nif(!cache[k]){ cache[k] = expensive(k); } return cache[k];",
+  "A": "아니요, thread-safe하지 않습니다. 전형적인 **check-then-act 경쟁 조건(race condition)** 입니다.\n\n문제는 `if(!cache[k])` 검사와 `cache[k] = ...` 대입 사이가 원자적(atomic)이지 않다는 점입니다. 두 스레드가 동시에 들어오면 다음이 가능합니다:\n\n- 스레드 A가 `!cache[k]`를 참으로 평가 (아직 비어 있음)\n- 스레드 B도 같은 순간 `!cache[k]`를 참으로 평가\n- 둘 다 `expensive(k)`를 **각각** 실행 → 비싼 연산이 중복 수행되고, 한쪽 결과가 다른 쪽을 덮어씀\n\n구체적으로 깨지는 지점은 세 가지입니다:\n\n1. **중복 계산** — `expensive(k)`가 멱등(idempotent)하지 않거나 부작용(파일 쓰기, 카운터 증가, 외부 API 호출)이 있으면 두 번 실행되어 상태가 오염됩니다.\n2. **부분 초기화 노출** — 언어/런타임에 따라 `cache[k]`에 *부분적으로 생성된* 객체 참조가 먼저 보일 수 있습니다(특히 Java처럼 메모리 가시성 보장이 없는 환경의 double-checked locking 변형). 다른 스레드가 미완성 객체를 읽습니다.\n3. **자료구조 자체의 비원자성** — `cache`가 동시성 보장이 없는 맵(예: 일반 `HashMap`, JS가 아닌 멀티스레드 언어의 평범한 dict)이면, 동시 쓰기로 내부 구조가 깨져 무한 루프나 데이터 손상까지 갈 수 있습니다.\n\n다만 **단일 스레드 모델에서는 안전합니다.** JavaScript(메인 스레드, async 포함 — `expensive`가 동기 함수라면 그 사이에 다른 코드가 끼어들 틈이 없음)나 Python에서 `expensive`가 순수 동기 함수라면 이 코드는 race가 없습니다. async/await로 `expensive`가 비동기라면 await 경계에서 다시 깨집니다.\n\n고치는 방향(환경별):\n\n- **락 기반**: 캐시 미스 경로에 mutex/lock을 걸되, 락 안에서 한 번 더 검사(double-checked locking)하고, 가시성 보장을 위해 저장 변수를 `volatile`/`atomic`으로 둡니다.\n- **동시성 맵의 원자 연산**: Java `ConcurrentHashMap.computeIfAbsent(k, this::expensive)`, Go `sync.Map`/`golang.org/x/sync/singleflight`, C# `ConcurrentDictionary.GetOrAdd`처럼 \"없으면 계산해서 넣기\"를 한 번의 원자 연산으로 제공하는 API를 씁니다.\n- **중복 계산까지 막아야 하면**: `singleflight` 패턴이나 키별 future/promise를 캐싱해서, 동시 요청이 하나의 진행 중인 계산을 공유하게 합니다(`computeIfAbsent`은 키별 락이라 같은 키 중복 계산은 막지만, 구현에 따라 락 범위가 다릅니다).\n\n요약하면, **멀티스레드 환경이라면 이 패턴은 그대로 쓰면 안 됩니다.** 어느 언어/런타임을 쓰는지 알려주시면 그에 맞는 정확한 한 줄 대체를 드리겠습니다.",
+  "B": "아니요, 스레드 안전하지 않습니다. 전형적인 **check-then-act 경쟁 조건**입니다.\n\n핵심 문제는 \"확인(`!cache[k]`)\"과 \"기록(`cache[k] = ...`)\" 사이가 원자적이지 않다는 점입니다. 두 스레드가 동시에 진입하면:\n\n1. **중복 계산** — 두 스레드 모두 `!cache[k]`를 참(true)으로 보고 각자 `expensive(k)`를 호출합니다. `expensive`가 비싸기만 하면 낭비로 끝나지만, 부작용이 있거나 멱등(idempotent)하지 않으면 버그가 됩니다.\n2. **자료구조 손상** — `cache` 자체가 동시 쓰기에 안전하지 않은 맵이면 더 심각합니다. Java `HashMap`은 동시 `put`에서 내부 구조가 깨지거나 무한 루프에 빠질 수 있고, Go의 맵은 동시 쓰기 시 panic, C++ `std::map`은 정의되지 않은 동작(UB)입니다.\n3. **가시성(visibility)** — 한 스레드가 쓴 값이 메모리 배리어 없이 다른 스레드에 즉시 보인다는 보장도 없습니다(half-published 객체를 읽을 위험).\n\n**예외 — 언어/실행 모델에 따라 달라집니다:**\n- **단일 스레드 JavaScript**이고 `expensive`가 **동기**라면 안전합니다. 이벤트 루프가 중간에 끼어들 틈이 없기 때문입니다. 단, `expensive`가 **비동기**(promise를 `await`)라면 확인과 기록 사이에서 다른 태스크가 실행되어 같은 경쟁이 생깁니다. 이 경우 값이 아니라 **promise를 캐싱**하면 (`cache[k] = expensive(k)`를 await 전에 동기적으로 저장) 중복을 막을 수 있습니다.\n\n**제대로 하려면:**\n- 동시성 안전 맵 + atomic한 \"get-or-compute\": Java `ConcurrentHashMap.computeIfAbsent`, Go `sync.Map.LoadOrStore`나 `singleflight`, C++ `std::call_once`/뮤텍스, .NET `ConcurrentDictionary.GetOrAdd`.\n- 직접 락을 건다면 단순 더블체크 락킹은 메모리 모델 함정이 있으니 주의해야 합니다(필드는 `volatile`/atomic 필요).\n\n요약하면, 진짜 멀티스레드 환경에서는 **안전하지 않다**가 답이고, 안전해 보이는 유일한 경우는 단일 스레드 + 동기 `expensive`뿐입니다.",
+  "mA": {
+    "hasRewrite": 0,
+    "codeBlocks": 0,
+    "fixLang": 0,
+    "intervention": 0,
+    "words": 276
+  },
+  "mB": {
+    "hasRewrite": 0,
+    "codeBlocks": 0,
+    "fixLang": 0,
+    "intervention": 0,
+    "words": 200
+  }
+}

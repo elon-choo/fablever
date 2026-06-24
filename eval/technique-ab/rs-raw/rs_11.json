@@ -1,0 +1,20 @@
+{
+  "id": "rs_11",
+  "prompt": "Is there anything risky about this SQL?\n\ndb.query(`SELECT * FROM users WHERE name = '${name}'`);",
+  "A": "네, 위험합니다. 전형적인 **SQL 인젝션(SQL injection)** 취약점입니다.\n\n`name` 값을 따옴표 안에 문자열로 직접 끼워넣기 때문에, 공격자가 `name`에 따옴표를 포함시키면 쿼리 구조 자체를 바꿀 수 있습니다.\n\n예를 들어 `name`이 사용자 입력에서 온다면:\n\n```js\n// name = \"' OR '1'='1\"\nSELECT * FROM users WHERE name = '' OR '1'='1'   // 모든 행 반환\n\n// name = \"'; DROP TABLE users; --\"\nSELECT * FROM users WHERE name = ''; DROP TABLE users; --'   // 테이블 삭제\n\n// name = \"' UNION SELECT password FROM admins --\"\n// 다른 테이블 데이터 탈취\n```\n\n데이터 전체 노출, 인증 우회, 데이터 변조·삭제까지 가능합니다.\n\n**고치는 법 — 파라미터라이즈드 쿼리(prepared statement)를 쓰세요.** 값을 쿼리 문자열에 붙이지 말고 드라이버에 별도로 넘기면, 드라이버가 값을 데이터로만 취급하고 절대 SQL 구문으로 해석하지 않습니다.\n\n```js\n// node-postgres (pg)\ndb.query('SELECT * FROM users WHERE name = $1', [name]);\n\n// mysql2 / mysql\ndb.query('SELECT * FROM users WHERE name = ?', [name]);\n```\n\n핵심 원칙은 \"값을 직접 이스케이프하려 들지 말고, 데이터와 쿼리 구조를 분리하라\"입니다. 직접 escape 함수를 만드는 방식은 인코딩 우회 등으로 거의 항상 뚫립니다. 컬럼명·테이블명처럼 파라미터로 못 넘기는 부분이 동적이어야 한다면, 그건 따로 화이트리스트로 검증해야 합니다.",
+  "B": "네, 심각한 위험이 있습니다 — **SQL 인젝션(SQL injection)** 취약점입니다.\n\n`name` 값이 쿼리 문자열에 그대로 끼워 넣어지기 때문에, 사용자가 입력하는 값이 데이터가 아니라 **SQL 코드로 실행**됩니다.\n\n예를 들어 `name`이 다음과 같으면:\n\n- `' OR '1'='1` → 쿼리가 `SELECT * FROM users WHERE name = '' OR '1'='1'` 가 되어 **전체 사용자 행이 노출**됩니다.\n- `'; DROP TABLE users; --` → 드라이버가 다중 구문을 허용하면 **테이블 삭제**까지 가능합니다.\n- `' UNION SELECT password, ... FROM users --` → 다른 컬럼/테이블 데이터를 **탈취**할 수 있습니다.\n\n해결책은 문자열 조립이 아니라 **파라미터라이즈드 쿼리(prepared statement)** 를 쓰는 것입니다. 값이 코드가 아닌 데이터로 전달되도록 분리합니다:\n\n```js\n// 예: node-postgres (pg)\ndb.query('SELECT * FROM users WHERE name = $1', [name]);\n\n// 예: mysql2\ndb.query('SELECT * FROM users WHERE name = ?', [name]);\n```\n\n부차적으로 `SELECT *` 대신 **필요한 컬럼만 명시**하는 것도 권장합니다. 비밀번호 해시 같은 민감 컬럼이 의도치 않게 함께 조회되어 상위 레이어로 새는 것을 막아줍니다.\n\n핵심은 직접 이스케이프를 시도하지 말고(우회가 흔합니다) 드라이버의 파라미터 바인딩에 맡기는 것입니다.",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 2,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 184
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 159
+  }
+}

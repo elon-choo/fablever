@@ -1,0 +1,30 @@
+{
+  "id": "ob_7",
+  "prompt": "Add a GET /health route to this Express app that returns 200 with the text OK:\n\nconst app = express();\napp.get('/', (req,res) => res.send('home'));",
+  "A": "작업 디렉터리가 비어 있어 편집할 파일이 없습니다. 붙여주신 스니펫에 `GET /health` 라우트를 추가한 코드는 다음과 같습니다.\n\n```js\nconst app = express();\napp.get('/', (req,res) => res.send('home'));\napp.get('/health', (req,res) => res.status(200).send('OK'));\n```\n\n`res.status(200)`은 명시적으로 둔 것이고, Express는 `send()` 호출 시 기본으로 200을 반환하므로 생략해도 동일하게 동작합니다. 실제 파일에 반영하시려면 경로만 알려주시면 거기에 바로 넣겠습니다.",
+  "B": "작업 디렉터리에 해당 파일이 없어서 (`/private/tmp/fabl-ob-GB3P2w`는 비어 있음) 편집할 대상 파일이 없습니다. 붙여주신 스니펫에 `/health` 라우트를 추가한 코드입니다:\n\n```js\nconst app = express();\napp.get('/', (req,res) => res.send('home'));\napp.get('/health', (req,res) => res.status(200).send('OK'));\n```\n\n`res.send('OK')`는 기본적으로 200을 반환하므로 `.status(200)`은 명시적 표현일 뿐이고, `res.send('OK')`만 써도 동일하게 200 + 텍스트 `OK`가 나갑니다.\n\n이 코드가 실제 프로젝트 파일에 있는 거라면 경로를 알려주시면 직접 그 파일에 반영하겠습니다.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 1,
+    "codeLines": 3,
+    "words": 52,
+    "composite": 1
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 1,
+    "codeLines": 3,
+    "words": 61,
+    "composite": 1
+  }
+}

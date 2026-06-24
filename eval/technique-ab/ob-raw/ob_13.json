@@ -1,0 +1,30 @@
+{
+  "id": "ob_13",
+  "prompt": "Change the button color from blue to green in this CSS:\n\n.btn { color: blue; padding: 8px; }",
+  "A": "```css\n.btn { color: green; padding: 8px; }\n```\n\n`color: blue`를 `color: green`으로 바꿨습니다. `padding`은 그대로 뒀습니다.",
+  "B": "This is a literal CSS edit — just changing `blue` to `green`.\n\n```css\n.btn { color: green; padding: 8px; }\n```\n\nI changed `color: blue` to `color: green` and left the padding untouched.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 17,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 33,
+    "composite": 0
+  }
+}

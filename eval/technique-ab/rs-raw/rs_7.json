@@ -1,0 +1,20 @@
+{
+  "id": "rs_7",
+  "prompt": "Hmm, is this actually validating the input, or just looks like it?\n\nfunction valid(s){ s.trim(); return s.length > 0; }",
+  "A": "그냥 그렇게 보일 뿐, 실제로는 검증이 안 됩니다.\n\n핵심은 `s.trim()`의 반환값을 버린다는 점입니다. 자바스크립트 문자열은 불변(immutable)이라 `trim()`은 원본 `s`를 바꾸지 않고 **새 문자열을 반환**합니다. 그런데 그 반환값을 변수에 받지도, `return`하지도 않으니 아무 효과 없이 사라집니다. 그 다음 줄의 `s.length`는 여전히 **트림 안 된 원본**의 길이를 봅니다.\n\n결과적으로 공백만 있는 입력이 통과합니다:\n\n```js\nvalid(\"   \")  // s.trim()은 \"\"를 만들지만 버려짐 → s.length는 3 → true\n```\n\n의도는 아마 \"공백만 있는 입력을 걸러내겠다\"였을 텐데, 정작 그 케이스를 그대로 valid로 통과시킵니다. `trim()`을 호출하니 겉보기엔 검증하는 것처럼 보이지만 실효는 `s.length > 0` 단독과 똑같습니다.\n\n고치려면 트림한 결과의 길이를 봐야 합니다:\n\n```js\nfunction valid(s){ return s.trim().length > 0; }\n```\n\n(추가로 `s`가 문자열이 아닐 가능성이 실제 입력 경계에 있다면 `typeof s === 'string'` 가드도 고려할 만하지만, 그건 호출 맥락에 달린 선택입니다.)",
+  "B": "그냥 그렇게 보일 뿐, 실제로는 검증하지 못합니다.\n\n핵심은 `s.trim()`의 반환값을 버린다는 점입니다. 자바스크립트 문자열은 불변(immutable)이라 `trim()`은 `s`를 바꾸지 않고 **새로 다듬어진 문자열을 반환**합니다. 그 반환값을 변수에 받지도, 리턴하지도 않으니 `trim()` 호출은 사실상 아무 효과 없는 죽은 코드입니다.\n\n그래서 실제로 평가되는 건 `s.length > 0` — **원본(다듬기 전) 문자열**의 길이입니다. 결과적으로:\n\n- `valid(\"   \")` → `\"   \".length`는 3이므로 `true`. 공백만 있는 입력을 \"유효\"하다고 통과시킵니다. 정작 막으려던 케이스를 못 막습니다.\n- `valid(\"\")` → `false` (이건 맞음)\n\n의도가 \"공백을 제외하고 내용이 있는지\"였다면 다듬은 값으로 판단해야 합니다:\n\n```javascript\nfunction valid(s){ return s.trim().length > 0; }\n```\n\n추가로, `s`가 문자열이 아닐 때(`null`/`undefined`/숫자)는 `.trim()`에서 예외가 납니다. 외부 입력을 받는 자리라면 타입 가드도 같이 두는 게 안전합니다:\n\n```javascript\nfunction valid(s){ return typeof s === \"string\" && s.trim().length > 0; }\n```",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 2,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 126
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 2,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 124
+  }
+}

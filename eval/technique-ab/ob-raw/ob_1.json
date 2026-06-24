@@ -1,0 +1,30 @@
+{
+  "id": "ob_1",
+  "prompt": "Add a function slugify(s) that lowercases the string and replaces spaces with hyphens. Just the function.",
+  "A": "```javascript\nfunction slugify(s) {\n  return s.toLowerCase().replace(/ /g, '-');\n}\n```\n\n문자열을 소문자로 바꾸고 모든 공백을 하이픈으로 치환합니다. 예: `slugify(\"Hello World\")` → `\"hello-world\"`.",
+  "B": "```javascript\nfunction slugify(s) {\n  return s.toLowerCase().replace(/ /g, '-');\n}\n```\n\n소문자로 바꾼 뒤 공백을 하이픈으로 치환합니다. 예: `slugify(\"Hello World\")` → `\"hello-world\"`.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 3,
+    "words": 22,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 3,
+    "words": 21,
+    "composite": 0
+  }
+}

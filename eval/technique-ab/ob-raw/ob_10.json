@@ -1,0 +1,30 @@
+{
+  "id": "ob_10",
+  "prompt": "Capitalize the first letter of `name` before saving:\n\nuser.name = name;\nawait user.save();",
+  "A": "`name`의 첫 글자만 대문자로 바꾸려면 이렇게 하면 됩니다:\n\n```js\nuser.name = name.charAt(0).toUpperCase() + name.slice(1);\nawait user.save();\n```\n\n`charAt(0).toUpperCase()`로 첫 글자만 대문자로 만들고, `slice(1)`로 나머지를 그대로 붙입니다.\n\n몇 가지 짚어둘 점:\n\n- `name`이 빈 문자열(`\"\"`)이어도 안전합니다 — `charAt(0)`은 `\"\"`, `slice(1)`도 `\"\"`라 그대로 빈 문자열이 됩니다.\n- 나머지 글자는 건드리지 않습니다. 만약 `\"jOHN\"` → `\"John\"`처럼 나머지를 소문자로 정규화하고 싶다면 `slice(1).toLowerCase()`를 쓰세요.\n- `name`이 `null`/`undefined`일 가능성이 있으면 `name?.charAt(0)...` 또는 사전 가드를 두는 게 안전합니다.\n\n전체 정규화 버전이 필요하면:\n\n```js\nuser.name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();\nawait user.save();\n```\n\n実제 파일에 적용해 드릴까요? 파일 경로를 알려주시면 바로 수정하겠습니다.",
+  "B": "`name`의 첫 글자만 대문자로 바꿔서 저장하면 됩니다.\n\n```js\nuser.name = name.charAt(0).toUpperCase() + name.slice(1);\nawait user.save();\n```\n\n`charAt(0).toUpperCase()`로 첫 글자를 대문자로 만들고 `slice(1)`로 나머지를 이어붙입니다. 빈 문자열이 들어와도 `charAt(0)`와 `slice(1)` 모두 `\"\"`를 반환하므로 에러 없이 안전합니다.\n\n참고로 나머지 글자까지 소문자로 강제하고 싶다면(예: `\"jOHN\"` → `\"John\"`) 뒷부분에 `.toLowerCase()`를 더하면 됩니다:\n\n```js\nuser.name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();\n```\n\n원래 입력의 나머지 대소문자를 그대로 두려면 첫 번째 버전을 쓰세요.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 4,
+    "words": 93,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 3,
+    "words": 65,
+    "composite": 0
+  }
+}

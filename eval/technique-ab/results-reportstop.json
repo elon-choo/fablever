@@ -1,0 +1,23 @@
+{
+  "n": 16,
+  "arms": {
+    "A_noReportStop": {
+      "rewritePct": 68.8,
+      "fixLang": 0,
+      "words": 179
+    },
+    "B_fullFable": {
+      "rewritePct": 75,
+      "fixLang": 0,
+      "words": 178
+    }
+  },
+  "B_vs_A": {
+    "F": 10,
+    "O": 4,
+    "tie": 2,
+    "dec": 14,
+    "F_pct": 71.4,
+    "p": 0.1796
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "rs_1",
+  "prompt": "Is this a real bug or am I misreading it?\n\nfunction last(a){ return a[a.length]; }",
+  "A": "진짜 버그입니다. 잘못 읽으신 게 아니에요.\n\n배열 인덱스는 0부터 시작하므로 마지막 원소는 `a[a.length - 1]`에 있습니다. `a[a.length]`는 항상 존재하지 않는 한 칸 뒤를 가리키므로 **언제나 `undefined`를 반환**합니다.\n\n예를 들어 `last([10, 20, 30])`은 `length`가 3이고 유효 인덱스는 0,1,2인데 `a[3]`을 읽으니 `undefined`가 나옵니다. 30이 나와야 정상이죠.\n\n고치면:\n\n```js\nfunction last(a){ return a[a.length - 1]; }\n```\n\n참고로 빈 배열(`last([])`)을 호출하면 수정 후에도 `a[-1]`이라 `undefined`가 나옵니다 — 이건 버그라기보단 자연스러운 동작이고, 호출 측에서 빈 배열을 따로 처리할지만 정하시면 됩니다.",
+  "B": "Real bug. Array indices run from `0` to `length - 1`, so `a[a.length]` is always one position past the end and returns `undefined` for any array. You want `a[a.length - 1]`.\n\n```js\nfunction last(a){ return a[a.length - 1]; }\n```\n\n빠르게 확인하면: `last([10, 20, 30])` 의 경우 `a.length` 가 `3` 이라 원래 코드는 `a[3]` → `undefined` 를 돌려주고, 고친 코드는 `a[2]` → `30` 을 돌려줍니다. 잘못 읽으신 게 아니라 실제 버그가 맞습니다.\n\n한 가지 덧붙이면, 빈 배열 `[]` 에 대해서는 두 버전 모두 `undefined` 를 반환하는데 이건 보통 의도된 동작이라 따로 처리할 필요는 없습니다.",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 76
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 94
+  }
+}

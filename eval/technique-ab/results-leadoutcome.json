@@ -1,0 +1,23 @@
+{
+  "n": 16,
+  "arms": {
+    "A_noLeadOutcome": {
+      "leadsVerdictPct": 12.5,
+      "walkthroughPct": 0,
+      "words": 185
+    },
+    "B_fullFable": {
+      "leadsVerdictPct": 31.3,
+      "walkthroughPct": 0,
+      "words": 201
+    }
+  },
+  "B_vs_A": {
+    "F": 6,
+    "O": 10,
+    "tie": 0,
+    "dec": 16,
+    "F_pct": 37.5,
+    "p": 0.4545
+  }
+}

@@ -202,6 +202,18 @@ strongest setting. This is also the **"harness paradox" check** — our gate eva
 out-of-band, run ≥50 sessions, compare ON vs OFF holdout outcome signals stratified by task type. (Aligns
 with — and is partly enabled by — upgrade #4's deterministic Stop hook as the logging point.)
 
+> **Update — the single-shot directive audit makes #7 the decisive measurement, not just the strongest.**
+> We ablated the three most elicitable flagship directives one at a time (full Fable vs the style with exactly
+> that paragraph removed, `FABLE_PROFILE=off` so the output style is the only steering source): "Don't
+> over-build", "Lead with the outcome", "Report findings, then stop". **All three are single-shot null**
+> (judge 10–5 / 6–10 / 10–4; none p<0.05; pooled 26–19, 57.8%, p=0.37 — [`RESULTS-directive-audit.md`](RESULTS-directive-audit.md)).
+> On one-shot tasks Opus 4.8 is already restrained, already answers first, already doesn't gold-plate, so no
+> individual directive can be shown to earn its words in a single turn. This is the harness paradox stated as a
+> measurement fact: the style's per-directive value, if real, is *only* observable longitudinally. So #7 is no
+> longer "the highest-leverage next eval" — it is the **only** eval that can decide keep-vs-cut for the style's
+> own contents. Two of three directives trend toward the full style and none is shown harmful, so they stay
+> pending the holdout; this is an evidence-located "keep, unproven single-shot," not a cut.
+
 ## What NOT to adopt (consistent with the project's anti-bloat rule)
 - **hashline edits** — Claude Code's `Edit` already enforces exact-match + state tracking; marginal gain.
 - **teammode / model routing / 8 parallel members** — heavy orchestration already covered by

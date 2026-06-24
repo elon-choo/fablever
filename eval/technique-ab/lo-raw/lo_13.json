@@ -1,0 +1,18 @@
+{
+  "id": "lo_13",
+  "prompt": "What's wrong with the error handling here?\n\ntry { risky(); } catch(e) {}",
+  "A": "빈 `catch` 블록이 예외를 통째로 삼키는 게 핵심 문제입니다. `risky()`가 실패해도 아무 일도 없었던 것처럼 코드가 계속 흘러갑니다.\n\n구체적으로 뭐가 나쁘냐면:\n\n- **Silent failure** — 에러가 로그에도, 사용자에게도, 모니터링에도 안 남습니다. 프로덕션에서 \"왜 데이터가 비어 있지?\"의 전형적 원인이고, 디버깅할 단서가 0입니다.\n- **잘못된 후속 가정** — `risky()`가 어떤 상태를 만들어줬다고 가정하는 뒷 코드가 그대로 실행됩니다. 실패를 무시하면 진짜 터지는 지점은 한참 뒤로 밀려서 원인 추적이 더 어려워집니다.\n- **무차별 포획** — 의도한 한 종류의 에러만이 아니라 `TypeError`, 프로그래밍 버그, 심지어 취소/중단 신호까지 다 잡아 묻습니다. 정작 잡아야 할 게 아닌 것까지 가립니다.\n\n고친다면 방향은 세 가지 중 하나입니다:\n\n```js\n// 1) 처리할 수 없으면 그냥 던지게 두거나 (catch를 아예 빼기)\nrisky();\n\n// 2) 의미 있게 처리 — 최소한 기록하고, 복구할 수 있으면 복구\ntry {\n  risky();\n} catch (e) {\n  logger.error('risky() failed', e);\n  // 폴백/재시도/사용자 알림 등 실제 복구 동작\n}\n\n// 3) 정말 무시가 의도라면, 그 사실을 명시적으로 남기기\ntry {\n  risky();\n} catch (e) {\n  // 의도적으로 무시: <이유를 여기 적기>\n}\n```\n\n핵심 원칙: 에러를 **잡았으면 뭔가를 해야** 합니다 — 처리하든, 다시 던지든, 최소한 로그라도. \"조용히 무시\"가 진짜 의도일 때만 그 이유를 주석으로 못 박아두세요. 그게 없으면 거의 항상 버그입니다.",
+  "B": "The catch block swallows the error completely — that's the problem. An empty `catch(e) {}` means if `risky()` throws, the program silently continues as if nothing happened. You lose the error message, the stack trace, and any signal that something went wrong.\n\nConcretely, what breaks:\n\n- **Silent failure.** A caller after this block assumes `risky()` succeeded. If it set up state, returned a value, or had side effects that didn't happen, the bug surfaces much later somewhere unrelated — far harder to trace than the original throw.\n- **No diagnostics.** `e` is caught and discarded. When this fails in production you have nothing: no log line, no stack, no idea it even happened.\n- **Over-broad capture.** It catches *everything*, including programmer errors like a `TypeError` from a typo, or an unexpected `null`. Those should crash loudly, not be hidden.\n\nWhat \"good\" usually looks like depends on intent:\n\n```js\n// If you can recover and a failure is expected/acceptable:\ntry {\n  risky();\n} catch (e) {\n  logger.warn('risky() failed, falling back', e);\n  // ...actual recovery\n}\n\n// If you genuinely want to ignore it, say so explicitly so the next\n// reader knows it's deliberate, not a forgotten TODO:\ntry {\n  risky();\n} catch {\n  // intentionally ignored: <reason>\n}\n```\n\nThe rule of thumb: a catch block should either **recover**, **rethrow** (often wrapped with context), or **log** — and if it truly does nothing, a comment must say why. An empty, silent catch is almost always a latent bug, and most linters (e.g. ESLint's `no-empty`) flag it for exactly this reason.\n\nOne nuance: even when ignoring is correct, prefer `catch {}` (omit the binding) over `catch(e) {}` so it's clear `e` was never meant to be used.",
+  "mA": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "빈 `catch` 블록이 예외를 통째로 삼키는 게 핵심 문제입니다.",
+    "words": 193
+  },
+  "mB": {
+    "leadsVerdict": 1,
+    "opensWalkthrough": 0,
+    "firstSent": "The catch block swallows the error completely — that's the problem.",
+    "words": 286
+  }
+}

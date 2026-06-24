@@ -1,0 +1,20 @@
+{
+  "id": "rs_14",
+  "prompt": "Is this comparison even doing what it looks like?\n\nif (typeof x === 'string' || 'number') { ... }",
+  "A": "아니요. 보기엔 \"x가 문자열이거나 숫자면\" 같지만, 실제로는 **항상 참**입니다.\n\nJavaScript의 연산자 우선순위 때문에 이렇게 묶입니다:\n\n```js\nif ( (typeof x === 'string') || ('number') ) { ... }\n```\n\n`||`의 오른쪽 피연산자는 `typeof x === 'number'`가 아니라 그냥 문자열 리터럴 `'number'`입니다. 비어 있지 않은 문자열은 truthy라서 `'number'`는 언제나 참으로 평가되고, 그 결과 `||` 전체가 `x`와 무관하게 항상 참이 됩니다. `if` 블록은 무조건 실행됩니다.\n\n확인:\n\n```js\nfunction test(x) { return (typeof x === 'string' || 'number'); }\ntest(42);        // true\ntest({});        // true\ntest(null);      // true  ← 의도와 정반대\n```\n\n의도한 동작은 양쪽 다 `typeof`를 써야 합니다:\n\n```js\nif (typeof x === 'string' || typeof x === 'number') { ... }\n```\n\n각 비교를 따로 완전하게 적어야 한다는 게 핵심이에요. `typeof x === ('string' || 'number')` 같은 축약도 안 됩니다 — 이건 `typeof x === 'string'`과 같아지거든요(`'string' || 'number'`가 `'string'`으로 평가되므로).",
+  "B": "아니요. 보이는 것과 전혀 다르게 동작합니다 — 이 조건은 `x`가 무엇이든 **항상 참**입니다.\n\n연산자 우선순위 때문에 이렇게 묶입니다:\n\n```js\nif ( (typeof x === 'string') || ('number') ) { ... }\n```\n\n`||`의 오른쪽 피연산자는 `typeof x === 'number'`가 아니라 그냥 문자열 리터럴 `'number'`입니다. 비어 있지 않은 문자열은 truthy이므로, 왼쪽이 거짓이어도 `|| 'number'`가 항상 참을 만들어 버립니다. 결과적으로 `if` 블록은 무조건 실행됩니다.\n\n의도한 대로 하려면 양쪽 모두 `typeof`를 다시 써야 합니다:\n\n```js\nif (typeof x === 'string' || typeof x === 'number') { ... }\n```\n\n여러 값을 검사할 때 흔히 쓰는 패턴이라면 이렇게도 가능합니다:\n\n```js\nif (['string', 'number'].includes(typeof x)) { ... }\n```\n\n빠른 확인: `x = true`(불리언)를 넣어 보면, 원래 코드는 `typeof true === 'string'`(거짓) `|| 'number'`(참) → **참**이 되어 블록에 들어가 버립니다. 고친 버전은 `'boolean'`이라 둘 다 거짓 → 정상적으로 건너뜁니다.",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 3,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 140
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 3,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 134
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "ob_8",
+  "prompt": "Convert this to async/await:\n\nfunction load(cb){ fs.readFile('a.txt','utf8',(e,d)=>cb(e,d)); }",
+  "A": "```js\nasync function load() {\n  return fs.promises.readFile('a.txt', 'utf8');\n}\n```\n\n`fs.promises.readFile`가 데이터를 resolve하는 Promise를 반환하므로, 호출 측에서 `const d = await load()`로 받고 에러는 `try/catch`로 처리하면 됩니다. 콜백의 `(e, d)` 두 인자는 각각 reject(throw)와 resolve 값으로 자연스럽게 매핑됩니다.\n\n기존 `cb` 시그니처를 유지해야 하는 호출 측이 남아 있다면, 래퍼만 바꾸는 방식도 가능합니다:\n\n```js\nasync function load(cb) {\n  try {\n    cb(null, await fs.promises.readFile('a.txt', 'utf8'));\n  } catch (e) {\n    cb(e);\n  }\n}\n```\n\n첫 번째가 권장형입니다. 콜백을 없애고 반환값/예외로 다루는 게 async/await의 본래 목적에 맞습니다.",
+  "B": "변환 결과입니다. `fs.promises`(또는 `fs/promises`)의 `readFile`를 `await`하면 됩니다.\n\n```js\nasync function load() {\n  return await fs.promises.readFile('a.txt', 'utf8');\n}\n```\n\n핵심 변경점은 세 가지입니다. 콜백 인자 `cb`를 제거하고, 콜백 기반 `fs.readFile` 대신 Promise를 반환하는 `fs.promises.readFile`를 썼으며, 함수를 `async`로 선언해 데이터를 직접 `return`하도록 했습니다.\n\n호출 측도 그에 맞춰 바뀝니다. 원래 `load((e, d) => ...)` 였다면 이제는 이렇게 씁니다.\n\n```js\ntry {\n  const d = await load();\n} catch (e) {\n  // 읽기 실패 처리\n}\n```\n\n원래 콜백의 에러 인자 `e`는 async 버전에서 throw 되는 예외로 바뀌므로, 호출부에서 `try/catch`로 받습니다. 별도 에러 처리 없이 그대로 전파하길 원하면 `load` 안에서는 아무것도 안 해도 되고, 위 예시처럼 `await load()` 한 줄에 `return await`의 `await`도 생략(`return fs.promises.readFile(...)`) 가능합니다.",
+  "mA": {
+    "tryCatch": 1,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 1,
+    "codeLines": 10,
+    "words": 82,
+    "composite": 2
+  },
+  "mB": {
+    "tryCatch": 1,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 8,
+    "words": 112,
+    "composite": 1
+  }
+}

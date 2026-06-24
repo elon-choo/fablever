@@ -1,0 +1,18 @@
+{
+  "id": "lo_9",
+  "prompt": "Is this == a problem here?\n\nif (userInput == 0) { resetAll(); }",
+  "A": "네, 문제 맞습니다 — 특히 JavaScript라면 위험합니다.\n\n`==`는 느슨한 비교(loose equality)라 타입 강제 변환을 합니다. 그래서 `userInput == 0`은 `0` 말고도 아래 값들에 대해 **전부 `true`** 가 됩니다:\n\n- `0` (의도한 값)\n- `\"\"` (빈 문자열) → 0으로 변환\n- `false`\n- `[]` (빈 배열) → 0으로 변환\n- `\"0\"`, `\"\\t\"`, `\" \"` 같은 공백/제로 문자열\n\n즉 사용자가 입력칸을 비웠거나(`\"\"`), 빈 배열이 넘어오거나, 불리언 `false`가 들어와도 `resetAll()`이 호출됩니다. 하필 `resetAll()`은 파괴적(되돌리기 어려운) 동작이라, 의도치 않은 트리거의 비용이 큽니다. 전형적인 버그 패턴입니다.\n\n수정은 의도에 따라 둘 중 하나입니다:\n\n```js\n// 1) 정확히 숫자 0일 때만 — 가장 안전한 기본값\nif (userInput === 0) { resetAll(); }\n\n// 2) \"비어있음/0 입력\"을 모두 리셋 신호로 쓰려던 거라면, 의도를 명시적으로\nif (userInput === 0 || userInput === \"\") { resetAll(); }\n```\n\n기본은 `===`(strict equality) 권장입니다. 만약 `userInput`이 폼에서 온 문자열이라면 `==`로 우연히 동작하던 걸 의존하고 있을 수 있으니, `Number(userInput) === 0`처럼 변환을 명시적으로 하는 게 안전합니다.\n\n참고로 Python·Ruby 등에는 이런 강제 변환 함정이 없어서 `==`로도 안전합니다 — 이 문제는 JS/PHP 같은 느슨한 타입 언어에 한정됩니다. 지금 코드가 어떤 언어인지 알려주시면 더 정확히 짚어드릴게요.",
+  "B": "네, 문제 맞습니다. `==`는 느슨한 비교(loose equality)라서 타입 강제 변환을 하기 때문에, `userInput == 0`은 `0` 말고도 여러 값에서 `true`가 됩니다. 특히 `resetAll()` 같은 파괴적 동작이 의도치 않게 발동될 수 있어서 위험합니다.\n\nJavaScript 기준으로 `userInput == 0`이 `true`가 되는 값들:\n\n- `0` → true (의도한 경우)\n- `\"\"` (빈 문자열) → true ⚠️ 빈 입력칸이 그대로 들어오면 발동\n- `\"0\"` (문자열 0) → true\n- `false` → true\n- `[]` (빈 배열) → true\n- `\"   \"`, `\"\\t\\n\"` (공백/탭/줄바꿈만 있는 문자열) → true\n\n즉 사용자가 입력칸을 비워서 제출하거나(`\"\"`), 빈 배열이 넘어오는 등의 경우에 `resetAll()`이 의도치 않게 실행됩니다. 반대로 `null`, `undefined`, `NaN`은 `== 0`이 `false`라 또 다른 비대칭도 생깁니다.\n\n권장 수정:\n\n```js\nif (userInput === 0) { resetAll(); }\n```\n\n다만 `userInput`이 폼에서 온 값이면 보통 문자열이므로(`\"0\"`은 `=== 0`에서 false), 실제 의도가 \"사용자가 숫자 0을 입력했을 때\"라면 입력을 먼저 숫자로 명시 변환한 뒤 비교하는 편이 더 안전합니다:\n\n```js\nif (Number(userInput) === 0 && userInput !== \"\") { resetAll(); }\n```\n\n`userInput`이 정확히 어떤 타입으로 들어오는지(이미 숫자인지, 폼 문자열인지) 알려주시면 어느 쪽이 맞는지 짚어드리겠습니다. 지금은 스니펫만 보고 판단한 것이라, 고쳐드릴지는 말씀 주시면 반영하겠습니다.",
+  "mA": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "네, 문제 맞습니다 — 특히 JavaScript라면 위험합니다.",
+    "words": 180
+  },
+  "mB": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "네, 문제 맞습니다.",
+    "words": 181
+  }
+}

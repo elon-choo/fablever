@@ -1,0 +1,30 @@
+{
+  "id": "ob_12",
+  "prompt": "Add a console.log of the user id right after login:\n\nconst user = await login(email, password);\nreturn user;",
+  "A": "로그인 바로 다음에 user id를 찍는 한 줄을 넣으면 됩니다.\n\n```js\nconst user = await login(email, password);\nconsole.log(user.id);\nreturn user;\n```\n\n`login`이 반환하는 객체의 id 필드명이 `id`가 아니라 `userId`·`uid` 같은 다른 이름이면 그에 맞춰 `console.log(user.userId)`처럼 바꿔 주세요. 라벨을 붙이고 싶으면 `console.log('user id:', user.id);`로 하면 로그에서 찾기 쉽습니다.\n\n특정 파일에 적용해야 하면 경로를 알려주시면 그 파일에 직접 반영하겠습니다.",
+  "B": "The working directory is empty — there's no file containing this code, so this is just a snippet edit. Here it is with the log added:\n\n```js\nconst user = await login(email, password);\nconsole.log(user.id);\nreturn user;\n```\n\nIf this lives in an actual file you'd like me to edit, tell me the path and I'll apply it there.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 3,
+    "words": 57,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 3,
+    "words": 58,
+    "composite": 0
+  }
+}

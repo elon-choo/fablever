@@ -1,0 +1,18 @@
+{
+  "id": "lo_4",
+  "prompt": "Is this O(n) or O(n^2)?\n\nfunction dupes(a){ return a.filter((x,i)=>a.indexOf(x)!==i); }",
+  "A": "O(n²).\n\n`filter` walks the array once (n iterations), and inside the callback `a.indexOf(x)` does its own linear scan from the start each time — also up to n. n iterations × an O(n) scan each = O(n²). The `indexOf` is the hidden cost; it's easy to read this as one pass, but it's a nested loop.\n\nIf you want O(n), track seen values with a Set:\n\n```js\nfunction dupes(a){\n  const seen = new Set(), out = [];\n  for (const x of a) {\n    if (seen.has(x)) out.push(x);\n    else seen.add(x);\n  }\n  return out;\n}\n```\n\nOne pass, O(1) average lookups → O(n) time, O(n) space.\n\nBehavior note: your version returns *every* occurrence after the first (so `[1,1,1]` → `[1,1]`); the Set version above matches that. If you want each duplicated value only once, dedupe the result (e.g. `[...new Set(out)]`).",
+  "B": "**O(n²)입니다.**\n\n`filter`가 배열을 한 번 순회하면서(n번) 각 원소마다 `a.indexOf(x)`를 호출하는데, `indexOf` 자체가 배열을 앞에서부터 선형 탐색하므로 최악의 경우 O(n)입니다. 따라서 n × n = **O(n²)**.\n\nO(n)으로 만들려면 `Set`이나 객체로 카운트를 잡으면 됩니다:\n\n```js\nfunction dupes(a){\n  const seen = new Set();\n  const out = new Set();\n  for (const x of a){\n    if (seen.has(x)) out.add(x);\n    else seen.add(x);\n  }\n  return [...out];\n}\n```\n\n이 버전은 각 원소를 한 번씩만 보고 `Set`의 `has`/`add`가 평균 O(1)이라 전체 O(n)입니다. 다만 동작이 원본과 미묘하게 다릅니다 — 원본은 중복 원소를 등장할 때마다(첫 등장 제외) 그대로 내보내서 결과에 중복이 남지만, 이 버전은 중복값을 한 번씩만 반환합니다. 중복 자체를 유니크하게 뽑는 게 목적이면 이쪽이 보통 의도에 맞습니다.",
+  "mA": {
+    "leadsVerdict": 1,
+    "opensWalkthrough": 0,
+    "firstSent": "O(n²).",
+    "words": 137
+  },
+  "mB": {
+    "leadsVerdict": 1,
+    "opensWalkthrough": 0,
+    "firstSent": "**O(n²)입니다.**\n",
+    "words": 107
+  }
+}

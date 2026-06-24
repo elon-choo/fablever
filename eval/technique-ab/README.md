@@ -33,6 +33,7 @@ Opus in both arms; the only variable is the technique.
 | **Evidence loop** (full rewrite pass) | hit its metric but GPT-5.5 preferred the leaner baseline **12–4** (length 217→384) | **DO NOT adopt as a 2nd pass** — over-pads | [`RESULTS-evidence-loop.md`](RESULTS-evidence-loop.md) |
 | **↳ Evidence loop, refined (inline)** | baking the discipline into the **first pass** cuts unsupported→**0%**, *halves* length (224→117w), and beats baseline **15–2** (p=0.0023) + the original loop **17–0**; pooled vs baseline **26–6 (p=0.0005)** | **ADOPT the inline packaging** — the discipline belongs in the first pass, not a rewrite | [`RESULTS-surgical-r2.md`](RESULTS-surgical-r2.md), [`RESULTS-surgical-evidence.md`](RESULTS-surgical-evidence.md) |
 | **Task-type routing** | routed (93% accurate) is **~22% leaner** than always-on but does **not** beat it on single-shot quality (6–9, n.s.); trends > baseline (8–3, n.s.) | **BOUNDED NULL** — single-shot benefit is leanness, not quality; the long-session cost that motivates routing needs an out-of-band holdout, not a 1-turn A/B | [`RESULTS-routing.md`](RESULTS-routing.md) |
+| **Directive audit** (ablate 3 shipped directives) | full-Fable vs style-minus-one-line: over-build **10–5**, lead-outcome **6–10**, report-stop **10–4** — **none p<0.05**; pooled **26–19** (57.8%, p=0.37) | **BOUNDED NULL ×3** — no flagship directive is single-shot significant; the per-directive value is longitudinal (→ #7 holdout), and this is *not* a license to cut | [`RESULTS-directive-audit.md`](RESULTS-directive-audit.md) |
 
 ### What each result means for fablever
 
@@ -63,6 +64,15 @@ Opus in both arms; the only variable is the technique.
   structurally invisible to a single-turn A/B. So the result **relocates** the claim rather than killing it:
   routing's measured benefit is leanness; its quality case (if any) needs the **out-of-band holdout** the
   research flags as the highest-leverage next eval — not another single-shot run.
+- **The directive audit confirms the same boundary for the shipped style itself.** Ablating the three most
+  elicitable flagship directives one at a time — "Don't over-build", "Lead with the outcome", "Report
+  findings, then stop" — and comparing full-Fable against the style-minus-one-line returned a null every time
+  (none p<0.05; pooled 26–19, 57.8%, p=0.37). On single-shot tasks Opus 4.8 is *already* restrained, *already*
+  answers first, and *already* doesn't gold-plate, so no single directive can be shown to move the needle by
+  itself. Two of three trend toward the full style and one slightly against — directional, underpowered, not
+  zero. The honest conclusion is not "cut them" but "their value is where this harness can't see": the
+  longitudinal **#7 holdout** is the only instrument that can settle keep-vs-cut. Until it runs, the directives
+  stay (2/3 trend positive, none shown harmful). Full synthesis: [`RESULTS-directive-audit.md`](RESULTS-directive-audit.md).
 
 ## Where these came from — upgrade research
 
@@ -75,7 +85,13 @@ procedure-transfers-capability-doesn't split we measured). Full writeup + the pr
 ## Honest limits
 
 - Single judge model (GPT-5.5); modest per-round n (plan-first 12, local-seed 9, auto-seed 9, evidence-loop
-  16+18). Inline-vs-baseline is the firmest (pooled n=32, p=0.0005); the rest are directional.
+  16+18, each directive ablation 16). Inline-vs-baseline is the firmest (pooled n=32, p=0.0005); the rest are
+  directional. The directive audit's nulls are underpowered to detect a *small* single-shot effect, not proof
+  of zero — read them as "not single-shot significant," not "useless."
+- The directive ablations run with `FABLE_PROFILE=off` because the reinject hook fires even in headless
+  `claude -p` and its compact/core reminders repeat the directives — verified empirically (a `seen-` marker
+  appears with the hook on, none with it off). Without that control both arms would carry the directive and
+  the ablation would be meaningless; with it, the output style is the sole manipulated variable.
 - The local-seed/auto-seed tests still hand the file to the model — real seeding's *auto-discovery near the
   code* is untested, so those adherence numbers are a **lower bound**.
 - "Adopt" here means *the technique earned a measured win in this harness* — wiring it into fablever's
@@ -95,4 +111,7 @@ node run-evidence-loop.mjs     # the original full-rewrite loop (the negative)
 node run-surgical-evidence.mjs # round 1: four lighter packagings vs baseline
 node run-surgical-r2.mjs       # round 2: confirm the inline winner (3-way, pooled)
 node run-routing.mjs           # task-type routing vs always-on vs baseline (the bounded null)
+node run-overbuild.mjs         # ablate "Don't over-build" (full Fable vs style-minus-line, hook off)
+node run-leadoutcome.mjs       # ablate "Lead with the outcome"
+node run-reportstop.mjs        # ablate "Report findings, then stop"
 ```

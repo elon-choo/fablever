@@ -1,0 +1,18 @@
+{
+  "id": "lo_10",
+  "prompt": "Why might this lock never get released?\n\nawait lock.acquire(); doWork(); lock.release();",
+  "A": "가장 큰 이유는 **`try/finally`가 없다**는 점입니다. `doWork()`가 예외를 던지면 그 자리에서 스택이 풀려 나가고 `lock.release()` 줄은 **실행되지 않은 채 건너뛰어집니다**. 그러면 락은 영원히 잡힌 상태로 남고, 다음에 `acquire()`를 기다리는 모든 호출자가 데드락에 빠집니다.\n\n구체적인 누수 경로:\n\n1. **`doWork()`가 throw** (동기 예외든, 거부된 프로미스든) → `release()` 도달 불가. 이게 핵심 결함입니다.\n2. **숨은 두 번째 버그**: `await doWork()`가 아니라 `doWork()`입니다. `doWork`가 async면 락을 잡은 채 일이 **끝나기도 전에** `release()`가 먼저 실행됩니다(조기 해제 — 락이 보호하던 임계영역이 실제로 보호되지 않음). 반대로 동기 함수가 무한 루프/영구 블록에 빠지면 `release()`에 영영 도달하지 못합니다.\n3. `acquire()`와 `try` 사이, 혹은 취소(`AbortSignal`)·타임아웃으로 중간에 빠져나가는 경로가 있어도 같은 누수가 생깁니다.\n\n표준적인 수정은 획득 직후 `try`를 열고 해제를 `finally`에 두는 것입니다:\n\n```js\nawait lock.acquire();\ntry {\n  await doWork();   // 완료까지 대기\n} finally {\n  lock.release();   // 예외·정상 종료 무관하게 항상 해제\n}\n```\n\n주의: `acquire()`는 반드시 `try` **바깥**에 둬야 합니다. 획득 자체가 실패했는데 `finally`에서 `release()`를 부르면 잡지도 않은 락을 푸는 또 다른 버그가 됩니다.",
+  "B": "가장 큰 이유는 **`doWork()`가 예외를 던지면 `lock.release()`가 실행되지 않기 때문**입니다. 세 문장이 try/finally 없이 나열돼 있어서, 중간에서 throw가 나면 제어 흐름이 release를 건너뛰고 빠져나가고 락은 영원히 잡힌 채로 남습니다.\n\n구체적으로 새는 경로들:\n\n- **`doWork()`가 동기적으로 throw** — release 호출 자체에 도달하지 못함. 가장 흔한 케이스.\n- **`doWork()`가 async인데 await가 빠짐** — 위 코드에선 `doWork()`를 await하지 않습니다. 그러면 반환된 Promise가 reject될 때 그 거부가 이 스코프 밖(unhandled rejection)에서 터지고, 한편 `release()`는 작업이 *끝나기도 전에* 곧바로 실행됩니다. 즉 \"너무 일찍 풀리는\" 정반대 버그가 동시에 생깁니다. 만약 의도가 \"작업 끝나고 푼다\"였다면 `await doWork()`여야 하고, 그러면 위의 throw 문제로 돌아옵니다.\n- **acquire와 release 사이에서 `return`/`break`/`continue`** — 함수 일부라면 조기 반환 경로마다 release를 우회할 수 있음.\n- **`release()`가 acquire한 주체와 다른 컨텍스트** — 재진입/중첩 획득이나 await 경계를 넘나드는 동안 다른 코드가 끼어들면 짝이 안 맞을 수 있음.\n\n정석 수정은 finally로 해제를 보장하는 것입니다:\n\n```js\nawait lock.acquire();\ntry {\n  await doWork();   // async면 반드시 await — 안 그러면 너무 일찍 release\n} finally {\n  lock.release();\n}\n```\n\n이렇게 하면 `doWork()`가 성공하든 throw하든 release가 항상 실행됩니다. 락 라이브러리가 지원한다면, 콜백을 받아 자동 해제해 주는 `lock.runExclusive(() => doWork())` 같은 API를 쓰는 게 더 안전합니다 — 사람이 finally를 빠뜨릴 여지를 없애니까요.",
+  "mA": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "가장 큰 이유는 **`try/finally`가 없다**는 점입니다.",
+    "words": 155
+  },
+  "mB": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "가장 큰 이유는 **`doWork()`가 예외를 던지면 `lock.release()`가 실행되지 않기 때문**입니다.",
+    "words": 192
+  }
+}

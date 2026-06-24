@@ -1,0 +1,39 @@
+{
+  "n": 16,
+  "arms": {
+    "A_noOverbuild": {
+      "creep": 0.25,
+      "words": 55,
+      "codeLines": 3,
+      "tryCatch": 0.06,
+      "throws": 0,
+      "guards": 0,
+      "tests": 0,
+      "jsdoc": 0,
+      "bonus": 0,
+      "extraFns": 0.19,
+      "cleanPct": 81.3
+    },
+    "B_fullFable": {
+      "creep": 0.25,
+      "words": 57,
+      "codeLines": 2.94,
+      "tryCatch": 0.06,
+      "throws": 0,
+      "guards": 0,
+      "tests": 0,
+      "jsdoc": 0,
+      "bonus": 0,
+      "extraFns": 0.19,
+      "cleanPct": 75
+    }
+  },
+  "B_vs_A": {
+    "F": 10,
+    "O": 5,
+    "tie": 1,
+    "dec": 15,
+    "F_pct": 66.7,
+    "p": 0.3018
+  }
+}

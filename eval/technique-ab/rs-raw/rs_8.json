@@ -1,0 +1,20 @@
+{
+  "id": "rs_8",
+  "prompt": "Do you think this retry loop could hammer the server?\n\nwhile(true){ try { return call(); } catch(e){ continue; } }",
+  "A": "네, 그 루프는 서버를 때릴(hammer) 수 있습니다. 사실상 거의 확실합니다.\n\n이유는 세 가지입니다.\n\n첫째, **지연이 전혀 없습니다.** `call()`이 빠르게 실패하면(연결 거부, 즉시 에러 등) 루프는 CPU가 허용하는 최대 속도로 재시도를 쏟아냅니다. 초당 수천~수만 요청이 나갈 수 있는 타이트한 busy-loop입니다. 서버가 이미 과부하거나 다운된 상태라면 여기에 더 부하를 얹어 self-inflicted DoS가 됩니다.\n\n둘째, **재시도 가능한 에러와 불가능한 에러를 구분하지 않습니다.** 401/403(인증 실패)이나 400(잘못된 요청)처럼 재시도해도 절대 성공할 수 없는 에러까지 영원히 반복합니다. 이 경우는 서버를 때리기만 할 뿐 결과가 바뀌지 않습니다.\n\n셋째, **종료 조건이 없습니다.** 최대 시도 횟수나 전체 타임아웃이 없어, 성공할 때까지 무한히 돕니다.\n\n고치는 방향은 지수 백오프 + 지터 + 시도 횟수 상한 + 재시도 가능 여부 판별입니다:\n\n```js\nasync function callWithRetry({ maxAttempts = 5, baseMs = 200, capMs = 10_000 } = {}) {\n  let attempt = 0;\n  while (true) {\n    try {\n      return await call();\n    } catch (e) {\n      attempt++;\n      if (attempt >= maxAttempts || !isRetryable(e)) throw e; // 상한·비재시도 에러는 즉시 포기\n      const backoff = Math.min(capMs, baseMs * 2 ** (attempt - 1));\n      const jitter = Math.random() * backoff;                  // thundering herd 방지\n      await sleep(jitter);\n    }\n  }\n}\n```\n\n핵심은 (1) 실패할 때마다 대기 시간을 지수적으로 늘리고, (2) 무작위 지터로 여러 클라이언트가 동시에 재시도해 몰리는 thundering herd를 막고, (3) `isRetryable`로 5xx·타임아웃·네트워크 오류만 재시도하고 4xx 클라이언트 오류는 바로 던지며, (4) `maxAttempts`로 무한 루프를 끊는 것입니다. 서버가 `Retry-After` 헤더를 주면 그 값을 백오프보다 우선하면 더 좋습니다.",
+  "B": "네, 충분히 그럴 수 있습니다. 이 루프는 서버를 망치로 두드리는(hammer) 전형적인 패턴입니다.\n\n핵심 문제는 **재시도 사이에 아무런 간격이 없다**는 점입니다. `call()`이 빠르게 실패하는 상황(연결 거부, 즉시 5xx, DNS 실패 등)에서는 `continue`가 곧바로 다음 시도로 넘어가기 때문에 초당 수천 번 재시도하는 타이트 스핀 루프가 됩니다. 결과적으로 서버에는 트래픽 폭격, 클라이언트에는 CPU 100% 점유라는 양쪽 자해가 됩니다.\n\n구체적으로 빠진 것들:\n\n- **지연(delay) 없음** — 가장 큰 문제. 최소한의 `sleep`조차 없어 실패가 빠를수록 더 격렬하게 두드립니다.\n- **백오프(backoff) 없음** — 표준은 지수 백오프입니다. 서버가 과부하(503/429)일 때 오히려 간격을 늘려줘야 회복할 틈이 생기는데, 이 코드는 정반대로 압박을 가중시킵니다.\n- **지터(jitter) 없음** — 여러 클라이언트가 동시에 같은 패턴으로 재시도하면 thundering herd(동시 재시도 떼)로 회복 직후 서버를 다시 무너뜨립니다.\n- **최대 시도 횟수 / 상한 없음** — `while(true)`라 영원히 멈추지 않습니다.\n- **에러를 무차별 catch** — 여기가 특히 위험합니다. 인증 실패(401), 검증 오류(400) 같은 **재시도해도 절대 성공할 수 없는** 비재시도성 에러까지 무한 재시도합니다. 성공 가망이 0인 요청으로 서버를 영구히 두드리게 됩니다.\n\n최소한의 안전한 형태는 대략 이렇습니다(개념 예시):\n\n```js\nconst MAX = 5;\nfor (let i = 0; i < MAX; i++) {\n  try {\n    return call();\n  } catch (e) {\n    if (!isRetryable(e) || i === MAX - 1) throw e;   // 비재시도성/마지막 시도는 즉시 포기\n    const backoff = Math.min(1000 * 2 ** i, 30000);  // 지수 백오프\n    const jitter = Math.random() * backoff;           // 지터\n    await sleep(jitter);\n  }\n}\n```\n\n정리하면 지연·백오프·지터·시도 상한·에러 분류 다섯 가지가 전부 빠져 있어, 서버를 두드릴 수 있는 정도가 아니라 **거의 확실하게 두드립니다.** 특히 비재시도성 에러를 거르지 않는 부분 때문에 \"일시적 장애 복구용 재시도\"가 아니라 \"영구 장애 상황에서의 무한 폭격\"이 될 수 있습니다.",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 228
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 262
+  }
+}

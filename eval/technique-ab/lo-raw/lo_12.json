@@ -1,0 +1,18 @@
+{
+  "id": "lo_12",
+  "prompt": "Does this debounce keep the latest arguments?\n\nfunction debounce(fn,ms){ let t; return ()=>{ clearTimeout(t); t=setTimeout(fn,ms); }; }",
+  "A": "아니요. 이 구현은 인자를 아예 전달하지 않습니다.\n\n반환된 함수가 `()=>{...}`로 매개변수가 없고, `setTimeout(fn, ms)`도 `fn`을 인자 없이 호출하도록 예약합니다. 그래서 호출할 때 무슨 인자를 넘기든 `fn`은 항상 **인자 0개**로 실행됩니다 — \"최신 인자 유지\"가 아니라 \"인자 유실\"입니다.\n\n검증: `const d = debounce((x)=>console.log(x), 10); d('a'); d('b');` → 10ms 뒤 출력은 `undefined` (`'b'`가 아님).\n\n최신 인자(그리고 `this`)를 유지하려면 매 호출의 인자를 클로저에 담아 두고 화살표 함수로 넘기면 됩니다:\n\n```js\nfunction debounce(fn, ms) {\n  let t;\n  return function (...args) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, args), ms);\n  };\n}\n```\n\n이렇게 하면 `setTimeout`이 발화될 때 가장 마지막 호출의 `args`가 클로저에 남아 있어 최신 인자가 전달됩니다. 검증: 위 예시에서 출력이 `'b'`가 됩니다.",
+  "B": "아니요. 최신 인자를 유지하지 못합니다. 사실 **인자를 아예 전달하지 않습니다.**\n\n이유는 두 군데입니다. 반환된 함수가 `()=>{ ... }`로 매개변수를 받지 않아서 호출 시 넘긴 인자를 캡처하지 못하고, `setTimeout(fn, ms)`는 `fn`을 인자 없이 호출하기 때문에 결국 `fn()`이 빈 인자로 실행됩니다. 추가로 화살표 함수라 `this` 바인딩도 보존되지 않습니다.\n\n\"최신 인자 유지\"를 하려면 매 호출마다 인자를 받아서 클로저에 담고, 타이머가 발화할 때 그 인자를 넘겨야 합니다. 매 호출이 `t`를 덮어쓰므로 자연스럽게 **마지막 호출의 인자**만 살아남습니다:\n\n```js\nfunction debounce(fn, ms) {\n  let t;\n  return function (...args) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, args), ms);\n  };\n}\n```\n\n여기서 `function(...args)` + `fn.apply(this, args)` 조합이 핵심입니다. 일반 함수로 받아 `this`까지 보존하고, `args`는 호출할 때마다 갱신되어 마지막 값이 setTimeout 콜백으로 전달됩니다.\n\n확인용으로 보면, `const d = debounce((x)=>console.log(x), 50); d(1); d(2); d(3);` 실행 시 원본 코드는 `undefined`를 출력하지만, 수정본은 마지막 인자인 `3`을 출력합니다.",
+  "mA": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "아니요.",
+    "words": 109
+  },
+  "mB": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "아니요.",
+    "words": 136
+  }
+}

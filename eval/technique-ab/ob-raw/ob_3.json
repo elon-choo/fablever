@@ -1,0 +1,30 @@
+{
+  "id": "ob_3",
+  "prompt": "Give me a one-liner that sums an array of numbers called nums.",
+  "A": "```javascript\nconst sum = nums.reduce((a, b) => a + b, 0);\n```\n\n`reduce`로 초깃값 `0`부터 누적합니다. 빈 배열이면 `0`을 반환합니다.\n\n다른 언어가 필요하면 말씀해 주세요 — Python은 `sum(nums)`, Java는 `Arrays.stream(nums).sum()` 입니다.",
+  "B": "```js\nconst total = nums.reduce((a, b) => a + b, 0);\n```\n\n`reduce` walks `nums` accumulating each value onto the running total, with `0` as the seed so an empty array returns `0`. Quick check: `[1, 2, 3]` → `0+1+2+3` = `6`.\n\nIf you're in Python instead, it's just `total = sum(nums)`.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 31,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 52,
+    "composite": 0
+  }
+}

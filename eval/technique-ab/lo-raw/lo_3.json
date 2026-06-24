@@ -1,0 +1,18 @@
+{
+  "id": "lo_3",
+  "prompt": "Does this correctly compute the average? What happens on an empty array?\n\nconst avg = a => a.reduce((x,y)=>x+y) / a.length;",
+  "A": "네, 비어 있지 않은 숫자 배열에 대해서는 평균을 올바르게 계산합니다. 하지만 빈 배열에서는 `NaN`이 아니라 **에러를 던집니다.**\n\n`reduce`에 초기값을 주지 않았기 때문에 첫 요소가 누적값(accumulator)으로 쓰입니다.\n\n- 정상 케이스: `avg([1,2,3])` → `(1+2+3)/3 = 2` ✓\n- 단일 요소: `avg([5])` → 콜백이 한 번도 호출되지 않고 `5/1 = 5` ✓\n- 빈 배열: `avg([])` → `TypeError: Reduce of empty array with no initial value` ✗ (`a.length`로 나누기도 전에 `reduce`에서 throw)\n\n빈 배열을 안전하게 처리하려면 초기값 `0`을 넣되, 그러면 `0/0 = NaN`이 되므로 길이를 따로 확인하는 게 보통입니다:\n\n```js\nconst avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0; // 빈 배열은 0 (또는 NaN/undefined 등 정책에 맞게)\n```\n\n추가로, 요소에 숫자가 아닌 값이 섞이면 `+`가 문자열 연결로 빠지는 점(예: `avg([1,\"2\"])` → `\"12\"/2`)도 입력 신뢰가 낮은 경계라면 염두에 둘 만합니다.",
+  "B": "네, 비어 있지 않은 숫자 배열에 대해서는 평균을 올바르게 계산합니다. 다만 빈 배열에서는 `NaN`이 아니라 **예외를 던집니다.**\n\n핵심은 `reduce`에 초기값이 없다는 점입니다. 초기값을 생략하면 배열의 첫 원소가 초기 누적값이 되고 두 번째 원소부터 콜백이 호출되므로, `[10, 20, 30]` 같은 경우 합 60을 길이 3으로 나눠 20을 정확히 반환합니다. 원소가 하나인 `[5]`도 콜백이 한 번도 안 불리고 그냥 5를 반환해 `5/1 = 5`로 맞습니다.\n\n빈 배열 `[]`에서는 `[].reduce((x,y)=>x+y)`가 곧바로 `TypeError: Reduce of empty array with no initial value`를 던집니다. 초기값이 없는데 배열이 비어 있어 누적값으로 삼을 첫 원소조차 없기 때문입니다. 즉 `0/0 = NaN`이 나오는 게 아니라 그 앞에서 throw로 죽습니다.\n\n원하는 동작에 따라 두 가지 선택지가 있습니다.\n\n```js\n// 1) 빈 배열을 NaN으로 처리 (수학적으로 정의되지 않음을 표현)\nconst avg = a => a.reduce((x, y) => x + y, 0) / a.length;   // [] → 0/0 → NaN\n\n// 2) 빈 배열을 명시적으로 방어\nconst avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;\n```\n\n초기값 `0`을 넣으면 빈 배열에서 throw 대신 `NaN`(1번)이 나오고, 호출부에서 빈 배열이 정상 입력이라면 2번처럼 길이를 먼저 확인해 0이나 `null` 등 의도한 값을 반환하는 편이 안전합니다. 어느 쪽이 맞는지는 \"빈 배열이 들어올 수 있는 입력인가, 들어오면 안 되는 입력인가\"에 달려 있습니다 — 들어오면 안 되는 거라면 오히려 현재처럼 throw하는 게 버그를 빨리 드러내 줍니다.",
+  "mA": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "네, 비어 있지 않은 숫자 배열에 대해서는 평균을 올바르게 계산합니다.",
+    "words": 136
+  },
+  "mB": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "네, 비어 있지 않은 숫자 배열에 대해서는 평균을 올바르게 계산합니다.",
+    "words": 217
+  }
+}

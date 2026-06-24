@@ -1,0 +1,30 @@
+{
+  "id": "ob_6",
+  "prompt": "Fix the off-by-one in this loop:\n\nfor (let i = 0; i <= arr.length; i++) { process(arr[i]); }",
+  "A": "The bug is `i <= arr.length` — when `i` equals `arr.length`, `arr[i]` is `undefined` (valid indices run `0` to `arr.length - 1`), so `process()` gets called one extra time on a nonexistent element. Change `<=` to `<`:\n\n```javascript\nfor (let i = 0; i < arr.length; i++) { process(arr[i]); }\n```\n\n배열의 유효 인덱스는 `0`부터 `arr.length - 1`까지인데 `<=`는 `i === arr.length`일 때 한 번 더 돌면서 존재하지 않는 `arr[arr.length]`(= `undefined`)를 `process`에 넘깁니다. 비교 연산자를 `<=`에서 `<`로 바꾸면 마지막 반복이 잘려 정확히 모든 원소를 한 번씩만 처리합니다.",
+  "B": "`<=`를 `<`로 바꾸면 됩니다. 지금은 `i`가 `arr.length`일 때도 루프가 한 번 더 돌아 `arr[arr.length]`(존재하지 않는 인덱스, `undefined`)를 `process`에 넘깁니다.\n\n```js\nfor (let i = 0; i < arr.length; i++) { process(arr[i]); }\n```\n\n유효 인덱스는 `0`부터 `arr.length - 1`까지이므로 `<`가 맞습니다.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 87,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 41,
+    "composite": 0
+  }
+}

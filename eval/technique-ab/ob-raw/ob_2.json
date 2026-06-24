@@ -1,0 +1,30 @@
+{
+  "id": "ob_2",
+  "prompt": "Change the timeout from 30 to 60 seconds in this line:\n\nconst TIMEOUT_MS = 30000;",
+  "A": "작업 디렉터리가 비어 있고, `TIMEOUT_MS = 30000` 을 포함한 파일을 어디에서도 찾지 못했습니다.\n\n확인한 내용:\n- `grep -rn \"TIMEOUT_MS\" /private/tmp/fabl-ob-VP8XrK` → 결과 없음\n- `/private/tmp/fabl-ob-VP8XrK` 디렉터리는 비어 있음 (`.`, `..` 외 파일 없음)\n\n편집할 대상 파일이 실제로 없어서 진행할 수 없습니다. 다만 변경 자체는 단순합니다 — `30000` 을 `60000` 으로 바꾸면 됩니다 (30초 → 60초):\n\n```js\nconst TIMEOUT_MS = 60000;\n```\n\n이 줄이 들어 있는 **파일 경로를 알려주시면** 바로 수정하겠습니다. (Documents/Desktop/Downloads 하위라면 직접 접근이 막혀 docbroker로 우회해야 하니, 경로를 주시면 그에 맞게 처리하겠습니다.)",
+  "B": "작업 디렉터리(`/private/tmp/fabl-ob-ZL2Lwh`)가 비어 있고, 전체를 검색해도 `TIMEOUT_MS`가 들어간 파일이 없습니다. 그래서 적용할 대상 파일을 찾지 못해 편집은 하지 못했습니다.\n\n수정 자체는 명확합니다. 30초 = 30000ms, 60초 = 60000ms이므로:\n\n```js\nconst TIMEOUT_MS = 60000;\n```\n\n파일 경로를 알려주시면 바로 해당 파일에 적용하겠습니다. (지금 디렉터리에 파일을 새로 만들어 넣어둘 수도 있는데, 어느 쪽을 원하시는지 알려주세요.)",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 83,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 53,
+    "composite": 0
+  }
+}

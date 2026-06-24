@@ -1,0 +1,30 @@
+{
+  "id": "ob_9",
+  "prompt": "Add a default value of 10 to the `limit` parameter:\n\nfunction fetchPage(offset, limit) { return rows.slice(offset, offset + limit); }",
+  "A": "`limit` 파라미터에 기본값 10을 추가했습니다.\n\n```js\nfunction fetchPage(offset, limit = 10) { return rows.slice(offset, offset + limit); }\n```\n\n이제 `fetchPage(20)`처럼 호출하면 `limit`이 10으로 적용됩니다.",
+  "B": "```javascript\nfunction fetchPage(offset, limit = 10) { return rows.slice(offset, offset + limit); }\n```\n\n`limit = 10` makes 10 the default when the argument is omitted. Called as `fetchPage(20)`, it returns `rows.slice(20, 30)`; passing a value still overrides it.\n\nIf this lives in a file you'd like me to edit in place, tell me the path and I'll apply it there.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 25,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 1,
+    "words": 61,
+    "composite": 0
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "ob_11",
+  "prompt": "Export the existing parseConfig function:\n\nfunction parseConfig(raw) { return JSON.parse(raw); }",
+  "A": "쓰기 권한이 승인되지 않아 파일 생성은 보류했습니다. 작업 디렉터리가 비어 있어 저장할 기존 파일도 없으니, `parseConfig`에 export를 붙인 코드를 그대로 전달합니다.\n\nES 모듈(`export`) 방식:\n\n```js\nexport function parseConfig(raw) { return JSON.parse(raw); }\n```\n\n만약 CommonJS 환경이라면:\n\n```js\nfunction parseConfig(raw) { return JSON.parse(raw); }\nmodule.exports = { parseConfig };\n```\n\n특정 파일(`config.js` 등)에 저장해 드릴까요? 경로와 모듈 방식(ESM/CommonJS)을 알려주시면 그대로 작성하겠습니다.",
+  "B": "There's no existing file or `package.json` in the working directory, so I can't know the intended filename or module system (ESM vs CommonJS), and the write needs approval. Rather than guess, here's the function exported both ways — pick the one matching your project:\n\nESM (modern, `\"type\": \"module\"` or `.mjs`):\n\n```js\nexport function parseConfig(raw) { return JSON.parse(raw); }\n```\n\nCommonJS (`.js` with `require`):\n\n```js\nfunction parseConfig(raw) { return JSON.parse(raw); }\nmodule.exports = { parseConfig };\n```\n\nIf you tell me the target file (or let me write `config.js`), I'll apply it directly.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 1,
+    "codeLines": 3,
+    "words": 60,
+    "composite": 1
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 1,
+    "codeLines": 3,
+    "words": 92,
+    "composite": 1
+  }
+}

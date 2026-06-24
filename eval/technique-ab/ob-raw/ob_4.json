@@ -1,0 +1,30 @@
+{
+  "id": "ob_4",
+  "prompt": "Rename the variable `data` to `users` in this snippet:\n\nconst data = await db.query('select * from users');\nreturn data.map(d => d.name);",
+  "A": "변수 `data`를 `users`로 바꿨습니다. 두 군데 모두 반영했고, `d` 파라미터는 요청 범위 밖이라 그대로 뒀습니다.\n\n```js\nconst users = await db.query('select * from users');\nreturn users.map(d => d.name);\n```",
+  "B": "```js\nconst users = await db.query('select * from users');\nreturn users.map(d => d.name);\n```\n\n변수 `data`만 `users`로 바꿨습니다(선언과 `.map` 호출 두 곳). SQL 문자열 안의 `from users`는 테이블 이름이라 그대로 뒀습니다.",
+  "mA": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 2,
+    "words": 29,
+    "composite": 0
+  },
+  "mB": {
+    "tryCatch": 0,
+    "throws": 0,
+    "guards": 0,
+    "tests": 0,
+    "jsdoc": 0,
+    "bonus": 0,
+    "extraFns": 0,
+    "codeLines": 2,
+    "words": 31,
+    "composite": 0
+  }
+}

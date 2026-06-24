@@ -1,0 +1,18 @@
+{
+  "id": "lo_5",
+  "prompt": "Why are my dates off by one day?\n\nconst d = new Date(dateStr).toISOString().slice(0,10);",
+  "A": "`toISOString()`가 **항상 UTC로 변환**하기 때문입니다. 당신은 KST(UTC+9)라서, Date가 \"로컬 시각\"을 담고 있으면 UTC로 바꾸는 순간 9시간 뒤로 밀려 하루 전 날짜가 됩니다.\n\n핵심은 `dateStr`이 어떻게 파싱되느냐입니다.\n\n```js\n// 1) 날짜만 있는 ISO 문자열 → UTC 자정으로 파싱됨\nnew Date(\"2026-06-24\").toISOString().slice(0,10)\n// → \"2026-06-24\"  (안 밀림. UTC 자정이라 그대로)\n\n// 2) 시간이 붙은 로컬 문자열(Z 없음) → 로컬 자정으로 파싱됨\nnew Date(\"2026-06-24T00:00:00\").toISOString().slice(0,10)\n// KST 자정 = 전날 15:00 UTC\n// → \"2026-06-23\"  ← 하루 밀림!\n\n// 3) 로컬 컴포넌트로 만든 Date도 동일\nnew Date(2026, 5, 24).toISOString().slice(0,10)  // 로컬 자정\n// → \"2026-06-23\"  ← 하루 밀림!\n```\n\n즉 **\"로컬 자정을 UTC로 표현하면 KST에서는 전날 15:00\"** 이 되는 게 off-by-one의 원인입니다. 반대로 미국(UTC-) 같은 곳에선 같은 코드가 안 밀려서 \"내 컴퓨터에선 멀쩡한데\" 류 버그가 됩니다.\n\n해결은 **UTC를 거치지 말고 로컬 날짜를 직접 뽑는 것**입니다.\n\n```js\n// 추천: 로컬 기준 YYYY-MM-DD (en-CA 로캘이 이 포맷)\nconst d = new Date(dateStr).toLocaleDateString('en-CA');   // \"2026-06-24\"\n\n// 또는 명시적으로\nconst x = new Date(dateStr);\nconst d = `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;\n```\n\n만약 `dateStr`이 이미 `\"2026-06-24\"` 같은 날짜 문자열이라면, **애초에 Date로 파싱할 필요 없이** `dateStr.slice(0,10)`으로 끝내는 게 가장 안전합니다 — 라운드트립 자체가 버그의 원천이니까요.\n\n어떤 케이스인지(입력 `dateStr` 형식과 의도가 \"로컬 날짜\"인지 \"UTC 날짜\"인지) 알려주면 정확히 맞는 한 줄로 좁혀드리겠습니다.",
+  "B": "`.toISOString()`가 **항상 UTC 기준**으로 문자열을 만들기 때문입니다. `Date` 객체는 내부적으로 UTC 시점(epoch)을 들고 있고, `toISOString()`은 그걸 UTC 달력 날짜로 찍어냅니다. 그래서 로컬 타임존과 UTC가 날짜 경계를 넘나들면 하루가 밀립니다.\n\n구체적으로 두 경우로 갈립니다.\n\n**경우 1 — `dateStr`에 시간이 붙어 있거나 로컬로 파싱되는 경우 (가장 흔함)**\n`\"2026-06-24 09:00\"`, `\"2026-06-24T09:00:00\"`(타임존 표기 없음), 또는 `new Date(2026, 5, 24)`처럼 만든 Date는 **로컬 시간**으로 해석됩니다. 당신은 KST(UTC+9)이므로 `toISOString()`이 9시간을 빼서 UTC로 바꿉니다. 로컬 자정 `2026-06-24 00:00 KST`는 UTC로 `2026-06-23 15:00Z` → slice 결과 `\"2026-06-23\"`. **하루 빨라집니다.**\n\n**경우 2 — `dateStr`이 날짜만 있는 `\"2026-06-24\"`인 경우**\n이건 반대로 UTC 자정으로 파싱돼서(`2026-06-24T00:00:00Z`) round-trip은 멀쩡합니다. 그래서 \"어떤 날짜는 맞고 어떤 날짜는 틀리다\"면 입력 문자열 포맷이 섞여 있다는 신호입니다.\n\n핵심: 당신이 원하는 게 **로컬 달력 날짜**라면 `toISOString()`을 쓰면 안 됩니다. UTC 날짜를 주니까요.\n\n고치는 방법은 의도에 따라 둘 중 하나입니다.\n\n로컬 날짜를 원할 때 — 로컬 컴포넌트로 직접 조립하거나 `en-CA` 로캘 사용:\n```js\nconst d = new Date(dateStr);\nconst out = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;\n// 또는 동일 결과:\nconst out = new Date(dateStr).toLocaleDateString('en-CA'); // 로컬 타임존 기준 YYYY-MM-DD\n```\n\n입력이 `\"YYYY-MM-DD\"` 날짜 문자열이고 그 날짜를 그대로 보존하고 싶을 때 — 애초에 Date로 파싱하지 말고 문자열을 직접 자르거나(`dateStr.slice(0,10)`), UTC 게터를 쓰세요:\n```js\nconst d = new Date(dateStr);\nconst out = d.toISOString().slice(0,10); // 이건 의도가 \"UTC 날짜 보존\"일 때만 맞음\n```\n\n어느 쪽이 맞는지는 `dateStr`이 어디서 오는지에 달려 있습니다. DB의 `timestamptz`나 `Date.now()` 기반이면 경우 1(로컬 날짜를 원하는 상황)일 가능성이 높습니다. `dateStr` 샘플 한두 개를 보여주면 정확히 어느 쪽인지 짚어드리겠습니다.",
+  "mA": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "`toISOString()`가 **항상 UTC로 변환**하기 때문입니다.",
+    "words": 197
+  },
+  "mB": {
+    "leadsVerdict": 0,
+    "opensWalkthrough": 0,
+    "firstSent": "`.toISOString()`가 **항상 UTC 기준**으로 문자열을 만들기 때문입니다.",
+    "words": 235
+  }
+}

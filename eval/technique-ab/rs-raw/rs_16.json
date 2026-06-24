@@ -1,0 +1,20 @@
+{
+  "id": "rs_16",
+  "prompt": "I'm not sure this actually awaits. Thoughts?\n\nasync function save(items){ items.forEach(async i => { await write(i); }); }",
+  "A": "맞습니다. 이 코드는 `save`가 끝날 때까지 쓰기 완료를 기다리지 않습니다.\n\n핵심은 `Array.prototype.forEach`가 콜백의 반환값(여기서는 async 콜백이 돌려주는 Promise)을 **그냥 버린다**는 점입니다. `await write(i)`는 각 콜백 함수 *내부에서만* 기다릴 뿐이고, `forEach`는 그 Promise들을 모은 적도 기다린 적도 없습니다. 그래서 `save`는 모든 `write(i)` 호출을 동시에 발사(fire-and-forget)해 놓고, 어느 것도 끝나기 전에 즉시 반환됩니다. 호출부에서 `await save(items)`를 해도 실제로는 쓰기가 끝났다는 보장이 전혀 없습니다.\n\n부수적으로, 의도와 상관없이 모든 쓰기가 **순차가 아니라 병렬**로 시작됩니다.\n\n원하는 동작에 따라 둘 중 하나로 고치면 됩니다.\n\n순차로 하나씩 기다리려면:\n```js\nasync function save(items){\n  for (const i of items) { await write(i); }\n}\n```\n\n병렬로 돌리되 전부 끝나기를 기다리려면:\n```js\nasync function save(items){\n  await Promise.all(items.map(i => write(i)));\n}\n```\n\n둘 다 `save`가 반환하는 Promise가 모든 쓰기 완료 시점에 resolve됩니다. 원래 코드는 그렇지 않습니다. 하나라도 실패했을 때 에러를 전파해야 한다면 후자(`Promise.all`)나 전자의 `await`가 reject를 올려주지만, 원래 `forEach` 버전은 콜백 안에서 난 거부가 unhandled rejection으로 새어나갑니다.",
+  "B": "맞습니다. 그 코드는 **실제로 await하지 않습니다.** 직관이 정확해요.\n\n핵심은 `forEach`가 콜백의 반환값을 **버린다**는 점입니다. `async i => {...}` 콜백은 Promise를 반환하지만, `forEach`는 그걸 받지도 기다리지도 않습니다. 그래서 `save`는 모든 `write(i)` 호출을 발사(fire)만 해놓고, 그것들이 끝나기 전에 곧바로 리턴합니다. 콜백 안의 `await`는 **그 콜백 자신의 Promise 내부에서만** 동작할 뿐, `save`의 실행 흐름과는 연결되지 않습니다.\n\n결과적으로 생기는 두 가지 문제:\n\n1. **순서/완료 보장 없음** — `await save(items)`를 해도 write들이 끝났다는 보장이 없습니다. `save`가 반환하는 Promise는 write들이 완료되기 전에 resolve됩니다.\n2. **에러 유실** — 어떤 `write(i)`가 reject되면, 그 거부는 `forEach`가 버린 Promise 안에 갇혀 **unhandled rejection**이 됩니다. `save`를 `try/catch`로 감싸도 잡히지 않습니다.\n\n(참고로 write 자체가 안 일어나는 건 아닙니다 — 다 실행되긴 하고 결국 완료됩니다. 단지 `save`가 그걸 기다려주지 않을 뿐입니다.)\n\n고치는 방법은 의도에 따라 둘 중 하나입니다.\n\n순차 실행(앞 write가 끝나야 다음 시작):\n```js\nasync function save(items) {\n  for (const i of items) {\n    await write(i);\n  }\n}\n```\n\n병렬 실행(전부 동시에 시작하고 모두 끝날 때까지 대기):\n```js\nasync function save(items) {\n  await Promise.all(items.map(i => write(i)));\n}\n```\n\n대부분의 경우 병렬 버전(`Promise.all`)이 원래 `forEach`로 의도했을 법한 동작에 가깝고 더 빠릅니다. 단, write 사이에 순서 의존성이 있거나 동시 부하를 제한해야 하면 `for...of` 순차 버전을 쓰세요.",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 2,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 146
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 2,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 192
+  }
+}

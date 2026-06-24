@@ -1,0 +1,20 @@
+{
+  "id": "rs_15",
+  "prompt": "Would this pass a security review?\n\napp.use((req,res,next)=>{ res.header('Access-Control-Allow-Origin', req.headers.origin); next(); });",
+  "A": "아니요, 통과 못 합니다. 이건 전형적인 CORS 오설정(origin reflection)이고, 리뷰어가 바로 잡을 패턴입니다.\n\n핵심 문제는 `req.headers.origin`을 검증 없이 그대로 `Access-Control-Allow-Origin`에 되비추는 것입니다. 결과적으로 **모든 출처를 허용**하는 셈인데, `*`보다 더 나쁩니다. 와일드카드 `*`는 브라우저가 자격증명 요청을 막아주지만, origin을 반사하면 그 보호가 풀립니다.\n\n구체적 위험:\n\n1. **자격증명과 결합 시 치명적.** 만약 코드 어딘가에서 `Access-Control-Allow-Credentials: true`가 설정돼 있거나 추가된다면, 임의의 악성 사이트가 피해자의 쿠키/세션을 실은 인증된 cross-origin 요청을 보내고 **응답까지 읽을 수 있습니다.** 사실상 CSRF + 데이터 탈취 경로가 열립니다.\n\n2. **출처 allowlist 부재.** 신뢰 출처 검사가 전혀 없어 공격자 도메인도 통과합니다.\n\n3. **`Vary: Origin` 누락.** 응답이 출처별로 달라지는데 `Vary` 헤더가 없어 캐시(프록시/CDN)가 한 출처의 응답을 다른 출처에 잘못 내줄 수 있습니다. 캐시 포이즈닝 + 헤더 오염 가능성.\n\n4. **Origin 없을 때 처리 없음.** `req.headers.origin`이 `undefined`면 헤더에 `undefined` 문자열이 들어가거나 비정상 동작합니다.\n\n통과시키려면 출처를 화이트리스트로 검증하세요:\n\n```js\nconst allowed = new Set(['https://app.example.com', 'https://admin.example.com']);\n\napp.use((req, res, next) => {\n  const origin = req.headers.origin;\n  if (origin && allowed.has(origin)) {\n    res.header('Access-Control-Allow-Origin', origin);\n    res.header('Vary', 'Origin');              // 출처별 응답이므로 캐시 분리\n    // 자격증명이 필요할 때만, 그리고 위 검증을 통과한 출처에만:\n    // res.header('Access-Control-Allow-Credentials', 'true');\n  }\n  next();\n});\n```\n\n핵심 원칙: 자격증명이 필요 없으면 정적 `*`로 충분하고, 자격증명이 필요하면 **반드시 닫힌 allowlist 검증 + `Vary: Origin`**을 함께 둬야 합니다. 지금 코드처럼 무조건 반사하는 형태는 리뷰에서 막혀야 정상입니다.",
+  "B": "아니요, 통과 못 합니다. 이 한 줄은 사실상 \"모든 출처 허용\"을 켜는 전형적인 CORS 취약 설정입니다.\n\n핵심 문제는 `req.headers.origin`을 **검증 없이 그대로 반사(reflect)**한다는 점입니다. 요청이 어떤 Origin을 주장하든 그 값을 `Access-Control-Allow-Origin`에 그대로 돌려주므로, 효과는 와일드카드(`*`)와 같지만 **더 위험합니다.** 와일드카드는 브라우저가 자격증명(쿠키) 동반 요청의 응답을 못 읽게 막지만, Origin을 반사하면 그 제약이 풀리기 때문입니다.\n\n리뷰에서 반드시 지적될 항목:\n\n1. **출처 화이트리스트 부재** — `req.headers.origin`을 신뢰 도메인 목록과 대조하지 않고 무조건 반사. 공격자 사이트(`https://evil.com`)도 그대로 허용됩니다.\n2. **자격증명 결합 시 계정 탈취로 직결** — 이 코드 자체엔 `Access-Control-Allow-Credentials`가 없지만, 앱 다른 곳에서 `credentials: true`가 켜져 있거나 누군가 추가하면, **임의의 웹사이트가 피해자 쿠키를 실어 인증된 cross-origin 요청을 보내고 응답까지 읽을 수 있습니다.** CORS 오설정의 대표적 데이터 유출/계정 탈취 경로입니다.\n3. **`Vary: Origin` 누락** — Origin을 반사할 때는 캐시가 한 출처용 ACAO 헤더를 다른 출처에 재사용하지 않도록 `Vary: Origin`을 함께 설정해야 합니다. 없으면 캐시 오염 위험.\n4. **Origin 없는 요청 처리 부재** — `req.headers.origin`이 `undefined`면 헤더가 빈 값/`undefined`로 설정됩니다.\n5. **전역 적용** — 모든 라우트에 무차별 적용되어 공개 엔드포인트와 민감 엔드포인트를 구분하지 않습니다.\n\n권장 형태는 명시적 허용 목록으로 좁히는 것입니다:\n\n```javascript\nconst ALLOWED = new Set(['https://app.example.com', 'https://admin.example.com']);\napp.use((req, res, next) => {\n  const origin = req.headers.origin;\n  if (origin && ALLOWED.has(origin)) {\n    res.header('Access-Control-Allow-Origin', origin);\n    res.header('Vary', 'Origin');\n    // 자격증명이 필요할 때만, 그리고 위 화이트리스트가 전제일 때만:\n    // res.header('Access-Control-Allow-Credentials', 'true');\n  }\n  next();\n});\n```\n\n실제 프로덕션이라면 직접 만들기보다 `cors` 미들웨어에 `origin` 화이트리스트를 넘기는 방식을 권합니다. 검증 로직·프리플라이트(OPTIONS)·`Vary` 처리를 알아서 해줍니다.\n\n요약하면, **현재 코드는 \"Origin 반사 = 사실상 전체 허용\"이라 보안 리뷰에서 거의 확실히 BLOCK 됩니다.** 화이트리스트 검증을 넣는 것이 최소 수정입니다.",
+  "mA": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 207
+  },
+  "mB": {
+    "hasRewrite": 1,
+    "codeBlocks": 1,
+    "fixLang": 0,
+    "intervention": 1,
+    "words": 254
+  }
+}
