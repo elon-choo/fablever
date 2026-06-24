@@ -1,0 +1,12 @@
+{
+  "judge": "gemini-3.1-pro-preview",
+  "pairs": 34,
+  "S1": 30,
+  "A": 2,
+  "tie": 2,
+  "missing": 0,
+  "decided": 32,
+  "S1_pct": 93.8,
+  "p": 0,
+  "p_display": "<0.0001"
+}

@@ -170,7 +170,17 @@ Step-by-step commands: [`whitepaper/07-reproduce.md`](whitepaper/07-reproduce.md
   [`eval/technique-ab/`](eval/technique-ab/) with every runner, raw generation, and verdict committed:
   plan-first (adopt), local-context seeding + auto-generated seed (adopt — auto reaches 88.9% vs 100%
   hand-written), and the evidence-loop refined to its winning **inline** packaging (beats baseline 26–6
-  pooled, p=0.0005). Upgrade-research writeup: [`eval/technique-ab/RESEARCH-upgrade-points.md`](eval/technique-ab/RESEARCH-upgrade-points.md).
+  pooled, p=0.0005). The inline directive is the one change **wired into production**, so it was re-judged by a
+  second lab: **Gemini 3.1 pro prefers it 30–2 (93.8%, p<0.0001)** on the same generations — judge-robust, not
+  a single-judge artifact ([`eval/technique-ab/RESULTS-rejudge-gemini.md`](eval/technique-ab/RESULTS-rejudge-gemini.md)).
+- **A directive audit that argues *against* the project's own shipped style.** Ablating the three most
+  elicitable flagship directives one at a time (full Fable vs the style with that one paragraph removed,
+  hook off so the style is the only variable) returns a single-shot **null every time** — over-build 10–5,
+  lead-outcome 6–10, report-stop 10–4; none p<0.05; pooled 26–19 (57.8%, p=0.37). The honest reading is not
+  "cut them" (2/3 trend positive, none harmful) but "their value is longitudinal, where a one-turn A/B can't
+  see it" — which is exactly why the out-of-band holdout is the decisive measurement, not another single-shot
+  run ([`eval/technique-ab/RESULTS-directive-audit.md`](eval/technique-ab/RESULTS-directive-audit.md)).
+  Upgrade-research writeup: [`eval/technique-ab/RESEARCH-upgrade-points.md`](eval/technique-ab/RESEARCH-upgrade-points.md).
 
 ---
 

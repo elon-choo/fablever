@@ -55,7 +55,11 @@ Opus in both arms; the only variable is the technique.
   terse evidence discipline into the **first** generation ("inline"). Inline cuts unsupported claims to **0%**,
   *halves* the reply length, and the judge prefers it **15–2** over baseline (p=0.0023) and **17–0** over the
   original loop (pooled vs baseline **26–6, p=0.0005**). The full loop's failure was the *second pass itself*.
-  This is the "surgical" answer the first round predicted — found, and confirmed at significance.
+  This is the "surgical" answer the first round predicted — found, and confirmed at significance. **And because
+  this is the one change actually wired into production (`profiles/full.md` + `compact.md`), it was re-judged by
+  a second lab: Gemini 3.1 pro, given the identical instruction on the same 34 generations, prefers the inline
+  arm even more strongly — S1 30–2 (93.8%, p<0.0001) vs GPT-5.5's 26–6.** Two labs agree, so the shipped
+  directive is judge-robust, not a single-judge artifact ([`RESULTS-rejudge-gemini.md`](RESULTS-rejudge-gemini.md)).
 - **Task-type routing is an honest bounded null.** The research's "#1 headline" — inject a discipline only
   where it fits, not on every task — is **leaner** when run (routed ~22% fewer words than always-on) but does
   **not** beat always-on on single-shot quality (6–9, n.s.). Why: in one shot the model simply ignores the
@@ -114,4 +118,5 @@ node run-routing.mjs           # task-type routing vs always-on vs baseline (the
 node run-overbuild.mjs         # ablate "Don't over-build" (full Fable vs style-minus-line, hook off)
 node run-leadoutcome.mjs       # ablate "Lead with the outcome"
 node run-reportstop.mjs        # ablate "Report findings, then stop"
+node rejudge-evidence-gemini.mjs  # judge-robustness: re-judge shipped inline directive with Gemini 3.1 pro
 ```
