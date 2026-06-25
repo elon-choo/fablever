@@ -3,6 +3,8 @@ node_modules/
 .DS_Store
 *.fable-bak-*
 /tmp/
+# Codex install target at the repo root is a local artifact (e.g. from a project-scope test), never the repo
+/.codex/
 # fable-handoff: per-session operator working-state — local context, never committed
 .fablever_state
 .fablever_state/

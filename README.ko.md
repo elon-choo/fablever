@@ -308,6 +308,33 @@ export FABLE_PROFILE=off       # turns off the fablever HOOKS (injections) for t
 > (또는 *커스텀 에이전트 정의*까지 조종하려면), [`claude-code/subagent-brief.md`](claude-code/subagent-brief.md)
 > (영문)의 스니펫과 MCP `get_fable_profile` 도구를 폴백으로 계속 쓸 수 있습니다.
 
+## Codex CLI 지원 (네이티브)
+
+fablever는 **[OpenAI의 Codex CLI](https://github.com/openai/codex)** 안에서도 네이티브로 동작합니다 — 포지셔닝은
+동일합니다(**스타일 이식이지 능력 이식이 아님**). Codex에는 Claude Code의 output style 표면이 없으므로, 항상-켜짐
+계층을 Codex 고유 표면으로 전달합니다: **`AGENTS.md`**(지시 계층), **`hooks.json`**(라이프사이클 훅),
+**`config.toml`**(동일한 제로-의존성 MCP를 host-aware로 등록). 상세 가이드: **[`docs/CODEX.md`](docs/CODEX.md)**.
+
+```bash
+node install.mjs --codex-style-only      # 가장 안전한 첫 설치: AGENTS.md 마커 블록만 (훅/MCP/네트워크 없음)
+node install.mjs --codex-full            # AGENTS.md + Codex 훅 + fable-profile MCP
+node install.mjs --codex-full --dry-run  # 변경 사항 미리보기 — 아무것도 쓰지 않음
+node install.mjs --codex-status          # 설치 상태 확인
+node install.mjs --uninstall --codex     # Codex 설치분만 제거 (Claude Code는 건드리지 않음)
+```
+
+전체 설치 후 Codex에서 마무리하세요: **`/hooks`** 로 fablever 훅을 **신뢰(trust)** 하고(신뢰되지 않은 커맨드 훅은
+실행되지 않습니다), **`/mcp`** 로 `fable-profile` 연결을 확인하세요. 모든 변경은 **마커 기반·되돌릴 수 있음** —
+언인스톨은 fablever 블록만 제거하며(AGENTS.md / config.toml 은 바이트 단위 복원, hooks.json 은 의미 동일 복원),
+각 파일은 수정 전에 백업됩니다.
+
+**인증:** Codex는 **ChatGPT/OAuth 로그인**(또는 OpenAI API 키)으로 로그인하며, **그 인증은 전적으로 Codex가
+관리**합니다 — fablever는 Codex 토큰을 **읽지도 저장하지도 출력하지도 않으며**, Codex 네이티브 지원에는 **OpenAI API
+키가 필요 없습니다**. (([`docs/API-KEYS.md`](docs/API-KEYS.md))의 API 키는 선택적인 Claude 쪽 xverify/fusion
+경로 전용입니다.) 참고: Claude Code 안에서 codex MCP를 *GPT 리뷰어*로 쓰는 것과 fablever를 *Codex 위에서* 돌리는
+것은 **다른 것**이며, Codex 호스트가 자기 출력을 검증하는 것은 **교차모델 검증이 아닙니다**. 둘 다
+[`docs/CODEX.md`](docs/CODEX.md)에 설명되어 있습니다.
+
 ## 다른 곳에서 쓰기 (다른 사람, 다른 MCP 클라이언트)
 
 어떤 클라이언트(Cursor, Windsurf, Claude Desktop, 다른 Claude Code 사용자)에서든 MCP 서버를 등록하세요:
@@ -357,7 +384,7 @@ export OPENROUTER_API_KEY="sk-or-v1-..."   # an API key (NOT OAuth login) — se
 ## 검증
 
 ```bash
-node test/mcp-test.js                  # 48 MCP 체크 (프로토콜 + fable_check 게이트 + 취향 저장소)
+node test/mcp-test.js                  # 56 MCP 체크 (프로토콜 + fable_check 게이트 + 취향 저장소)
 node test/fusion-test.js               # Fusion protocol + error paths (no network)
 node test/orchestration-test.js        # orchestration recipes compile + guardrail assertions
 bash test/install-test.sh              # install/uninstall safety lifecycle

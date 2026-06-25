@@ -99,6 +99,28 @@ function check(name, cond, detail) {
   const rTriv = await lintReport(trivialTrail);
   check('fable_lint flags a trail on a trivial turn', ruleNames(rTriv).includes('trail-on-trivial'), JSON.stringify(ruleNames(rTriv)));
 
+  // --- unsupported "done/works" claim rule (A5): the wording-level guard, EN + KO ---
+  const hasUnsupported = rep => ruleNames(rep).includes('unsupported-done-claim');
+  const sevOf = (rep, rule) => ((rep && rep.violations) || []).filter(v => v.rule === rule).map(v => v.severity);
+  const u1 = await lintReport('Fixed. It works now.');
+  check('fable_lint FLAGS an unsupported "it works" claim (high)', hasUnsupported(u1) && sevOf(u1, 'unsupported-done-claim').includes('high') && u1.passed === false, JSON.stringify({ v: ruleNames(u1), passed: u1.passed }));
+  const u2 = await lintReport('Fixed. Verified with `npm test`.');
+  check('fable_lint PASSES a done-claim that shows the check', !hasUnsupported(u2), JSON.stringify(ruleNames(u2)));
+  const u3 = await lintReport('Implemented, but not verified yet.');
+  check('fable_lint PASSES a done-claim explicitly marked not-verified', !hasUnsupported(u3), JSON.stringify(ruleNames(u3)));
+  const k1 = await lintReport('고쳤고 작동합니다.');
+  check('fable_lint FLAGS an unsupported Korean done-claim', hasUnsupported(k1) && k1.passed === false, JSON.stringify({ v: ruleNames(k1), passed: k1.passed }));
+  const k2 = await lintReport('고쳤습니다. `npm test`로 확인했습니다.');
+  check('fable_lint PASSES a Korean done-claim that shows the check', !hasUnsupported(k2), JSON.stringify(ruleNames(k2)));
+  const k3 = await lintReport('수정했지만 아직 검증하지 못했습니다.');
+  check('fable_lint PASSES a Korean done-claim marked not-verified', !hasUnsupported(k3), JSON.stringify(ruleNames(k3)));
+
+  // --- instructions (B6): initialize returns server-wide guidance; first 512 chars self-contained ---
+  const ins = (init.result && init.result.instructions) || '';
+  const head = ins.slice(0, 512);
+  check('initialize returns server instructions', ins.length > 100, String(ins.length));
+  check('instructions head includes evidence-grounded + fable_check + safety', /evidence-grounded/.test(head) && /fable_check/.test(head) && /[Ss]afety/.test(head), head.slice(0, 120));
+
   // --- fable_check: the deterministic delivery gate (per-domain Definition of Done) ---
   async function checkReport(text, dod) { const r = await rpc('tools/call', { name: 'fable_check', arguments: { text, dod_id: dod } }); return r.result ? JSON.parse(r.result.content[0].text) : null; }
   // One GOOD deliverable per domain must clear the gate (gate=PASS, no FAIL); each carries exactly the

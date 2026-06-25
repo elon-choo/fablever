@@ -48,6 +48,17 @@ XVERIFY_CFG="${PROFILE_DST_DIR}/xverify.json"
 MODE_CFG="${PROFILE_DST_DIR}/mode.json"
 FABLE_HOME_PTR="${PROFILE_DST_DIR}/fable-home"
 
+# Codex CLI native support, the cross-host --dry-run preview, and the measurement-holdout flags all live in
+# the UNIVERSAL Node installer (install.mjs owns that logic; reimplementing it in bash would just duplicate
+# codex/lib/*.mjs and drift). If any such flag is present, forward EVERYTHING to install.mjs and exit — so
+# POSIX users get `./install.sh --codex-style-only`, `--dry-run`, `--with-measure-holdout`, etc. for free.
+for _a in "$@"; do
+  case "$_a" in
+    --codex|--codex-*|--no-codex-*|--force-codex-mcp|--dry-run|--with-measure-holdout|--no-measure-holdout|--measure-status)
+      exec node "${REPO}/install.mjs" "$@" ;;
+  esac
+done
+
 usage() {
   cat <<'USAGE'
 Fable Profile installer — make any Claude model adopt Claude Fable 5's working style.
@@ -71,6 +82,12 @@ Usage: ./install.sh [options]
   --no-mcp         skip registering the MCP server
   --uninstall      remove everything; restores prior settings
   -h, --help       show this help
+
+  Forwarded to the universal Node installer (run `node install.mjs --help` for full detail):
+  --dry-run [--json]          preview the plan without writing anything
+  --with-measure-holdout      opt-in long-session holdout measurement (INERT until FABLE_MEASURE=on)
+  --codex-style-only | --codex-full | --codex-status | --uninstall --codex
+                              Codex CLI native install (AGENTS.md + hooks + MCP). See docs/CODEX.md.
 
 After installing, restart Claude Code (or /clear). Quiet the hooks: export FABLE_PROFILE=off
 (the always-on style stays — switch it in /config or run --uninstall to remove it too).

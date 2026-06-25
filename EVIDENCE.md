@@ -93,7 +93,7 @@ sign test** and **Wilson 95% CIs**:
 
 Verify: read [`eval/comparison/fable-check-sim/out4/RESULTS.md`](eval/comparison/fable-check-sim/out4/RESULTS.md)
 (every raw per-task judgment is committed under `out4/judge/`; runner `run-mega.mjs`). The gate logic is
-`mcp/src/server.js` → `fableCheck()`, covered by `node test/mcp-test.js` (48 checks). Earlier, smaller
+`mcp/src/server.js` → `fableCheck()`, covered by `node test/mcp-test.js` (56 checks). Earlier, smaller
 replications (pilot 7–0; cross-model agreement check) are kept under the same directory's `out/`–`out3/`.
 
 ---
@@ -159,7 +159,7 @@ Step-by-step commands: [`whitepaper/07-reproduce.md`](whitepaper/07-reproduce.md
   behind the headline straight from committed raw data ([`eval/ultra/raw/`](eval/ultra/raw/)).
 - **The delivery-gate result (§2.1), offline:** `cat eval/comparison/fable-check-sim/out4/RESULTS.md`
   reads the 27–0 / 80.6%-vs-12.9% tally; the raw per-task judgments it was computed from are committed
-  alongside in `out4/judge/`. The gate itself is exercised by `node test/mcp-test.js` (48 checks).
+  alongside in `out4/judge/`. The gate itself is exercised by `node test/mcp-test.js` (56 checks).
 - Tests: `npm test` (orchestration contract + runtime smoke + MCP + fusion + install lifecycle).
 - The Claude-only A/B (`eval/ab-harness.mjs`) is a **Workflow-tool module**, not a bare-`node`
   script; its recorded output is committed at `eval/results-2026-06-15*.md`.
