@@ -71,6 +71,8 @@ repo — so you can check them against the prose rather than take this file's wo
 | **Adversarially reviewed, on the record** | 3 rounds × (Claude expert personas + GPT + Gemini) consensus, **with the attacks that failed recorded too**. | `docs/PUBLICATION-READINESS.md` |
 | **Provenance** | Distilled from Anthropic's *published* Fable prompting guidance (not reverse-engineered, not leaked content). | `docs/RESEARCH.md`, `NOTICE` |
 | **Transparent experiment trail** | The full dated experiment log is published — including the runs that **failed or went against the project** (the saturated-fixture loss, the escalation that backfired). | [`whitepaper/08-experiment-log.md`](whitepaper/08-experiment-log.md) |
+| **Guards its own self-negating result, in-tool** | The style-only ablation's one honest negative — fablever asserting "it works" with no shown check (8.3% vs plain 2.1%) — is now caught by the tool. `fable_lint`'s `unsupported-done-claim` rule (EN+KO) flags, at high severity, a completion claim that shows neither inline evidence (`command`/file:line/test/"passes") nor a "not verified" marker, and is regression-guarded at **100% accuracy (TP7/TN11/FP0/FN0)** on a labeled fixture (lexical-proxy limits published). Role split: `fable_lint` = message-wording discipline, `fable_check` = deliverable acceptance gate. | `eval/unsupported-claim-regression/RESULTS.md`, `mcp/src/server.js`→`fableLint()`, `node test/mcp-test.js` (56 checks) |
+| **Codex CLI native support — reversible, no token reads (proven by test)** | Codex has no Claude-Code output-style surface, so the same discipline installs via `AGENTS.md` (+ hooks + MCP). Everything is marker-based and reversible: uninstall restores `AGENTS.md`/`config.toml` **byte-for-byte** and `hooks.json` deep-equal, preserving foreign tables/hooks. fablever **never reads/stores/prints** Codex tokens (`auth.json`/`CODEX_ACCESS_TOKEN`) and needs no OpenAI key — verified by planting a fake token and asserting zero leak. The Claude path is unchanged (original behavior when `FABLE_HOST` is unset). | `node test/codex-install-test.mjs` (37 checks: reversibility + privacy), `docs/CODEX.md`, `codex/lib/codex-install.mjs` |
 
 ### 2.1 · The delivery gate (`fable_check`) — the freshest and most direct evidence of a real improvement
 
@@ -93,7 +95,7 @@ sign test** and **Wilson 95% CIs**:
 
 Verify: read [`eval/comparison/fable-check-sim/out4/RESULTS.md`](eval/comparison/fable-check-sim/out4/RESULTS.md)
 (every raw per-task judgment is committed under `out4/judge/`; runner `run-mega.mjs`). The gate logic is
-`mcp/src/server.js` → `fableCheck()`, covered by `node test/mcp-test.js` (48 checks). Earlier, smaller
+`mcp/src/server.js` → `fableCheck()`, covered by `node test/mcp-test.js` (56 checks). Earlier, smaller
 replications (pilot 7–0; cross-model agreement check) are kept under the same directory's `out/`–`out3/`.
 
 ---
@@ -143,8 +145,13 @@ Full list: [`whitepaper/06-limitations.md`](whitepaper/06-limitations.md). The l
   attention, so a 0.0 lift is a break-even warning, not a pass. Measuring it needs an **out-of-band holdout**
   design (gate ON vs OFF, outcome signals harvested post-hoc from git/transcripts) — logged as the
   highest-leverage next eval in [`eval/technique-ab/RESEARCH-upgrade-points.md`](eval/technique-ab/RESEARCH-upgrade-points.md).
-  The repo's "style not capability, no magnitude claimed" position is
+  That holdout is now a **runnable opt-in** (`node install.mjs --with-measure-holdout`, `measurement/`),
+  default OFF. The repo's "style not capability, no magnitude claimed" position is
   now backed by runs, not just conceded; index in [`EVALS.md`](EVALS.md).
+- **The `unsupported-done-claim` rule is a lexical proxy, not a verifier.** It catches the common wording
+  failure ("it works", "고쳤고 작동합니다") but misses completion implied by tone with no trigger word
+  ("all green, ship it"), and cannot know whether a cited check is real. That ceiling is published in the
+  regression's `hard_cases_known_limits` (`eval/unsupported-claim-regression/`).
 
 If you found a weakness not listed here, that is a contribution — it belongs in an issue, and
 under this repo's own rules it becomes a blocker until conceded, fixed, or rebutted.
@@ -159,8 +166,15 @@ Step-by-step commands: [`whitepaper/07-reproduce.md`](whitepaper/07-reproduce.md
   behind the headline straight from committed raw data ([`eval/ultra/raw/`](eval/ultra/raw/)).
 - **The delivery-gate result (§2.1), offline:** `cat eval/comparison/fable-check-sim/out4/RESULTS.md`
   reads the 27–0 / 80.6%-vs-12.9% tally; the raw per-task judgments it was computed from are committed
-  alongside in `out4/judge/`. The gate itself is exercised by `node test/mcp-test.js` (48 checks).
-- Tests: `npm test` (orchestration contract + runtime smoke + MCP + fusion + install lifecycle).
+  alongside in `out4/judge/`. The gate itself is exercised by `node test/mcp-test.js` (56 checks).
+- **The unsupported-claim rule (offline, no keys):** `node eval/unsupported-claim-regression/run.mjs`
+  regression-scores the rule against a labeled EN+KO fixture (100% accuracy; limits in its RESULTS.md).
+- **Codex native install (sandboxed, no token reads):** `node test/codex-install-test.mjs` verifies
+  style-only/full install, idempotent re-install, marker-only uninstall, reversibility, and zero token leak
+  across 37 checks in a throwaway HOME/CODEX_HOME.
+- **Preview before installing:** `node install.mjs --dry-run [--json]` (or `--codex-full --dry-run`) prints
+  the change plan (files, hooks, MCP, network, credentials, uninstall, risk level) and writes nothing.
+- Tests: `npm test` (orchestration contract + runtime smoke + MCP + fusion + install lifecycle + Codex + unsupported-claim regression).
 - The Claude-only A/B (`eval/ab-harness.mjs`) is a **Workflow-tool module**, not a bare-`node`
   script; its recorded output is committed at `eval/results-2026-06-15*.md`.
 - The cross-model ULTRA pipeline — scripts **and** the raw JSON they produced — is committed in

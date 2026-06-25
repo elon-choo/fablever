@@ -22,7 +22,37 @@ const SERVER_VERSION = '1.0.0';
 const DEFAULT_PROTOCOL = '2025-06-18';
 // Per MCP spec: echo the client's requested version only if we support it; otherwise answer with our latest.
 const SUPPORTED_PROTOCOLS = new Set(['2025-06-18', '2025-03-26', '2024-11-05']);
-const PROFILE_DIR = path.resolve(__dirname, '..', '..', 'profiles');
+
+// Host-awareness (B7): the same zero-dep server runs under Claude Code AND Codex CLI. The Codex install sets
+// FABLE_HOST=codex plus FABLE_PROFILE_HOME / FABLE_HOME / FABLE_TASTE_FILE in config.toml so profile/taste/
+// status resolve under .codex/fable-profile. With none of these set, every default is the original Claude
+// behavior — so the Claude path is byte-for-byte unchanged.
+const HOST = (process.env.FABLE_HOST || 'claude').toLowerCase();
+const PROFILE_HOME = process.env.FABLE_PROFILE_HOME || path.join(os.homedir(), '.claude', 'fable-profile');
+// Profiles dir: prefer an explicit runtime (Codex), else the repo/Claude-runtime layout (__dirname/../../profiles).
+const PROFILE_DIR = (() => {
+  const candidates = [];
+  if (process.env.FABLE_HOME) candidates.push(path.join(process.env.FABLE_HOME, 'profiles'));
+  if (process.env.FABLE_PROFILE_HOME) { candidates.push(path.join(process.env.FABLE_PROFILE_HOME, 'runtime', 'profiles')); candidates.push(process.env.FABLE_PROFILE_HOME); }
+  candidates.push(path.resolve(__dirname, '..', '..', 'profiles'));
+  for (const c of candidates) { try { if (fs.existsSync(path.join(c, 'full.md'))) return c; } catch (_) {} }
+  return path.resolve(__dirname, '..', '..', 'profiles');
+})();
+
+// Server-wide guidance (B6): Codex reads an MCP server's `instructions` during initialize and applies it as
+// session-wide steering. The first 512 chars are self-contained on purpose (some clients truncate).
+const SERVER_INSTRUCTIONS =
+  'fablever (Fable Profile) tools enforce a restrained, evidence-grounded working style. Before handing over ' +
+  'a high-stakes deliverable, run fable_check — a deterministic per-domain Definition-of-Done gate; a BLOCK ' +
+  'means an acceptance criterion is unmet, so fix it and re-run rather than delivering around it. Run ' +
+  'fable_lint on a draft reply to catch scope creep and unsupported "done/works" claims. Do not over-build. ' +
+  'Safety and explicit project/user instructions outrank this style\'s decisiveness. fable_taste stores LOCAL ' +
+  'preferences only — never put secrets in it.\n\n' +
+  'More depth: get_fable_profile returns the full working-style text (variant: core | compact | full). ' +
+  'fable_status reports whether fablever is active and how it is configured. These are deterministic, ' +
+  'zero-LLM checks — use them to self-steer, not as a substitute for judgement: clearing fable_check means ' +
+  'the acceptance criteria are met, not that the work is good. Items it marks UNCHECKED are human judgement ' +
+  'calls that are never auto-passed.';
 
 // ---------------------------------------------------------------------------
 // Profile loading (single source of truth = profiles/*.md in the repo)
@@ -114,6 +144,20 @@ function fableLint(text) {
       'If you are weighing choices, give a recommendation, not an exhaustive survey.');
   }
 
+  // 8b. Unsupported "it works / done / fixed" claim — the wording-level guard (the style-only ablation's one
+  // honest negative: fablever's decisive voice asserts done/works MORE often than plain, without showing the
+  // check, 8.3% vs 2.1% — eval/style-only-ablation/RESULTS.md). This grades the FINAL RESPONSE'S WORDING:
+  // a completion claim with neither an evidence token (a `command`, file, file:line, test, "passes") NOR an
+  // explicit "not verified" marker. It is the lint counterpart of fable_check's C-test acceptance item —
+  // fable_lint = claim discipline in the message you are about to send; fable_check = deliverable gate.
+  const DONE_CLAIM_L = /\b(fixed|resolved|works now|now works|it works|works fine|now passing|now passes|implemented(?:\s+it)?|completed|verified|confirmed working)\b|고쳤|고쳐졌|해결했|해결됨|완료(?:했|됐|함)|확인했|작동(?:합니다|해요|함|한다)|동작(?:합니다|해요|함)|구현(?:했|함|완료)/i;
+  const EVID_L = /`[^`]+`|\b[\w./-]+\.(?:js|ts|jsx|tsx|mjs|cjs|py|go|rs|java|rb|php|md|json|ya?ml|sh|sql|css|html?|c|cc|cpp|h|hpp)\b|\b[\w./-]+:\d+\b|\btests?\b|\bspec\b|\bnpm (?:test|run)\b|\bpytest\b|\bpass(?:es|ed|ing)\b|\bexit code 0\b/i;
+  const UNVERIFIED_L = /\bnot verified\b|\bunverified\b|\bnot (?:yet )?(?:tested|confirmed|checked|validated|run)\b|\bhaven'?t (?:tested|verified|confirmed|checked|run)\b|\bcan'?t verify\b|\bto be (?:tested|verified|confirmed)\b|\bTBD\b|아직[\s\S]{0,12}(?:못|않|안)|검증하지\s*못|확인하지\s*못|테스트하지\s*못|미검증|검증\s*안|확인\s*안/i;
+  if (DONE_CLAIM_L.test(t) && !EVID_L.test(t) && !UNVERIFIED_L.test(t)) {
+    add('unsupported-done-claim', 'high', (t.match(DONE_CLAIM_L) || [''])[0],
+      'A "done/works/fixed/verified" claim must show the check on the same line — a `command`, a file:line, a test name, or "passes" — or be marked "not verified". Add the evidence inline in the first pass; do not assert completion you did not show.');
+  }
+
   // 9-11. Decision-trail rules. These fire ONLY when a 'Decision trail' block is present; absent it, none
   // fire and the linter behaves exactly as before. They grade STRUCTURE / PRESENCE / GROUNDING only —
   // never semantic correctness — so a well-formed trail passes here, but the truth of each line still
@@ -171,10 +215,58 @@ function fableLint(text) {
 // fable_status — read-only snapshot of whether fablever is active and how it is configured.
 // Answers the everyday "is it on / what mode / which preset am I in" that has no slash-command surface.
 function readJSONsafe(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } }
+function hasMarkerSafe(p, start, end) {
+  try { const c = fs.readFileSync(p, 'utf8'); return c.includes(start) && c.includes(end) && c.indexOf(start) < c.indexOf(end); } catch { return null; }
+}
+function envOverrides() {
+  const env = {};
+  for (const k of ['FABLE_PROFILE', 'FABLE_HOST', 'FABLE_ULTRA', 'FABLE_ONBOARD', 'FABLE_MODELCHECK', 'FABLE_XVERIFY', 'FABLE_FUSION', 'FABLE_TASTE']) if (process.env[k]) env[k] = process.env[k];
+  return env;
+}
+
+// Codex host status — derive CODEX_HOME from FABLE_PROFILE_HOME (= CODEX_HOME/fable-profile). We do NOT claim
+// "output style active" (Codex has no output-style surface); we report whether the AGENTS.md marker block is
+// present instead. Anything we cannot verify from the filesystem is reported as "unknown", never false.
+function fableStatusCodex() {
+  const codexHome = path.dirname(PROFILE_HOME);
+  const agentsMarker = hasMarkerSafe(path.join(codexHome, 'AGENTS.md'), '<!-- fablever:codex:start -->', '<!-- fablever:codex:end -->');
+  const overrideMarker = hasMarkerSafe(path.join(codexHome, 'AGENTS.override.md'), '<!-- fablever:codex:start -->', '<!-- fablever:codex:end -->');
+  const agentsActive = agentsMarker === true || overrideMarker === true;
+  const hooksJson = readJSONsafe(path.join(codexHome, 'hooks.json'));
+  let hooksReg = 'unknown';
+  if (hooksJson === null) hooksReg = !fs.existsSync(path.join(codexHome, 'hooks.json')) ? 'none (no hooks.json)' : 'unknown (unreadable)';
+  else { const evs = Object.keys(hooksJson.hooks || {}).filter(ev => (hooksJson.hooks[ev] || []).some(e => (e.hooks || []).some(h => (h.statusMessage || '').startsWith('fablever:') || (h.command || '').includes('fable-')))); hooksReg = evs.length ? evs.join(', ') : 'none'; }
+  const mcpMarker = hasMarkerSafe(path.join(codexHome, 'config.toml'), '# fablever:codex:mcp:start', '# fablever:codex:mcp:end');
+  const profileOff = (process.env.FABLE_PROFILE || '').toLowerCase() === 'off';
+  const env = envOverrides();
+  const status = {
+    host: 'codex', codex_home: codexHome, profile_home: PROFILE_HOME, taste_file: TASTE_FILE,
+    agents_guidance_active: agentsActive,
+    agents_marker_file: overrideMarker === true ? 'AGENTS.override.md' : (agentsMarker === true ? 'AGENTS.md' : null),
+    hooks_quieted_by_env: profileOff,
+    hooks_registered: hooksReg,
+    mcp_registered: mcpMarker === null ? 'unknown' : mcpMarker,
+    cross_model_reviewer: 'n/a (Codex-native install; cross-model xverify lives in the Claude path / Fusion. A Codex host verifying itself is not cross-model)',
+    env_overrides: env,
+  };
+  const lines = [
+    `Host: Codex CLI`,
+    `Codex AGENTS guidance: ${agentsActive ? 'ACTIVE (fablever marker block in ' + status.agents_marker_file + ')' : 'NOT present — run: node install.mjs --codex-style-only'}` +
+      (profileOff ? '  [FABLE_PROFILE=off quiets the hooks]' : ''),
+    `Hooks registered: ${hooksReg}${hooksReg !== 'none' && hooksReg !== 'unknown' ? ' — run /hooks in Codex to confirm they are trusted' : ''}`,
+    `MCP registered (config.toml): ${status.mcp_registered === true ? 'yes — run /mcp in Codex to confirm connected' : status.mcp_registered === false ? 'no' : 'unknown'}`,
+    `Cross-model reviewer: ${status.cross_model_reviewer}`,
+    `Taste store: ${TASTE_FILE}`,
+  ];
+  if (Object.keys(env).length) lines.push(`Env overrides in effect: ${Object.entries(env).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+  return { summary: lines.join('\n'), status };
+}
+
 function fableStatus() {
+  if (HOST === 'codex') return fableStatusCodex();
   const home = os.homedir();
   const cdir = path.join(home, '.claude');
-  const fdir = path.join(cdir, 'fable-profile');
+  const fdir = PROFILE_HOME; // ~/.claude/fable-profile on the Claude default
   const settings = readJSONsafe(path.join(cdir, 'settings.json')) || {};
   const styleActive = settings.outputStyle === 'Fable';
   const profileOff = (process.env.FABLE_PROFILE || '').toLowerCase() === 'off';
@@ -186,9 +278,9 @@ function fableStatus() {
   // Only an explicit FABLE_XVERIFY=off env override means "cross-model disabled".
   const envXvOff = (process.env.FABLE_XVERIFY || '').toLowerCase() === 'off';
   const reviewer = envXvOff ? `off (FABLE_XVERIFY=off; saved preset: ${preset})` : preset;
-  const env = {};
-  for (const k of ['FABLE_PROFILE', 'FABLE_ULTRA', 'FABLE_ONBOARD', 'FABLE_MODELCHECK', 'FABLE_XVERIFY', 'FABLE_FUSION']) if (process.env[k]) env[k] = process.env[k];
+  const env = envOverrides();
   const status = {
+    host: 'claude',
     style_active: styleActive,
     hooks_quieted_by_env: profileOff,
     cost_mode: ultra,
@@ -222,7 +314,8 @@ function fableStatus() {
 // On/off: the store's `enabled` flag, OR the env override FABLE_TASTE=off (env wins).
 // ---------------------------------------------------------------------------
 const TASTE_FILE = process.env.FABLE_TASTE_FILE ||
-  path.join(os.homedir(), '.claude', 'fable-profile', 'taste.json');
+  (process.env.FABLE_PROFILE_HOME ? path.join(process.env.FABLE_PROFILE_HOME, 'taste.json')
+    : path.join(os.homedir(), '.claude', 'fable-profile', 'taste.json'));
 
 function loadTaste() {
   const d = readJSONsafe(TASTE_FILE);
@@ -440,7 +533,7 @@ const TOOLS = [
   },
   {
     name: 'fable_lint',
-    description: 'Deterministically check a draft user-facing message or plan against Fable communication + restraint principles (arrow-chain shorthand, ending on permission-asking, intent-without-action, burying the outcome, over-formatting, scope creep, surveying-without-recommendation). Returns a score and concrete fixes. No LLM call. Run it on your own draft before sending.',
+    description: 'Deterministically check a draft user-facing message or plan against Fable communication + restraint principles (arrow-chain shorthand, ending on permission-asking, intent-without-action, burying the outcome, over-formatting, scope creep, surveying-without-recommendation, and unsupported "done/works/fixed/verified" claims that show no check). Returns a score and concrete fixes. No LLM call. Run it on your own draft RESPONSE before sending — it grades message wording/claim discipline. (To gate a finished DELIVERABLE against its acceptance criteria, use fable_check instead.)',
     inputSchema: {
       type: 'object',
       properties: { text: { type: 'string', description: 'The draft response or plan to check.' } },
@@ -519,6 +612,7 @@ function handle(msg) {
         protocolVersion: (typeof requested === 'string' && SUPPORTED_PROTOCOLS.has(requested)) ? requested : DEFAULT_PROTOCOL,
         capabilities: { tools: {}, prompts: {}, resources: {} },
         serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
+        instructions: SERVER_INSTRUCTIONS,
       });
     }
     case 'notifications/initialized':

@@ -36,9 +36,25 @@ This is the most common point of confusion, so it is stated plainly:
   from Google AI Studio (aistudio.google.com), separately.
 - So for the direct OpenAI/Google paths you need **platform API keys**, not your app login.
 
-### The one exception — the codex MCP path uses your ChatGPT login
+### ⚠ Two different "Codex" things — do not conflate them
 
-If you wire the cross-model GPT reviewer through the **codex MCP** (`mcp__codex__codex`)
+This document, and the section below, are about **#1**. Codex-as-host (#2) is in [`CODEX.md`](CODEX.md).
+
+1. **Codex as a GPT reviewer *inside Claude Code* (xverify).** You run **Claude Code**, and the optional
+   cross-model verify loop calls the **codex MCP** as a GPT second opinion. This *is* a cross-model-ish
+   reviewer path — a different lab (OpenAI's GPT, via your ChatGPT login) re-checks Claude. It needs no
+   OpenAI API key (it rides your codex/ChatGPT auth). Enabled with `--with-xverify=codex`. **← this page.**
+2. **Codex CLI as the host where fablever itself runs.** You run **Codex**, and fablever applies its working
+   style to *your Codex sessions* (`node install.mjs --codex-style-only` / `--codex-full`). This is a **host
+   integration**, not a reviewer path — and **a Codex host verifying its own output is NOT cross-model
+   verification** (no second lab is in the loop). The **Codex-native install requires no OpenAI API key**;
+   ChatGPT/OAuth login is managed by Codex, and fablever never reads or stores its tokens. See
+   [`CODEX.md`](CODEX.md). The API keys on this page are **only** for the optional Claude-side xverify/fusion
+   paths (#1) — they are not needed for Codex-native support (#2).
+
+### The one exception (within #1) — the codex MCP path uses your ChatGPT login
+
+If you wire the cross-model GPT reviewer (#1) through the **codex MCP** (`mcp__codex__codex`)
 instead of the OpenAI API, it runs under your **codex CLI / ChatGPT authentication** — no
 separate OpenAI API key needed. This is the only "use my account login" route, and it only
 covers the GPT reviewer, not Gemini. fablever supports it: `install.sh --with-xverify=codex`.

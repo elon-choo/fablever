@@ -10,7 +10,26 @@
 Apply Anthropic's documented **Fable working-style guidance** as an always-on output style in
 [Claude Code](https://claude.com/claude-code) (and any MCP client), so **any** Claude model — Opus,
 Sonnet, Haiku — works more the way Fable does: decisive, outcome-first, restrained, evidence-grounded,
-and disciplined about stopping. Every project, every subagent, installable by anyone. **Zero dependencies.**
+and disciplined about stopping. Every project, every subagent, installable by anyone. Also runs natively in
+**[OpenAI's Codex CLI](docs/CODEX.md)**. **Zero dependencies.**
+
+> **fablever does not make Claude smarter or cheaper. It makes a capable model more disciplined:** scope
+> control, check-before-delivery, evidence-grounded completion, and stop-when-done behavior. A
+> style/structure transplant, not a capability upgrade.
+
+### Who should install which — read this first
+
+| you want… | install | why |
+|---|---|---|
+| **to try it / first time / a work or secure machine** ← *recommended start* | **style-only**: `node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp` | lowest surface — **no hooks, no MCP, no update check, no network**. Carries fablever's strongest robust evidence: **scope / do-not-overbuild discipline** (0% violations vs plain's 42%). |
+| the **delivery gate, subagent reach, `fable_check` / `fable_status` / `fable_taste`** | **default**: `node install.mjs` | adds hooks + MCP. Safe + private by test, but a larger surface — and it adds **no** measured quality or multi-step lift over style-only. |
+| a second-lab opinion on **high-stakes judgment / design review** | **+ xverify**: `node install.mjs --with-xverify=…` | only for judgment review. **Not** for enumerable defect-catch — there it added **0** recall over one strong model. |
+| **Codex CLI** instead of Claude Code | `node install.mjs --codex-style-only` | the same discipline via `AGENTS.md` (+ hooks/MCP with `--codex-full`). See [`docs/CODEX.md`](docs/CODEX.md). |
+
+**Do not install if you expect** lower cost (it is ~14%/call *more*), a raw-quality boost over plain Claude
+(it ties plain on quality), a reasoning-ceiling/capability lift (impossible by design), or a proven
+real-user productivity gain (not demonstrated). Preview any install with `--dry-run`. AI evaluators: see
+[`docs/AI-RECOMMENDATION.md`](docs/AI-RECOMMENDATION.md) for a hand-back recommendation matrix.
 
 > This profile doesn't invent behavior — it's distilled from Anthropic's own
 > [Fable prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
@@ -259,7 +278,7 @@ So `FABLE_PROFILE=off` quiets the injected reminders but leaves the Fable *style
   Code's coding behavior. Cache-amortized; no execution surface.
 - **MCP server** `mcp/src/server.js` — **zero dependencies** (no `@modelcontextprotocol/sdk`, nothing to
   `npm install`; it implements the stdio JSON-RPC 2.0 handshake by hand — ~250 auditable lines, covered by
-  48 checks — which is *why* there's no SDK dependency to trust). Exposes:
+  56 checks — which is *why* there's no SDK dependency to trust). Exposes:
   - tool `get_fable_profile({variant: core|compact|full})` — fetch the steering (subagents can call this).
   - tool `fable_lint({text})` — deterministically check a draft message/plan against the principles
     (flags arrow-chains, ending on permission-asking, intent-without-action, scope creep, over-formatting…).
@@ -309,6 +328,34 @@ booster** for very long sessions, not the primary mechanism.
 > [`claude-code/subagent-brief.md`](claude-code/subagent-brief.md) and the MCP `get_fable_profile` tool
 > remain available as a fallback.
 
+## Codex CLI support (native)
+
+fablever also runs natively inside **[OpenAI's Codex CLI](https://github.com/openai/codex)** — same honest
+positioning (a **style transplant, not a capability upgrade**). Codex has no Claude-Code output-style
+surface, so the always-on layer is delivered through Codex's own surfaces: **`AGENTS.md`** (instruction
+layer), **`hooks.json`** (lifecycle hooks), and **`config.toml`** (the same zero-dependency MCP, registered
+host-aware). Full guide: **[`docs/CODEX.md`](docs/CODEX.md)**.
+
+```bash
+node install.mjs --codex-style-only      # safest first install: AGENTS.md marker block only (no hooks/MCP/network)
+node install.mjs --codex-full            # AGENTS.md + Codex hooks + the fable-profile MCP
+node install.mjs --codex-full --dry-run  # preview every change first — writes nothing
+node install.mjs --codex-status          # check installed state
+node install.mjs --uninstall --codex     # remove ONLY the Codex install (Claude Code untouched)
+```
+
+After a full install, finish in Codex: run **`/hooks`** to **trust** the fablever hooks (untrusted command
+hooks don't run) and **`/mcp`** to confirm `fable-profile` is connected. Everything is **marker-based and
+reversible** — uninstall removes only fablever's blocks (AGENTS.md / config.toml restored byte-for-byte,
+hooks.json deep-equal), backing up each file first.
+
+**Auth:** Codex signs in with your **ChatGPT/OAuth login** (or an OpenAI API key), and **that is wholly
+managed by Codex** — fablever **never reads, stores, or prints** your Codex tokens, and Codex-native support
+**needs no OpenAI API key**. (The API keys in [`docs/API-KEYS.md`](docs/API-KEYS.md) are only for the
+optional Claude-side xverify/fusion paths.) Note: using the codex MCP as a *GPT reviewer inside Claude Code*
+xverify is a **different** thing from running fablever *on* Codex — and a Codex host verifying its own output
+is **not** cross-model verification. Both are spelled out in [`docs/CODEX.md`](docs/CODEX.md).
+
 ## Use it elsewhere (other people, other MCP clients)
 
 Register the MCP server in any client (Cursor, Windsurf, Claude Desktop, another Claude Code user):
@@ -356,7 +403,7 @@ to use the codex MCP instead of an OpenRouter key). The installer prints the opt
 ## Verify
 
 ```bash
-node test/mcp-test.js                  # 48 MCP checks (protocol + fable_check gate + taste store)
+node test/mcp-test.js                  # 56 MCP checks (protocol + fable_check gate + taste store)
 node test/fusion-test.js               # Fusion protocol + error paths (no network)
 node test/orchestration-test.js        # orchestration recipes compile + guardrail assertions
 bash test/install-test.sh              # install/uninstall safety lifecycle

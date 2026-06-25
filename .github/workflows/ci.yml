@@ -26,11 +26,23 @@ jobs:
         run: node test/fusion-test.js
       - name: Install / uninstall lifecycle tests (sandboxed HOME)
         run: bash test/install-test.sh
+      - name: Codex CLI native install (sandboxed HOME/CODEX_HOME — reversibility + no token reads)
+        run: node test/codex-install-test.mjs
+      - name: Unsupported-claim lint-rule regression (deterministic, offline)
+        run: node eval/unsupported-claim-regression/run.mjs
       - name: Scripts are valid and fail-safe
         run: |
           node --check claude-code/hooks/fable-subagent.js
           bash -n claude-code/hooks/fable-reinject.sh
           bash -n install.sh
+          node --check install.mjs
           node --check mcp/src/server.js
           node --check fusion/fusion-server.js
           node --check claude-code/lib/settings-merge.js
+          node --check codex/lib/paths.mjs
+          node --check codex/lib/markers.mjs
+          node --check codex/lib/codex-install.mjs
+          node --check codex/hooks/fable-session.js
+          node --check codex/hooks/fable-subagent.js
+          node --check codex/hooks/fable-reinject.js
+          node --check measurement/status.mjs

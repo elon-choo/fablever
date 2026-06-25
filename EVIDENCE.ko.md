@@ -66,6 +66,8 @@
 | **적대적으로 검토됨, 기록으로 남음** | 3라운드 × (Claude 전문가 페르소나 + GPT + Gemini) 합의, **실패한 공격까지 함께 기록**. | `docs/PUBLICATION-READINESS.md` |
 | **출처(provenance)** | Anthropic의 *공개된* Fable 프롬프팅 가이드에서 증류(역공학 아님, 유출 콘텐츠 아님). | `docs/RESEARCH.md`, `NOTICE` |
 | **투명한 실험 기록** | 날짜별 실험 로그 전체를 공개 — 실패하거나 **프로젝트에 불리하게 나온 실행**(포화 픽스처에서의 패배, 역효과를 낸 에스컬레이션)까지 포함. | [`whitepaper/08-experiment-log.md`](whitepaper/08-experiment-log.md) |
+| **자기 부정 결과를 제품으로 가드** | 스타일 단독 ablation의 유일한 정직한 부정 — fablever가 검증 없이 "작동한다"고 단언하는 비율(8.3% vs 일반 2.1%) — 을 이제 도구가 막는다. `fable_lint`의 `unsupported-done-claim` 룰(EN+KO)이 같은 줄에 증거(`command`/file:line/test/"passes")나 "not verified" 표시가 없는 완료 주장을 high로 표시하고, 라벨된 픽스처에서 **정확도 100%(TP7/TN11/FP0/FN0)**로 회귀 가드된다(어휘 프록시 한계는 공개). `fable_lint`=메시지 표현 규율, `fable_check`=산출물 합격 게이트로 역할 분리. | `eval/unsupported-claim-regression/RESULTS.md`, `mcp/src/server.js`→`fableLint()`, `node test/mcp-test.js`(56개 체크) |
+| **Codex CLI 네이티브 지원 — 되돌릴 수 있고 토큰 미접근(테스트로 입증)** | Claude Code output style 표면이 없는 Codex에서 같은 규율을 `AGENTS.md`(+ 훅 + MCP)로 적용. 전부 마커 기반·되돌림: 언인스톨이 `AGENTS.md`/`config.toml`을 **바이트 단위**로, `hooks.json`을 deep-equal로 복원하고 외부 테이블/훅을 보존. fablever는 Codex 토큰(`auth.json`/`CODEX_ACCESS_TOKEN`)을 **읽지·저장·출력하지 않으며** OpenAI 키가 필요 없다 — 가짜 토큰을 심어 누수 0을 실측. Claude 경로는 무손상(`FABLE_HOST` 미설정 시 기존 동작). | `node test/codex-install-test.mjs`(37개 체크: 되돌림+프라이버시), `docs/CODEX.md`, `codex/lib/codex-install.mjs` |
 
 ### 2.1 · 납품 게이트(`fable_check`) — 가장 신선하고 가장 직접적인 "실제 개선" 근거
 
@@ -86,7 +88,7 @@ CI**로 채점했다:
 
 검증: [`eval/comparison/fable-check-sim/out4/RESULTS.md`](eval/comparison/fable-check-sim/out4/RESULTS.md)
 를 읽으면 된다(과제별 원시 판정은 전부 `out4/judge/`에 커밋, 러너 `run-mega.mjs`). 게이트 로직은
-`mcp/src/server.js` → `fableCheck()`이며 `node test/mcp-test.js`(48개 체크)로 검증된다. 더 작은 초기
+`mcp/src/server.js` → `fableCheck()`이며 `node test/mcp-test.js`(56개 체크)로 검증된다. 더 작은 초기
 복제(파일럿 7–0; 크로스모델 일치 확인)는 같은 디렉터리의 `out/`–`out3/`에 보존되어 있다.
 
 ---
@@ -126,7 +128,12 @@ CI**로 채점했다:
   정밀도이고, 쉬운 작업에서는 순수 비용이다.
 - **숨기지 않은 미해결 항목:** 토큰/벽시계 비용-방향은 이제 측정됨(`eval/cost-latency/`, 호출당 ~14%),
   개발자 생산성 A/B도 실행됨(이득 없음). 남은 미실행: 여러 명의 실제 사용자 참여 연구(사람 필요, 위조 불가)와
-  **긴 인터랙티브 코딩 세션**(멀티턴+서브에이전트 — 위 단발성 평가들은 이를 시뮬레이션하지 않음). 인덱스: `EVALS.md`.
+  **긴 인터랙티브 코딩 세션**(멀티턴+서브에이전트 — 위 단발성 평가들은 이를 시뮬레이션하지 않음). 이 마지막 항목은
+  이제 옵트인 **장기 세션 holdout 측정**으로 돌릴 수 있다(`node install.mjs --with-measure-holdout`,
+  `measurement/`) — 기본 OFF. 인덱스: `EVALS.md`.
+- **`unsupported-done-claim` 룰은 어휘 프록시이지 검증기가 아니다.** 흔한 어휘적 실패("작동합니다",
+  "it works")는 잡지만, 트리거 단어 없이 어조로만 완료를 암시하는 경우("all green, ship it")는 놓친다.
+  이 한계는 회귀의 `hard_cases_known_limits`에 그대로 공개되어 있다(`eval/unsupported-claim-regression/`).
 
 여기 나열되지 않은 약점을 발견했다면, 그것은 기여다 — 이슈로 등록되어야 하고, 이 저장소 자체의 규칙에
 따라 인정·수정·반박될 때까지 차단 요소가 된다.
@@ -141,8 +148,14 @@ CI**로 채점했다:
   카운트를 커밋된 원시 데이터([`eval/ultra/raw/`](eval/ultra/raw/))에서 곧바로 재계산한다.
 - **납품 게이트 결과(§2.1), 오프라인:** `cat eval/comparison/fable-check-sim/out4/RESULTS.md`로
   27–0 / 80.6%-vs-12.9% 집계를 읽는다; 그 계산의 바탕인 과제별 원시 판정은 `out4/judge/`에 함께 커밋되어
-  있다. 게이트 자체는 `node test/mcp-test.js`(48개 체크)로 실행된다.
-- 테스트: `npm test` (오케스트레이션 계약 + 런타임 스모크 + MCP + fusion + 설치 라이프사이클).
+  있다. 게이트 자체는 `node test/mcp-test.js`(56개 체크)로 실행된다.
+- **unsupported-claim 룰(오프라인, 키 불필요):** `node eval/unsupported-claim-regression/run.mjs`가
+  라벨된 EN+KO 픽스처로 룰을 회귀 채점(정확도 100%, 한계는 RESULTS.md에 공개).
+- **Codex 네이티브 설치(샌드박스, 토큰 미접근):** `node test/codex-install-test.mjs`가 가짜 HOME/CODEX_HOME에서
+  스타일-only/full 설치·멱등 재설치·마커 전용 언인스톨·되돌림·토큰 누수 0을 37개 체크로 검증.
+- **설치 전 미리보기:** `node install.mjs --dry-run [--json]`(또는 `--codex-full --dry-run`)은 아무것도 쓰지 않고
+  변경 계획(생성/수정 파일·훅·MCP·네트워크·자격증명·언인스톨·리스크 등급)을 출력한다.
+- 테스트: `npm test` (오케스트레이션 계약 + 런타임 스모크 + MCP + fusion + 설치 라이프사이클 + Codex + unsupported-claim 회귀).
 - Claude 전용 A/B(`eval/ab-harness.mjs`)는 맨-`node` 스크립트가 아니라 **Workflow 도구 모듈**이다;
   그 기록된 출력은 `eval/results-2026-06-15*.md`에 커밋되어 있다.
 - 크로스모델 ULTRA 파이프라인은 — 스크립트 **및** 그것이 산출한 원시 JSON까지 —
