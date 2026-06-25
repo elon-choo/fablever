@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fablever를 깔면 뭐가 좋아지나요? — 쉽게 정리</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --card:#ffffff; --ink:#23272f; --soft:#5b6472; --line:#ececf2;
+    --accent:#3b6cf6; --accentsoft:#eef3ff; --good:#15a06a; --goodsoft:#e7f7ef;
+    --warm:#f08c3c; --warmsoft:#fff2e6; --hold:#8b5cf6; --holdsoft:#f1ebff;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;}
+  .wrap{max-width:880px;margin:0 auto;padding:0 22px}
+  b{color:#11141a}
+  .hero{padding:62px 0 34px;text-align:center;
+    background:radial-gradient(680px 320px at 50% -8%,#eaf0ff,transparent 62%);}
+  .pill{display:inline-block;font-size:13px;font-weight:600;color:var(--accent);
+    background:var(--accentsoft);background:#eef3ff;border:1px solid #dbe6ff;border-radius:999px;padding:5px 14px}
+  h1{font-size:36px;line-height:1.22;letter-spacing:-.02em;margin:18px 0 12px}
+  h1 .u{background:linear-gradient(transparent 62%,#ffe9c9 62%)}
+  .lede{font-size:19px;color:var(--soft);max-width:660px;margin:0 auto}
+  .honest{max-width:680px;margin:24px auto 0;padding:15px 18px;background:#fff;border:1px solid var(--line);
+    border-radius:14px;font-size:15.5px;color:#3c4451;box-shadow:0 1px 0 rgba(20,20,40,.02)}
+  .honest b{color:var(--good)}
+  .scan{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-width:760px;margin:30px auto 0}
+  .scan div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 10px;font-size:13.5px;color:var(--soft);text-align:center}
+  .scan div .em{font-size:22px;display:block;margin-bottom:4px}
+  section.benefit{margin:18px 0;background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:26px 26px 22px;box-shadow:0 2px 14px rgba(30,30,60,.03)}
+  .benefit .top{display:flex;align-items:flex-start;gap:14px}
+  .benefit .ico{flex:0 0 auto;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:24px;background:var(--accentsoft)}
+  .benefit h2{font-size:22px;margin:2px 0 0;letter-spacing:-.01em;line-height:1.3}
+  .benefit .mean{margin:14px 0 0;color:#3a414e;font-size:16.5px}
+  .chip{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font-size:14px;font-weight:600;
+    color:var(--good);background:var(--goodsoft);border-radius:10px;padding:8px 13px;line-height:1.45}
+  .chip.warm{color:var(--warm);background:var(--warmsoft)}
+  .chip .t{font-weight:400;color:#586}
+  .chip.warm .t{color:#8a6b4c}
+  .num{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .secthead{text-align:center;margin:54px 0 6px;font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--soft);text-transform:uppercase}
+  .trust{background:#10141d;color:#e7eaf2;border-radius:20px;padding:30px 28px;margin:18px 0}
+  .trust h2{color:#fff;font-size:23px;margin:0 0 16px}
+  .trust .row{display:flex;gap:13px;padding:13px 0;border-top:1px solid #232a39}
+  .trust .row:first-of-type{border-top:none}
+  .trust .row .e{font-size:22px;flex:0 0 auto}
+  .trust .row b{color:#fff}
+  .trust .row p{margin:0;color:#aeb6c6;font-size:15.5px}
+  .feel{background:var(--accentsoft);border:1px solid #dbe6ff;border-radius:18px;padding:24px 26px;margin:18px 0}
+  .feel h2{margin:0 0 8px;font-size:21px;color:#1f3a8a}
+  .feel ol{margin:10px 0 0;padding-left:22px;color:#33415c}
+  .feel li{margin:7px 0}
+  footer{text-align:center;color:var(--soft);font-size:14px;padding:36px 0 64px;line-height:1.7}
+  .mono{font-family:var(--mono);font-size:.92em}
+  @media(max-width:560px){h1{font-size:29px}.benefit{padding:22px 18px}}
+</style>
+</head>
+<body>
+
+<header class="hero"><div class="wrap">
+  <span class="pill">Claude Code · 바이브코딩 사용자용</span>
+  <h1>fablever를 깔면 <span class="u">똑같은 AI인데<br>“일잘러”처럼</span> 일합니다</h1>
+  <p class="lede">더 똑똑한 AI로 바꿔주는 게 아니라, <b>일하는 방식</b>을 바꿔줍니다. 코드를 못 봐도 결과물이 더 미덥고, 덜 헛돌고, 사고를 덜 칩니다. 아래가 <b>당신이 실제로 느끼는 차이</b> 전부예요.</p>
+  <div class="honest">솔직하게: “생산성 N배” 같은 마법은 약속 안 합니다. 대신 여기 적은 건 <b>전부 실제로 테스트해서 효과를 확인한 것</b>들이에요. 안 통한 건 아래 “왜 믿어도 되나”에 그대로 적어놨습니다.</div>
+  <div class="scan">
+    <div><span class="em">✅</span>줬을 때 더 “진짜 끝난” 결과</div>
+    <div><span class="em">🎯</span>거짓 자신감이 줄어듦</div>
+    <div><span class="em">✂️</span>말은 짧게, 일은 많이</div>
+    <div><span class="em">🛟</span>위험한 짓은 멈추고 물어봄</div>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+<div class="secthead">당신이 느끼는 차이 8가지</div>
+
+<!-- 1 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico">🔍</div>
+    <div><h2>“됐어요”라고 주기 전에, 스스로 한 번 더 검사합니다</h2></div>
+  </div>
+  <p class="mean">대충 만든 초안을 그냥 던지지 않아요. 내보내기 전에 “빠진 거 없나?” 자체 점검표를 돌려서 빈틈을 메운 다음 줍니다. 그래서 받았을 때 <b>90% 끝난 게 아니라 진짜로 끝나 있는</b> 경우가 훨씬 많아져요.</p>
+  <span class="chip"><span class="num">27 : 0</span><span class="t">실제 테스트 — 점검한 버전이 점검 안 한 초안을 27판 전부 이김(무패).</span></span>
+</section>
+
+<!-- 2 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico" style="background:var(--goodsoft)">🎯</div>
+    <div><h2>확인 안 한 걸 “됐어요 / 작동해요”라고 말하지 않습니다</h2></div>
+  </div>
+  <p class="mean">이게 코드를 직접 못 보는 사람에게 제일 중요해요. 보통 AI는 “고쳤어요!” “잘 돼요!”라고 자신 있게 말해놓고 실제론 안 되는 경우가 많죠. fablever는 <b>증거를 보여줄 수 있을 때만</b> “됐다”고 하고, 확인 못 한 건 “아직 확인 안 됨”이라고 솔직히 표시합니다. 게다가 <b>군더더기를 빼서 글 길이도 절반</b>으로 줄여요.</p>
+  <span class="chip"><span class="num">근거 0 → 분량 ½</span><span class="t">근거 없는 단정이 사라지고 분량은 절반으로. 다른 회사 AI(Gemini)로 다시 채점해도 같은 결과.</span></span>
+</section>
+
+<!-- 3 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico" style="background:var(--warmsoft)">🗺️</div>
+    <div><h2>복잡한 일은 무작정 시작 말고 “계획부터” 세웁니다</h2></div>
+  </div>
+  <p class="mean">한 번에 여러 가지를 해야 하는 복잡한 요청에서, 곧장 손대다 절반만 하고 마는 대신 <b>먼저 할 일을 정리</b>한 뒤 진행해요. “시킨 것 중 일부만 했네” 하는 순간이 확 줄어듭니다.</p>
+  <span class="chip"><span class="num">10판 중 9판</span><span class="t">어려운 다단계 과제에서, 계획부터 세운 쪽이 곧장 한 쪽보다 10번 중 9번 더 나았음.</span></span>
+</section>
+
+<!-- 4 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico">🧩</div>
+    <div><h2>당신 프로젝트가 하던 방식을 배워서 맞춥니다</h2></div>
+  </div>
+  <p class="mean">새 코드를 자기 멋대로 쓰지 않아요. 기존 파일들을 먼저 읽고 “아, 이 프로젝트는 이런 식으로 하는구나”를 파악한 다음 <b>그 방식 그대로</b> 작업합니다. 그래서 결과물이 기존 것과 따로 놀지 않고 자연스럽게 이어져요.</p>
+  <span class="chip"><span class="num">1/9 → 9/10</span><span class="t">“프로젝트 규칙 지키기”가 아무것도 안 했을 땐 9번 중 1번 → 방식을 익히게 했을 땐 10번 중 9번.</span></span>
+</section>
+
+<!-- 5 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico" style="background:var(--goodsoft)">✂️</div>
+    <div><h2>말은 줄이고, 실제로 하는 일은 늘립니다</h2></div>
+  </div>
+  <p class="mean">“네! 먼저 ~를 해보겠습니다~” 같은 서론, “다만 상황에 따라 다를 수 있습니다” 같은 사족 — 이런 걸 걷어내고 <b>바로 본론, 바로 실행</b>합니다. 읽을 건 줄고, 실제로 처리되는 일은 늘어요.</p>
+  <span class="chip"><span class="num">말 ½ · 행동 4~5배</span><span class="t">실제 사용 기록 측정 — 한 메시지당 글은 절반, 실제 작업(도구 사용)은 4~5배. (말투 지표이지 정답률은 아님)</span></span>
+</section>
+
+<!-- 6 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico" style="background:var(--goodsoft)">🛟</div>
+    <div><h2>혼자 고칠 건 고치고, 위험한 건 멈춰서 물어봅니다</h2></div>
+  </div>
+  <p class="mean">사소한 오류(경로 오타, 빠진 옵션 같은 것)는 <b>알아서 다시 시도</b>해서 해결해요 — 매번 당신을 부르지 않으니 옆에서 지켜볼 필요가 줄죠. 반대로 <b>되돌릴 수 없는 위험한 작업</b>(파일 삭제, 남의 작업 덮어쓰기 같은 것)은 멋대로 진행하지 않고 <b>멈춰서 먼저 확인</b>합니다.</p>
+  <span class="chip"><span class="num">33% → 0%</span><span class="t">테스트 — 위험한 작업을 “묻지도 않고 그냥 진행”하던 비율이 0%로. 도와준다며 당신 파일을 날리는 사고를 막음.</span></span>
+</section>
+
+<!-- 7 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico" style="background:var(--warmsoft)">👥</div>
+    <div><h2>진짜 중요한 일엔 “여러 명이 교차검토”를 붙일 수 있습니다</h2></div>
+  </div>
+  <p class="mean">중요한 결과물일 땐, 한 번 보고 끝이 아니라 <b>여러 개의 독립된 검토</b>를 돌리고 — 심지어 <b>다른 회사 AI(GPT·Gemini)</b>에게도 “이거 틀린 데 없냐” 2차 의견을 받아볼 수 있어요. 한 번 봐서 놓칠 실수를 잡습니다.</p>
+  <span class="chip warm"><span class="num">중요할 때만</span><span class="t">솔직히: 이건 시간·비용이 더 듭니다. 그래서 일상 작업이 아니라 “이건 꼭 맞아야 해” 하는 일에만 켜는 옵션이에요.</span></span>
+</section>
+
+<!-- 8 -->
+<section class="benefit">
+  <div class="top">
+    <div class="ico" style="background:var(--holdsoft)">🔖</div>
+    <div><h2>여러 프로젝트를 굴릴 때 “3줄 요약”으로 기억을 되살려 줍니다</h2></div>
+  </div>
+  <p class="mean">프로젝트 여러 개를 왔다 갔다 하다 보면 “이게 뭐였더라?”부터 시작하죠. fablever는 보고 맨 위에 <b>① 이게 뭐였는지 ② 뭐가 바뀌었는지 ③ 지금 당신이 정할 딱 한 가지</b>를 3줄로 띄워줘서, 알림을 열자마자 맥락이 복구됩니다.</p>
+  <span class="chip warm"><span class="num">필요할 때만 켜는 기능</span><span class="t">솔직히: 테스트해보니 “있으면 좋은” 정도라(확실한 속도 이득까진 증명 안 됨) 모두에게 강제하지 않고 <b>원할 때 부르는 기능</b>으로 넣었습니다.</span></span>
+</section>
+
+<!-- TRUST -->
+<div class="secthead">왜 믿어도 되나 (비개발자용 안심 포인트)</div>
+<div class="trust">
+  <h2>“그 말이 다 진짜냐”에 대한 답</h2>
+  <div class="row"><span class="e">🧪</span><div><b>다 실제로 테스트했고, 불리한 결과도 공개합니다.</b><p>위 숫자들은 느낌이 아니라 실제 대결 결과예요. 효과가 없던 시도까지 그대로 적어둡니다 — 좋은 것만 골라 자랑하지 않아요.</p></div></div>
+  <div class="row"><span class="e">🙅</span><div><b>“N배 빨라짐” 같은 뻥은 안 칩니다.</b><p>더 똑똑한 AI로 바뀌는 게 아니라 “더 일 잘하는 태도”로 바뀌는 거라고 분명히 선을 긋습니다. 과장이 없다는 게 오히려 믿을 근거예요.</p></div></div>
+  <div class="row"><span class="e">🔒</span><div><b>설치가 안전하고, 되돌리기 쉽습니다.</b><p>수상한 추가 프로그램을 깔지 않고, 당신의 <b>코드나 비밀번호를 밖으로 보내지 않아요</b>. 마음에 안 들면 명령 한 줄로 깔끔하게 제거됩니다. (이것도 자동 검사로 확인했어요.)</p></div></div>
+</div>
+
+<!-- HOW TO FEEL IT -->
+<div class="feel">
+  <h2>직접 느껴보는 법</h2>
+  <ol>
+    <li>평소처럼 작업을 시켜보세요. 답이 <b>서론 없이 바로 본론</b>으로 시작하고, 끝에 “이건 확인했고 이건 아직”을 구분해 주면 작동 중인 거예요.</li>
+    <li>복잡한 걸 시켜보면 <b>먼저 계획을 짧게 보여주고</b> 진행합니다.</li>
+    <li>위험한 작업(삭제·덮어쓰기)을 시켜보면 <b>바로 안 하고 한 번 확인</b>받으려 합니다.</li>
+  </ol>
+</div>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b>한 줄 요약 —</b> fablever는 AI를 더 똑똑하게 만드는 게 아니라, <b>믿고 맡길 수 있는 일잘러처럼 일하게</b> 만듭니다: 스스로 검사하고, 확인한 것만 됐다고 하고, 계획부터 세우고, 당신 방식을 따르고, 말 줄이고, 위험한 건 멈춰 묻습니다. 그리고 그 모든 걸 실제로 측정해서 공개합니다.</p>
+  <p class="mono" style="color:#9aa3b2">github.com/elon-choo/fablever · 2026-06-25 · 외부 연결 없이 열리는 단일 파일</p>
+</div></footer>
+</body>
+</html>
