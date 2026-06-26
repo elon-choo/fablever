@@ -36,7 +36,15 @@ copies auth, and passes a **token-free allowlist env** to the child (`lib/safe-e
   hooks. `--require-hook-trust` DROPS a run whose hooks were inert rather than scoring an arm that silently
   collapsed to M. The trace carries no prompt / path / session id (asserted).
 
-**Pending (next increments):** the **blind quality judge** (`judge.mjs`, a different-lab second opinion with
-order-swapped blind judging; reads adapter commands, never a key); and the **pilot → frozen confirmatory**
-task set (≥60 across the 6 domains, frozen after the pilot). Until those land this is the harness + scorer +
-trust gate, not a result.
+- the **blind quality judge** (`judge.mjs`, `node test/codex-ab-judge-test.mjs`): presents each arm pair BLIND
+  and order-swapped to an external judge adapter (`--judge-cmd`; the harness pipes it the two texts and reads
+  `{winner}`, and never reads a key — the adapter owns auth). Only pairs ranked consistently across both
+  orders count; the order-swap catches a position-biased judge (every pair inconsistent → nothing decided).
+  Decided pairs feed an exact sign test. Run it again with a second, independent judge — if the preference
+  flips, that is reported as JUDGE-DEPENDENT, not merged.
+
+**Pending (the one remaining piece):** the **pilot → frozen confirmatory** task set — author ≥60 tasks across
+the 6 domains (paired consent_kept/consent_stripped scope tasks + no-change tasks), run the pilot to confirm
+the fixtures discriminate, then FREEZE the set before the confirmatory run. The harness, scorer, frozen
+oracle, trust gate, and blind judge are all built and tested; what remains is the (content) task authoring and
+an actual run against a logged-in eval `CODEX_HOME`. Until then this is the instrument, not a result.

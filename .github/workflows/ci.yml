@@ -40,6 +40,8 @@ jobs:
         run: node test/codex-ab-runner-test.mjs
       - name: Codex-native A/B scorer + frozen oracle (McNemar contrasts, Holm, park-until-proven)
         run: node test/codex-ab-score-test.mjs
+      - name: Codex-native A/B blind judge (order-swap catches position bias, sign test)
+        run: node test/codex-ab-judge-test.mjs
       - name: Unsupported-claim lint-rule regression (deterministic, offline)
         run: node eval/unsupported-claim-regression/run.mjs
       - name: Scripts are valid and fail-safe
@@ -73,8 +75,12 @@ jobs:
           node --check eval/codex-native-ab/lib/safe-env.mjs
           node --check eval/codex-native-ab/lib/codex-events.mjs
           node --check eval/codex-native-ab/score.mjs
+          node --check eval/codex-native-ab/judge.mjs
           node --check eval/codex-native-ab/oracle/fable-lint-frozen.cjs
           node --check test/codex-ab-score-test.mjs
+          node --check test/codex-ab-judge-test.mjs
+          node --check test/fixtures/fake-judge.js
+          node --check test/fixtures/fake-codex-trusted.js
           node --check test/measurement-assignment-test.mjs
           node --check test/codex-campaign-test.mjs
           node --check test/measurement-stats-test.mjs
