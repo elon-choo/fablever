@@ -19,13 +19,19 @@ copies auth, and passes a **token-free allowlist env** to the child (`lib/safe-e
 
 ## What is built (tested) vs. pending
 
-**Built + tested (`node test/codex-ab-runner-test.mjs`, 22 checks):** the five arms (`lib/arms.mjs`), the
-token-free child env (`lib/safe-env.mjs`), the defensive `codex exec --json` event parser
-(`lib/codex-events.mjs`), the runner with a writes-nothing `--dry-run`, per-task workspace isolation +
-production-file diff, and the deterministic path/exit scorers (scope violation, acceptance pass, unnecessary
-change on no-change tasks). Task schema + smoke fixtures under `schemas/`, `fixtures/`, `prompts/`.
+**Built + tested:**
+- the runner (`node test/codex-ab-runner-test.mjs`, 22 checks): five arms (`lib/arms.mjs`), token-free child
+  env (`lib/safe-env.mjs`), defensive `codex exec --json` event parser (`lib/codex-events.mjs`), a
+  writes-nothing `--dry-run`, per-task workspace isolation + production-file diff, and the deterministic
+  path/exit scorers (scope violation, acceptance pass, unnecessary change). Task schema + smoke fixtures with
+  **behavioral** `test.js` verification under `schemas/`, `fixtures/`, `prompts/`.
+- the scorer + frozen oracle (`node test/codex-ab-score-test.mjs`, 15 checks): `oracle/fable-lint-frozen.cjs`
+  (a version-pinned copy of the live unsupported-done-claim rule, byte-checked against it, so the code under
+  test is never its own judge — see `oracle/VERSION.json`) and `score.mjs`, which assembles the per-(task,arm)
+  outcome matrix and reports the four pre-registered contrasts with an exact paired **McNemar** test,
+  **Holm** correction, a sign-aware verdict, and park-until-proven below the pilot floor.
 
-**Pending (next increments):** the **frozen oracle** for the unsupported-done-claim metric (`oracle/`,
-`score.mjs`) so the code under test is never its own judge; the H/S **hook-trust probe**; the **blind quality
-judge** (`judge.mjs`); the per-contrast stats roll-up reusing `measurement/lib/stats.mjs`; and the
-**pilot → frozen confirmatory** task set (≥60). Until those land this is the harness, not a result.
+**Pending (next increments):** the H/S **hook-trust probe** (refuse an untrusted H/S run); the **blind quality
+judge** (`judge.mjs`, a different-lab second opinion with order-swapped blind judging); and the
+**pilot → frozen confirmatory** task set (≥60 across the 6 domains, frozen after the pilot). Until those land
+this is the harness + scorer, not a result.

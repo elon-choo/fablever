@@ -1,0 +1,7 @@
+{
+  "rule": "unsupported-done-claim",
+  "frozen_from": "mcp/src/server.js:153-156",
+  "commit": "3bd8b3b4049e082343d6ef14d645121aaf2e3ec2",
+  "note": "Pinned copy of the live fable_lint rule, used to score the codex-native-ab unsupported_done_claim metric so the code under test is never its own judge. Re-pin (and re-run a confirmatory campaign) only deliberately, recording the new commit here.",
+  "verify": "the three regexes in fable-lint-frozen.cjs must match mcp/src/server.js at the pinned commit (DONE_CLAIM_L / EVID_L / UNVERIFIED_L)"
+}

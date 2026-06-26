@@ -53,7 +53,9 @@ const startR = run(CAMPAIGN, ['start', '--campaign=t1', '--allocation=60:40']);
   const logger = path.join(CH, 'fable-profile', 'runtime', 'measurement', 'hooks', 'codex-measure.js');
   t(existsSync(logger), 'runtime: measurement logger present in the Codex runtime copy');
   const logEnv = { ...env, FABLE_MEASURE: 'on', FABLE_MEASURE_HOME: measureHome, FABLE_MEASURE_CAMPAIGN: 't1', FABLE_MEASURE_OFF_PCT: '60' };
-  for (let i = 0; i < 30; i++) spawnSync(process.execPath, [logger], { env: logEnv, input: JSON.stringify({ session_id: 'cs' + i, cwd: '/proj', hook_event_name: 'SessionStart', model: 'gpt-5.5-codex' }), encoding: 'utf8' });
+  // ≤29 total guarantees the smaller arm is < 15 regardless of the on/off split, so 'status' must report
+  // UNDERPOWERED deterministically (independent of the campaign salt). 30 sat right on the 15/15 boundary.
+  for (let i = 0; i < 24; i++) spawnSync(process.execPath, [logger], { env: logEnv, input: JSON.stringify({ session_id: 'cs' + i, cwd: '/proj', hook_event_name: 'SessionStart', model: 'gpt-5.5-codex' }), encoding: 'utf8' });
   const ledger = readdirSync(path.join(measureHome, 'events')).map(f => read(path.join(measureHome, 'events', f))).join('');
   t(!ledger.includes('cs0') && !ledger.includes('/proj'), 'logger: raw session id / cwd never written to the ledger');
   const st = run(CAMPAIGN, ['status']);

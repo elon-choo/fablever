@@ -38,6 +38,8 @@ jobs:
         run: node test/measurement-stats-test.mjs
       - name: Codex-native A/B harness (offline fake-codex — dry-run purity, safe env, scorers, event parse)
         run: node test/codex-ab-runner-test.mjs
+      - name: Codex-native A/B scorer + frozen oracle (McNemar contrasts, Holm, park-until-proven)
+        run: node test/codex-ab-score-test.mjs
       - name: Unsupported-claim lint-rule regression (deterministic, offline)
         run: node eval/unsupported-claim-regression/run.mjs
       - name: Scripts are valid and fail-safe
@@ -70,6 +72,9 @@ jobs:
           node --check eval/codex-native-ab/lib/arms.mjs
           node --check eval/codex-native-ab/lib/safe-env.mjs
           node --check eval/codex-native-ab/lib/codex-events.mjs
+          node --check eval/codex-native-ab/score.mjs
+          node --check eval/codex-native-ab/oracle/fable-lint-frozen.cjs
+          node --check test/codex-ab-score-test.mjs
           node --check test/measurement-assignment-test.mjs
           node --check test/codex-campaign-test.mjs
           node --check test/measurement-stats-test.mjs
