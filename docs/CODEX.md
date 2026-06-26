@@ -15,7 +15,7 @@ in evidence, stop when done) through Codex's own extension surfaces.
 | mode | command | what it writes | recommend |
 |---|---|---|---|
 | **style-only** | `node install.mjs --codex-style-only` | one marker block in `AGENTS.md` (instruction text only). No hooks, no MCP, no network. | **first install** — lowest surface, safest |
-| **full** | `node install.mjs --codex-full` (alias `--codex`) | `AGENTS.md` block **+** `SessionStart`/`SubagentStart` hooks (`hooks.json`) **+** the `fable-profile` MCP (`config.toml`) | when you want hooks + MCP (`fable_check`, `fable_status`, `fable_taste`, subagent reach) |
+| **full** | `node install.mjs --codex-full` (alias `--codex`) | `AGENTS.md` block **+** `SessionStart`/`SubagentStart` hooks (`hooks.json`) **+** the `fable-profile` MCP (`config.toml`) **+** on-demand `fable-*` Agent Skills (`.agents/skills/`) | when you want hooks + MCP (`fable_check`, `fable_status`, `fable_taste`, subagent reach) + the skills |
 
 ```bash
 # Safest first install for Codex (AGENTS.md only):
@@ -64,9 +64,33 @@ Everything is **marker-based** and backed up before edit, so uninstall removes O
   (`FABLE_HOST=codex`, `FABLE_PROFILE_HOME`, `FABLE_HOME`, `FABLE_TASTE_FILE`).
 - **`${CODEX_HOME}/fable-profile/runtime/`** — an immutable copy of `mcp/ profiles/ orchestration/ docs/`
   the MCP and hooks resolve from any directory.
+- **`$HOME/.agents/skills/fable-*/`** (user scope) or **`<project>/.agents/skills/fable-*/`** (project
+  scope) — the on-demand Agent Skills (see below). Reversibility here is record-tracked rather than marker
+  based: the installer records exactly which `fable-*` skill dirs it created, and uninstall removes only
+  those, leaving any skill you authored in place.
 
-`--no-codex-agents` / `--no-codex-hooks` / `--no-codex-mcp` drop any one part. `--dry-run` shows the exact
-files, hooks, MCP, network behavior (none), credential behavior (none), and uninstall command before writing.
+`--no-codex-agents` / `--no-codex-hooks` / `--no-codex-mcp` / `--no-codex-skills` drop any one part.
+`--dry-run` shows the exact files, hooks, MCP, skills, network behavior (none), credential behavior (none),
+and uninstall command before writing.
+
+## Codex Agent Skills (full mode)
+
+`--codex-full` also installs five **on-demand** skills into Codex's skill-discovery directory
+(`$HOME/.agents/skills` for a user install, `<project>/.agents/skills` for project scope). Unlike the
+always-on `AGENTS.md` layer, a skill's `SKILL.md` loads only when its description matches the task, so it
+costs no context until it is relevant:
+
+- **`fable-scope-guard`** — hold the exact scope asked; no adjacent refactors or drive-by cleanup.
+- **`fable-delivery-gate`** — acceptance check before handing over an external-facing deliverable.
+- **`fable-evidence-done`** — never claim done/works/fixed without evidence on the same line.
+- **`fable-review`** — adversarial review before lock-in; find and rate failure paths, don't rewrite.
+- **`fable-seed`** — write the short local `AGENTS.md` a module's code already implies.
+
+Skills need **no `/hooks` trust step** (they are model-pulled instructions, not command hooks), but they do
+require a Codex build with Agent Skills support — confirm with `/skills` if your build has it. When you run
+an install from *inside the fablever repo at project scope*, the source and destination `.agents/skills` are
+the same directory, so the installer skips the copy and never touches the repo's own skills.
+
 
 ## `AGENTS.override.md`
 
@@ -121,6 +145,7 @@ env value. The installer may run `codex --version` / `codex mcp --help` to detec
 `node install.mjs --codex-status` reports: `CODEX_HOME`; whether the AGENTS marker is active and in which
 file; whether `AGENTS.override.md` exists (with a warning if it shadows AGENTS.md); which hook events are
 registered (and a reminder that trust can only be confirmed in `/hooks`); whether the MCP config block is
-present; whether the `codex` binary is found; auth status (**not inspected** — "run codex/codex login");
+present; which `fable-*` skills are installed (and the skills dir); whether the `codex` binary is found;
+auth status (**not inspected** — "run codex/codex login");
 external verification (off); the uninstall command; and a dry-run pointer. Anything it cannot verify from the
 filesystem it reports as **unknown**, never a confident false.

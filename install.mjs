@@ -93,12 +93,12 @@ const CODEX_STATUS = has('--codex-status'), CODEX_UNINSTALL = has('--codex-unins
 const KNOWN = new Set(['--with-hook', '--with-fusion', '--with-xverify', '--no-style', '--no-mcp', '--no-subagent', '--no-onboard', '--no-modelcheck', '--no-update-check', '--uninstall', '-h', '--help',
   '--with-measure-holdout', '--no-measure-holdout', '--measure-status', '--dry-run', '--json',
   '--codex', '--codex-full', '--codex-style-only', '--codex-uninstall', '--codex-status',
-  '--no-codex-agents', '--no-codex-hooks', '--no-codex-mcp', '--codex-with-reinject', '--codex-patch-override', '--force-codex-mcp']);
+  '--no-codex-agents', '--no-codex-hooks', '--no-codex-mcp', '--no-codex-skills', '--codex-with-reinject', '--codex-patch-override', '--force-codex-mcp']);
 const unknown = args.find(a => !KNOWN.has(a) && !a.startsWith('--with-xverify=') && !a.startsWith('--codex-scope='));
 if (has('-h') || has('--help')) {
   log('Fable Profile universal installer.');
   log('  Claude Code:  node install.mjs [--with-hook|--with-fusion|--with-xverify[=preset]|--no-mcp|--no-style|--no-subagent|--no-onboard|--no-modelcheck|--no-update-check|--with-measure-holdout|--uninstall]');
-  log('  Codex CLI:    node install.mjs --codex-style-only | --codex-full [--codex-scope=user|project] [--no-codex-agents|--no-codex-hooks|--no-codex-mcp|--codex-with-reinject|--codex-patch-override|--force-codex-mcp]');
+  log('  Codex CLI:    node install.mjs --codex-style-only | --codex-full [--codex-scope=user|project] [--no-codex-agents|--no-codex-hooks|--no-codex-mcp|--no-codex-skills|--codex-with-reinject|--codex-patch-override|--force-codex-mcp]');
   log('  Codex other:  node install.mjs --codex-status | --uninstall --codex');
   log('  Preview:      add --dry-run [--json] to any install/uninstall to print the plan WITHOUT writing anything.');
   process.exit(0);
@@ -112,7 +112,7 @@ if (CODEX_STATUS || CODEX_INSTALL_REQ || has('--codex-uninstall')) {
   const rc = await runCodex({
     action, scope: CODEX_SCOPE === 'project' ? 'project' : 'user', dry: DRY, json: DRY_JSON,
     styleOnly: has('--codex-style-only'),
-    parts: { agents: !has('--no-codex-agents'), hooks: !has('--no-codex-hooks'), mcp: !has('--no-codex-mcp') },
+    parts: { agents: !has('--no-codex-agents'), hooks: !has('--no-codex-hooks'), mcp: !has('--no-codex-mcp'), skills: !has('--no-codex-skills') },
     reinject: has('--codex-with-reinject'), patchOverride: has('--codex-patch-override'), forceMcp: has('--force-codex-mcp'),
     repoDir: REPO, log,
   });

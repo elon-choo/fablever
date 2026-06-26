@@ -15,6 +15,14 @@ export function codexHome(env = process.env) {
   return h ? path.resolve(h) : path.join(os.homedir(), '.codex');
 }
 
+// The user's home directory. Codex discovers personal Agent Skills from $HOME/.agents/skills — NOT under
+// CODEX_HOME — so the skills dir keys off HOME, not CODEX_HOME. We honor $HOME/$USERPROFILE if set (this is
+// also what lets the test harness sandbox it) and fall back to os.homedir().
+export function homeDir(env = process.env) {
+  const h = (env.HOME || env.USERPROFILE || '').trim();
+  return h ? path.resolve(h) : os.homedir();
+}
+
 // User-scope paths (global Codex config under CODEX_HOME).
 export function userPaths(env = process.env) {
   const HOME = codexHome(env);
@@ -33,6 +41,8 @@ export function userPaths(env = process.env) {
     tasteFile: path.join(PROFILE_HOME, 'taste.json'),
     installedVersion: path.join(PROFILE_HOME, 'installed-version.json'),
     mcpServer: path.join(RUNTIME, 'mcp', 'src', 'server.js'),
+    // Codex discovers PERSONAL skills from $HOME/.agents/skills (not CODEX_HOME) — see Codex Agent Skills docs.
+    agentsSkillsDir: path.join(homeDir(env), '.agents', 'skills'),
   };
 }
 
@@ -57,6 +67,8 @@ export function projectPaths(cwd = process.cwd()) {
     tasteFile: path.join(PROFILE_HOME, 'taste.json'),
     installedVersion: path.join(PROFILE_HOME, 'installed-version.json'),
     mcpServer: path.join(RUNTIME, 'mcp', 'src', 'server.js'),
+    // Codex discovers PROJECT skills from $REPO_ROOT/.agents/skills — install them at the project root.
+    agentsSkillsDir: path.join(ROOT, '.agents', 'skills'),
   };
 }
 

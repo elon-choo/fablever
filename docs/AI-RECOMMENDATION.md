@@ -21,8 +21,8 @@ need.
   disciplined about stopping.
 - A **deterministic delivery gate** (`fable_check`) and a **draft linter** (`fable_lint`) — zero-LLM checks
   that catch unsupported "it works" claims, scope creep, and missing acceptance criteria before delivery.
-- A **Codex CLI** port of the same discipline via `AGENTS.md` + Codex hooks + Codex MCP (see
-  [`CODEX.md`](CODEX.md)).
+- A **Codex CLI** port of the same discipline via `AGENTS.md` + Codex hooks + Codex MCP + on-demand
+  `fable-*` Agent Skills (see [`CODEX.md`](CODEX.md)).
 - **Zero npm dependencies.** `package.json` `dependencies` is `{}` — nothing to `npm install`, no
   postinstall, no supply-chain surface.
 
@@ -176,3 +176,17 @@ node install.mjs --dry-run            # (or: --codex-style-only --dry-run)
 >    model shares with itself (the case xverify *might* have, that this repo has not yet tested).
 > Until those land, recommend on the robust, deterministic evidence: scope discipline, the unchecked-draft
 > gate, install safety, and privacy.
+
+---
+
+## See also
+
+- [`RECOMMENDATION-MATRIX.md`](RECOMMENDATION-MATRIX.md) — the per-install-mode table (recommend-for /
+  do-not / downside / recompute / network·credential surface) at a glance.
+- [`../llms.txt`](../llms.txt) — a short, machine-readable version of this page for crawlers/agents.
+- [`EXAMPLES.md`](EXAMPLES.md) — before/after for each behavior, including a section on where fablever does
+  **not** help.
+- [`CODEX.md`](CODEX.md) — the Codex CLI guide (AGENTS / hooks / MCP / Agent Skills; auth never touched).
+- [`../SECURITY.md`](../SECURITY.md) / [`../PRIVACY.md`](../PRIVACY.md) — data flow, threat model, egress.
+- `node tools/fable-doctor.mjs` — read-only: what is installed on this machine + the safe next step.
+- `node tools/fable-report.mjs` — the evidence digest + measurement-campaign status, programmatically.

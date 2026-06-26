@@ -36,6 +36,16 @@ const rmrf = d => { try { fs.rmSync(d, { recursive: true, force: true }); } catc
 const rmf = f => { try { fs.rmSync(f, { force: true }); } catch (_) {} };
 const cpR = (src, dst) => { try { fs.cpSync(src, dst, { recursive: true }); } catch (_) {} };
 const chmodx = f => { try { fs.chmodSync(f, 0o755); } catch (_) {} };
+// Skills are plain directories under .agents/skills/, each containing a SKILL.md. A skill dir is "ours"
+// only if it is named fable-* AND carries a SKILL.md — both conditions, so uninstall can never touch a
+// user-authored skill that merely shares the folder.
+function listSkillNames(srcDir) {
+  try {
+    return fs.readdirSync(srcDir, { withFileTypes: true })
+      .filter(d => d.isDirectory() && d.name.startsWith('fable-') && exists(path.join(srcDir, d.name, 'SKILL.md')))
+      .map(d => d.name).sort();
+  } catch { return []; }
+}
 function backup(file, plan) {
   if (!exists(file)) return null;
   const bak = `${file}.fable-bak-${ts()}`;
@@ -115,6 +125,15 @@ function resolve(opts) {
   const doHooks = !styleOnly && parts.hooks !== false;
   const doMcp = !styleOnly && parts.mcp !== false;
   const doReinject = !!opts.reinject && doHooks;
+  // Codex Agent Skills: on-demand SKILL.md files copied into the Codex discovery dir (.agents/skills).
+  // Part of full install (opt out with --no-codex-skills); never part of style-only.
+  const doSkills = !styleOnly && parts.skills !== false;
+  const skillsSrc = path.join(repo, '.agents', 'skills');
+  const skillsDst = P.agentsSkillsDir;
+  const skillNames = listSkillNames(skillsSrc);
+  // Running project-scope install from inside the fablever repo itself would copy .agents/skills onto
+  // itself — they are already discoverable there, so we skip the copy and never delete them on uninstall.
+  const skillsSelf = path.resolve(skillsSrc) === path.resolve(skillsDst);
 
   // AGENTS target: override file only with explicit --codex-patch-override; otherwise the plain AGENTS.md.
   const overrideExists = exists(P.agentsOverride);
@@ -130,6 +149,7 @@ function resolve(opts) {
   const tomlConflict = doMcp && hasForeignMcpTable(readFile(P.configToml)) && !opts.forceMcp;
 
   return { scope, P, repo, styleOnly, doAgents, doHooks, doMcp, doReinject,
+    doSkills, skillsSrc, skillsDst, skillNames, skillsSelf,
     overrideExists, patchOverride, agentsTarget, agentsSkippedByOverride, hookFiles, tomlConflict, opts };
 }
 
@@ -177,6 +197,15 @@ function computePlan(R) {
       plan.notes.push('After install, run /mcp in Codex to confirm fable-profile is connected.');
     }
   }
+  if (R.doSkills) {
+    if (R.skillsSelf) {
+      plan.notes.push(`Skills source == destination (${R.skillsDst}) — running inside the fablever repo; the .agents/skills/ skills are already discoverable here, nothing to copy.`);
+    } else if (R.skillNames.length) {
+      for (const nm of R.skillNames) plan.creates.push(`${path.join(R.skillsDst, nm)}/  (Codex skill)`);
+      plan.skills = R.skillNames.slice();
+      plan.notes.push(`Codex discovers these skills implicitly by their description (no /hooks trust needed). Requires a Codex build with Agent Skills support; confirm in Codex with /skills if available.`);
+    }
+  }
   return plan;
 }
 
@@ -201,6 +230,9 @@ function recordVersion(R) {
       host: 'codex', scope: R.scope, sha: git(['rev-parse', 'HEAD']),
       repo_url: normUrl(git(['config', '--get', 'remote.origin.url'])) || 'https://github.com/elon-choo/fablever',
       source_dir: repo,
+      // Record exactly which skill dirs we installed (and where) so uninstall removes only those.
+      skills: (R.doSkills && !R.skillsSelf) ? R.skillNames.slice() : [],
+      skills_dir: (R.doSkills && !R.skillsSelf) ? R.skillsDst : null,
     }, null, 2) + '\n');
   } catch (_) {}
 }
@@ -271,6 +303,24 @@ function executeInstall(R, log) {
     log('  hooks    -> ACTION NEEDED: open Codex and run /hooks to review and TRUST these hooks (untrusted command hooks do not run).');
   }
 
+  // 4) Codex Agent Skills — copy each fable-* skill dir into the discovery dir (.agents/skills).
+  if (R.doSkills) {
+    if (R.skillsSelf) {
+      log(`  skills   -> source == destination (${R.skillsDst}); running inside the fablever repo, skills already discoverable — nothing to copy`);
+    } else if (R.skillNames.length) {
+      mkdirp(R.skillsDst);
+      for (const nm of R.skillNames) {
+        const dst = path.join(R.skillsDst, nm);
+        rmrf(dst); cpR(path.join(R.skillsSrc, nm), dst); plan.creates.push(dst);
+      }
+      // skills-only install (no MCP, no hooks) still needs a version record so uninstall can find them.
+      if (!R.doMcp && !R.doHooks) recordVersion(R);
+      log(`  skills   -> installed ${R.skillNames.length} skill(s) into ${R.skillsDst} (${R.skillNames.join(', ')}). Codex matches them by description; no /hooks trust needed.`);
+    } else {
+      log(`  skills   -> none found in ${R.skillsSrc} (skipped)`);
+    }
+  }
+
   return plan;
 }
 
@@ -309,12 +359,33 @@ function executeUninstall(R, log) {
     else { fs.writeFileSync(P.configToml, after); log(`  mcp      -> removed fablever marker block from ${P.configToml}`); }
   }
 
+  // 3.5) Codex skills — remove ONLY the fable-* skill dirs we installed. Prefer the recorded list from
+  // installed-version.json (authoritative); fall back to our shipped source set. Never touch the repo's own
+  // .agents/skills when uninstalling project-scope from inside fablever (skillsSrc === skillsDst).
+  if (!R.skillsSelf) {
+    let recorded = [];
+    try { const iv = JSON.parse(readFile(P.installedVersion) || '{}'); if (Array.isArray(iv.skills)) recorded = iv.skills; } catch (_) {}
+    const names = recorded.length ? recorded : listSkillNames(R.skillsSrc);
+    let removed = 0;
+    for (const nm of names) {
+      if (!/^fable-/.test(nm)) continue; // defense-in-depth: only ever remove our own fable-* dirs
+      const d = path.join(R.skillsDst, nm);
+      if (exists(d)) { rmrf(d); removed++; }
+    }
+    if (removed) {
+      // Prune the .agents/skills and .agents dirs only if now empty (they may hold the user's own skills).
+      try { fs.rmdirSync(R.skillsDst); } catch (_) {}
+      try { fs.rmdirSync(path.dirname(R.skillsDst)); } catch (_) {}
+      log(`  skills   -> removed ${removed} fablever skill(s) from ${R.skillsDst}`);
+    }
+  }
+
   // 4) runtime + profile home
   rmrf(P.runtime);
   for (const v of ['full', 'compact', 'core']) rmf(path.join(P.profileHome, `${v}.md`));
   rmf(P.installedVersion);
   try { fs.rmdirSync(P.profileHome); } catch (_) {}
-  log('  done     -> Codex fablever install removed (AGENTS/hooks/config restored to their pre-fablever content).');
+  log('  done     -> Codex fablever install removed (AGENTS/hooks/config/skills restored to their pre-fablever content).');
 }
 
 // ---- STATUS ---------------------------------------------------------------------------------------------
@@ -326,6 +397,9 @@ function statusCodex(R) {
   let hooksRegistered = [];
   try { const h = JSON.parse(readFile(P.hooksJson) || '{}'); for (const ev of Object.keys(h.hooks || {})) if ((h.hooks[ev] || []).some(e => (e.hooks || []).some(x => (x.statusMessage || '').startsWith(HOOK_STATUS_PREFIX) || (x.command || '').includes(P.hooksDir)))) hooksRegistered.push(ev); } catch (_) {}
   const mcpPresent = exists(P.configToml) && hasBlock(readFile(P.configToml), TOML_START, TOML_END);
+  // Skills present = fable-* skill dirs in the discovery dir that match what this repo ships.
+  const ours = new Set(listSkillNames(R.skillsSrc));
+  const skillsInstalled = R.skillsSelf ? [] : listSkillNames(R.skillsDst).filter(n => ours.has(n));
   const bin = codexBin();
   return {
     host: 'codex', scope: R.scope, codex_home: P.CODEX_HOME,
@@ -337,6 +411,9 @@ function statusCodex(R) {
     hooks_need_trust: hooksRegistered.length ? 'cannot verify trust from outside — run /hooks in Codex to confirm these are trusted' : null,
     mcp_config_present: mcpPresent,
     mcp_confirm: mcpPresent ? 'run /mcp in Codex to confirm fable-profile is connected' : null,
+    skills_dir: R.skillsDst,
+    skills_installed: skillsInstalled,
+    skills_note: R.skillsSelf ? 'running inside the fablever repo — .agents/skills are the source, discoverable in-place' : (skillsInstalled.length ? 'Codex matches these by description; confirm with /skills if your Codex build supports Agent Skills' : null),
     codex_binary: bin || 'not found on PATH',
     codex_mcp_help: bin ? codexMcpHelp() : false,
     auth_status: 'not checked — fablever does not inspect Codex tokens. If a model call says you are signed out, run `codex` or `codex login`.',
@@ -382,6 +459,7 @@ export async function runCodex(opts) {
     log(`  Hooks registered:      ${s.hooks_registered.length ? s.hooks_registered.join(', ') : 'none'}`);
     if (s.hooks_need_trust) log(`  Hooks trust:           ${s.hooks_need_trust}`);
     log(`  MCP config present:    ${s.mcp_config_present ? 'yes' : 'no'}${s.mcp_confirm ? '  (' + s.mcp_confirm + ')' : ''}`);
+    log(`  Skills installed:      ${s.skills_installed.length ? s.skills_installed.join(', ') : 'none'}${s.skills_note ? '  (' + s.skills_note + ')' : ''}`);
     log(`  codex binary:          ${s.codex_binary}`);
     log(`  Auth:                  ${s.auth_status}`);
     log(`  External verification: ${s.external_verification}`);
@@ -413,7 +491,8 @@ export async function runCodex(opts) {
   executeInstall(R, log);
   log('\nDone. fablever never reads/stores/prints Codex tokens — ChatGPT/OAuth login is managed by Codex.');
   if (!R.styleOnly) {
-    log('Next in Codex:  /hooks  (trust the fablever hooks)   ·   /mcp  (confirm fable-profile)');
+    const skillsHint = (R.doSkills && !R.skillsSelf && R.skillNames.length) ? '   ·   /skills  (if supported — the fable-* skills load on demand)' : '';
+    log(`Next in Codex:  /hooks  (trust the fablever hooks)   ·   /mcp  (confirm fable-profile)${skillsHint}`);
     log('If a model call reports you are signed out, run `codex` or `codex login` (headless: `codex login --device-auth`). fablever does not run login for you.');
   }
   log(`Preview/verify later:  node install.mjs --codex-status${R.scope === 'project' ? ' --codex-scope=project' : ''}`);

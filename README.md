@@ -29,7 +29,11 @@ and disciplined about stopping. Every project, every subagent, installable by an
 **Do not install if you expect** lower cost (it is ~14%/call *more*), a raw-quality boost over plain Claude
 (it ties plain on quality), a reasoning-ceiling/capability lift (impossible by design), or a proven
 real-user productivity gain (not demonstrated). Preview any install with `--dry-run`. AI evaluators: see
-[`docs/AI-RECOMMENDATION.md`](docs/AI-RECOMMENDATION.md) for a hand-back recommendation matrix.
+[`docs/AI-RECOMMENDATION.md`](docs/AI-RECOMMENDATION.md) for a hand-back recommendation policy,
+[`docs/RECOMMENDATION-MATRIX.md`](docs/RECOMMENDATION-MATRIX.md) for the per-mode table, and
+[`llms.txt`](llms.txt) for a short machine-readable summary. Also: [`docs/EXAMPLES.md`](docs/EXAMPLES.md)
+(before/after, incl. where it does *not* help), [`SECURITY.md`](SECURITY.md) / [`PRIVACY.md`](PRIVACY.md),
+and local diagnostics `node tools/fable-doctor.mjs` · `node tools/fable-report.mjs`.
 
 > This profile doesn't invent behavior — it's distilled from Anthropic's own
 > [Fable prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
@@ -333,21 +337,24 @@ booster** for very long sessions, not the primary mechanism.
 fablever also runs natively inside **[OpenAI's Codex CLI](https://github.com/openai/codex)** — same honest
 positioning (a **style transplant, not a capability upgrade**). Codex has no Claude-Code output-style
 surface, so the always-on layer is delivered through Codex's own surfaces: **`AGENTS.md`** (instruction
-layer), **`hooks.json`** (lifecycle hooks), and **`config.toml`** (the same zero-dependency MCP, registered
-host-aware). Full guide: **[`docs/CODEX.md`](docs/CODEX.md)**.
+layer), **`hooks.json`** (lifecycle hooks), **`config.toml`** (the same zero-dependency MCP, registered
+host-aware), and on-demand **`fable-*` Agent Skills** (`.agents/skills/`). Full guide:
+**[`docs/CODEX.md`](docs/CODEX.md)**.
 
 ```bash
 node install.mjs --codex-style-only      # safest first install: AGENTS.md marker block only (no hooks/MCP/network)
-node install.mjs --codex-full            # AGENTS.md + Codex hooks + the fable-profile MCP
+node install.mjs --codex-full            # AGENTS.md + Codex hooks + the fable-profile MCP + on-demand skills
 node install.mjs --codex-full --dry-run  # preview every change first — writes nothing
-node install.mjs --codex-status          # check installed state
+node install.mjs --codex-status          # check installed state (incl. installed skills)
 node install.mjs --uninstall --codex     # remove ONLY the Codex install (Claude Code untouched)
 ```
 
 After a full install, finish in Codex: run **`/hooks`** to **trust** the fablever hooks (untrusted command
-hooks don't run) and **`/mcp`** to confirm `fable-profile` is connected. Everything is **marker-based and
-reversible** — uninstall removes only fablever's blocks (AGENTS.md / config.toml restored byte-for-byte,
-hooks.json deep-equal), backing up each file first.
+hooks don't run) and **`/mcp`** to confirm `fable-profile` is connected. The on-demand skills
+(`fable-scope-guard`, `fable-delivery-gate`, `fable-evidence-done`, `fable-review`, `fable-seed`) load only
+when their description matches the task and need no trust step (opt out with `--no-codex-skills`). Everything
+is **reversible** — uninstall removes only fablever's blocks (AGENTS.md / config.toml restored byte-for-byte,
+hooks.json deep-equal) and only the `fable-*` skill dirs it installed, backing up each edited file first.
 
 **Auth:** Codex signs in with your **ChatGPT/OAuth login** (or an OpenAI API key), and **that is wholly
 managed by Codex** — fablever **never reads, stores, or prints** your Codex tokens, and Codex-native support

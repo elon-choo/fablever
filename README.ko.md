@@ -317,16 +317,18 @@ fablever는 **[OpenAI의 Codex CLI](https://github.com/openai/codex)** 안에서
 
 ```bash
 node install.mjs --codex-style-only      # 가장 안전한 첫 설치: AGENTS.md 마커 블록만 (훅/MCP/네트워크 없음)
-node install.mjs --codex-full            # AGENTS.md + Codex 훅 + fable-profile MCP
+node install.mjs --codex-full            # AGENTS.md + Codex 훅 + fable-profile MCP + 온디맨드 스킬
 node install.mjs --codex-full --dry-run  # 변경 사항 미리보기 — 아무것도 쓰지 않음
-node install.mjs --codex-status          # 설치 상태 확인
+node install.mjs --codex-status          # 설치 상태 확인 (설치된 스킬 포함)
 node install.mjs --uninstall --codex     # Codex 설치분만 제거 (Claude Code는 건드리지 않음)
 ```
 
 전체 설치 후 Codex에서 마무리하세요: **`/hooks`** 로 fablever 훅을 **신뢰(trust)** 하고(신뢰되지 않은 커맨드 훅은
-실행되지 않습니다), **`/mcp`** 로 `fable-profile` 연결을 확인하세요. 모든 변경은 **마커 기반·되돌릴 수 있음** —
-언인스톨은 fablever 블록만 제거하며(AGENTS.md / config.toml 은 바이트 단위 복원, hooks.json 은 의미 동일 복원),
-각 파일은 수정 전에 백업됩니다.
+실행되지 않습니다), **`/mcp`** 로 `fable-profile` 연결을 확인하세요. 온디맨드 스킬(`fable-scope-guard`,
+`fable-delivery-gate`, `fable-evidence-done`, `fable-review`, `fable-seed`)은 작업 설명과 매칭될 때만
+로드되며 신뢰 단계가 필요 없습니다(`--no-codex-skills` 로 끌 수 있음). 모든 변경은 **되돌릴 수 있음** —
+언인스톨은 fablever 블록만 제거하고(AGENTS.md / config.toml 은 바이트 단위 복원, hooks.json 은 의미 동일 복원),
+설치했던 `fable-*` 스킬 디렉터리만 지우며, 각 파일은 수정 전에 백업됩니다.
 
 **인증:** Codex는 **ChatGPT/OAuth 로그인**(또는 OpenAI API 키)으로 로그인하며, **그 인증은 전적으로 Codex가
 관리**합니다 — fablever는 Codex 토큰을 **읽지도 저장하지도 출력하지도 않으며**, Codex 네이티브 지원에는 **OpenAI API
