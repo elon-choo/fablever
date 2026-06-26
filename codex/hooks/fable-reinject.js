@@ -39,10 +39,22 @@ function isOff() {
   return false;
 }
 
+// Measurement holdout: an 'off'-arm session suppresses the per-turn reminder (honest baseline).
+// Resolved from runtime/repo; fail-open (any error → false → inject normally).
+function isHoldoutOff(sessionId) {
+  if (!sessionId) return false;
+  const cands = [];
+  if (process.env.FABLE_HOME) cands.push(path.join(process.env.FABLE_HOME, 'measurement', 'runtime', 'holdout.cjs'));
+  cands.push(path.join(__dirname, '..', '..', 'measurement', 'runtime', 'holdout.cjs'));
+  cands.push(path.join(__dirname, '..', 'fable-profile', 'runtime', 'measurement', 'runtime', 'holdout.cjs'));
+  for (const c of cands) { try { return require(c).holdoutOff({ env: process.env, sessionId }); } catch (_) {} }
+  return false;
+}
+
 try {
   if (isOff()) process.exit(0);
-  // Drain stdin (the UserPromptSubmit event) but we don't need any field from it; the reminder is constant.
-  try { if (!process.stdin.isTTY) fs.readFileSync(0, 'utf8'); } catch (_) {}
+  // Read the UserPromptSubmit event only to honor the measurement holdout; the reminder text is constant.
+  try { if (!process.stdin.isTTY) { const raw = fs.readFileSync(0, 'utf8'); if (raw && isHoldoutOff(String(JSON.parse(raw).session_id || '').trim())) process.exit(0); } } catch (_) {}
   const text = readProfile('core') || readProfile('compact') || CORE_FALLBACK;
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text },

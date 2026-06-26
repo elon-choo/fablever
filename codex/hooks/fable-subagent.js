@@ -44,6 +44,18 @@ function isOff() {
   return false;
 }
 
+// Measurement holdout: an 'off'-arm session suppresses injection (subagents inherit the session's arm).
+// Resolved from runtime/repo; fail-open (any error → false → inject normally).
+function isHoldoutOff(sessionId) {
+  if (!sessionId) return false;
+  const cands = [];
+  if (process.env.FABLE_HOME) cands.push(path.join(process.env.FABLE_HOME, 'measurement', 'runtime', 'holdout.cjs'));
+  cands.push(path.join(__dirname, '..', '..', 'measurement', 'runtime', 'holdout.cjs'));
+  cands.push(path.join(__dirname, '..', 'fable-profile', 'runtime', 'measurement', 'runtime', 'holdout.cjs'));
+  for (const c of cands) { try { return require(c).holdoutOff({ env: process.env, sessionId }); } catch (_) {} }
+  return false;
+}
+
 try {
   if (isOff()) process.exit(0);
 
@@ -54,6 +66,7 @@ try {
       const raw = fs.readFileSync(0, 'utf8');
       if (raw) {
         const ev = JSON.parse(raw);
+        if (isHoldoutOff(String(ev.session_id || ev.sessionId || '').trim())) process.exit(0); // off-arm baseline
         const t = ev.agent_type || ev.subagent_type || ev.agentType || ev.subagentType ||
           (ev.hookSpecificOutput && ev.hookSpecificOutput.subagentType) || '';
         // Exact-match calibrated orchestration roles (incl. Claude's built-in Explore/Plan), plus an

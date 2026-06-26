@@ -213,7 +213,9 @@ function computePlan(R) {
 function installRuntime(R, plan) {
   const { P, repo } = R;
   rmrf(P.runtime); mkdirp(P.runtime);
-  for (const d of ['mcp', 'fusion', 'profiles', 'orchestration', 'docs']) cpR(path.join(repo, d), path.join(P.runtime, d));
+  // 'measurement' is included so the holdout guard (measurement/runtime/holdout.cjs) and the Codex event
+  // logger resolve from the installed runtime — the injector hooks require it to honor an off-arm session.
+  for (const d of ['mcp', 'fusion', 'profiles', 'orchestration', 'docs', 'measurement']) cpR(path.join(repo, d), path.join(P.runtime, d));
   // Flat profile copies so the zero-dep hooks resolve <profile-home>/{compact,core}.md without env.
   for (const v of ['full', 'compact', 'core']) {
     try { fs.copyFileSync(path.join(repo, 'profiles', `${v}.md`), path.join(P.profileHome, `${v}.md`)); } catch (_) {}

@@ -53,19 +53,32 @@ function isOff() {
   return false;
 }
 
+// Measurement holdout: during a campaign, an 'off'-arm session SUPPRESSES injection (honest baseline). The
+// guard lives in the runtime/repo; fail-open (any resolution/error → false → inject normally).
+function isHoldoutOff(sessionId) {
+  if (!sessionId) return false;
+  const cands = [];
+  if (process.env.FABLE_HOME) cands.push(path.join(process.env.FABLE_HOME, 'measurement', 'runtime', 'holdout.cjs'));
+  cands.push(path.join(__dirname, '..', '..', 'measurement', 'runtime', 'holdout.cjs'));
+  cands.push(path.join(__dirname, '..', 'fable-profile', 'runtime', 'measurement', 'runtime', 'holdout.cjs'));
+  for (const c of cands) { try { return require(c).holdoutOff({ env: process.env, sessionId }); } catch (_) {} }
+  return false;
+}
+
 try {
   if (isOff()) process.exit(0);
 
-  // SessionStart event arrives as JSON on stdin: { source: "startup"|"clear"|"resume"|"compact", ... }.
+  // SessionStart event arrives as JSON on stdin: { source: "startup"|"clear"|"resume"|"compact", session_id }.
   // Fail-open: missing/unparseable stdin → treat as a startup so we still help on a normal launch.
-  let src = 'startup';
+  let src = 'startup', sid = '';
   try {
     if (!process.stdin.isTTY) {
       const raw = fs.readFileSync(0, 'utf8');
-      if (raw) src = String((JSON.parse(raw).source || 'startup')).toLowerCase();
+      if (raw) { const ev = JSON.parse(raw); src = String(ev.source || 'startup').toLowerCase(); sid = String(ev.session_id || ev.sessionId || '').trim(); }
     }
   } catch (_) { /* proceed as startup */ }
   if (src === 'resume' || src === 'compact') process.exit(0);
+  if (isHoldoutOff(sid)) process.exit(0); // measurement off-arm: stay silent for an honest baseline
 
   const text = readProfile('compact') || readProfile('core') || COMPACT_FALLBACK;
   process.stdout.write(JSON.stringify({

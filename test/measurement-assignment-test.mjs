@@ -144,5 +144,32 @@ const newHome = () => mkdtempSync(path.join(tmpdir(), 'fable-measure-'));
   rmSync(h3, { recursive: true, force: true });
 }
 
+// ---------------------------------------------------------------------------------------------------------
+// 6) the Codex injector hooks honor the holdout: off-arm suppresses, on-arm injects, no-campaign injects
+{
+  const home = newHome();
+  writeFileSync(path.join(home, 'measurement-salt'), SALT, { mode: 0o600 });
+  const armOf = sid => assignArm({ campaignId: 'cmp', sessionId: sid, salt: SALT, offPercent: 50 });
+  let onSid = null, offSid = null;
+  for (let i = 0; i < 200 && !(onSid && offSid); i++) { const s = 'hk' + i; if (armOf(s) === 'on') onSid ||= s; else offSid ||= s; }
+  const campaign = { FABLE_MEASURE: 'on', FABLE_MEASURE_HOME: home, FABLE_MEASURE_CAMPAIGN: 'cmp' };
+  const runHookFile = (rel, event, env) => spawnSync(process.execPath, [path.join(REPO, 'codex', 'hooks', rel)], { input: JSON.stringify(event), env: { PATH: process.env.PATH, ...env }, encoding: 'utf8' });
+
+  const offR = runHookFile('fable-session.js', { source: 'startup', session_id: offSid }, campaign);
+  t(offR.status === 0 && (offR.stdout || '') === '', 'session hook: off-arm suppresses injection (no stdout)');
+  const onR = runHookFile('fable-session.js', { source: 'startup', session_id: onSid }, campaign);
+  t(onR.status === 0 && onR.stdout.includes('additionalContext'), 'session hook: on-arm still injects');
+  const noCamp = runHookFile('fable-session.js', { source: 'startup', session_id: offSid }, {});
+  t(noCamp.stdout.includes('additionalContext'), 'session hook: no campaign → injects (guard fail-open)');
+
+  const subOff = runHookFile('fable-subagent.js', { session_id: offSid, agent_type: 'coder' }, campaign);
+  t((subOff.stdout || '') === '', 'subagent hook: off-arm suppresses injection');
+  const subOn = runHookFile('fable-subagent.js', { session_id: onSid, agent_type: 'coder' }, campaign);
+  t(subOn.stdout.includes('additionalContext'), 'subagent hook: on-arm still injects');
+  const rjOff = runHookFile('fable-reinject.js', { session_id: offSid }, campaign);
+  t((rjOff.stdout || '') === '', 'reinject hook: off-arm suppresses injection');
+  rmSync(home, { recursive: true, force: true });
+}
+
 console.log(`\n${ok}/${n} checks passed`);
 process.exit(ok === n ? 0 : 1);
