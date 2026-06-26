@@ -32,6 +32,8 @@ jobs:
         run: node test/codex-skills-test.mjs
       - name: Measurement core (race-invariant assignment + HMAC privacy + metadata-only ledger)
         run: node test/measurement-assignment-test.mjs
+      - name: Codex holdout campaign lifecycle (start/log/status/stop, reversible, metadata-only)
+        run: node test/codex-campaign-test.mjs
       - name: Unsupported-claim lint-rule regression (deterministic, offline)
         run: node eval/unsupported-claim-regression/run.mjs
       - name: Scripts are valid and fail-safe
@@ -55,5 +57,8 @@ jobs:
           node --check test/codex-skills-test.mjs
           node --check measurement/runtime/assign.cjs
           node --check measurement/runtime/privacy.cjs
+          node --check measurement/runtime/holdout.cjs
           node --check measurement/hooks/codex-measure.js
+          node --check measurement/codex-campaign.mjs
           node --check test/measurement-assignment-test.mjs
+          node --check test/codex-campaign-test.mjs
