@@ -6,7 +6,7 @@
   "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node eval/unsupported-claim-regression/run.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs && node test/install-matrix.mjs && node test/codex-install-test.mjs && node test/codex-skills-test.mjs && node test/measurement-assignment-test.mjs && node test/codex-campaign-test.mjs && node test/privacy-canary/run.mjs",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node eval/unsupported-claim-regression/run.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs && node test/install-matrix.mjs && node test/codex-install-test.mjs && node test/codex-skills-test.mjs && node test/measurement-assignment-test.mjs && node test/codex-campaign-test.mjs && node test/measurement-stats-test.mjs && node test/privacy-canary/run.mjs",
     "test:safety": "node test/install-matrix.mjs",
     "test:privacy": "node test/privacy-canary/run.mjs",
     "test:mcp": "node test/mcp-test.js",
@@ -20,7 +20,7 @@
     "measure:collect": "node measurement/collect.mjs",
     "measure:analyze": "node measurement/analyze.mjs",
     "measure:status": "node measurement/status.mjs",
-    "test:measure": "node test/measurement-assignment-test.mjs && node test/codex-campaign-test.mjs",
+    "test:measure": "node test/measurement-assignment-test.mjs && node test/codex-campaign-test.mjs && node test/measurement-stats-test.mjs",
     "measure:codex": "node measurement/codex-campaign.mjs",
     "doctor": "node tools/fable-doctor.mjs",
     "report": "node tools/fable-report.mjs",

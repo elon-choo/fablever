@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { resolvePaths } from '../codex/lib/paths.mjs';
 import { HOOK_STATUS_PREFIX, addHookEntry } from '../codex/lib/markers.mjs';
+import { mean, median, bootstrapDiffCI, permutationP, cliffsDelta, holm } from './lib/stats.mjs';
 
 const require = createRequire(import.meta.url);
 const { readOrCreateSalt } = require('./runtime/privacy.cjs');
@@ -42,6 +43,7 @@ const toWin = p => p.replace(/\//g, '\\');
 
 const readJson = p => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
 const isMeasureEntry = e => Array.isArray(e?.hooks) && e.hooks.some(h => String(h.statusMessage || '').startsWith(MEASURE_PREFIX));
+const fmt = (x, dp = 2) => (x == null || Number.isNaN(x)) ? 'n/a' : Number(x).toFixed(dp);
 
 function start() {
   if (!fs.existsSync(measureHook)) {
@@ -99,7 +101,72 @@ function status() {
   const minSessions = Math.min(perArm.on.sessions.size, perArm.off.sessions.size);
   console.log(minSessions < MIN
     ? `\nUNDERPOWERED — need ≥${MIN} sessions per arm before any read-out (have ${minSessions} in the smaller arm). park-until-proven.`
-    : `\nReady for a descriptive read-out (≥${MIN}/arm). Analysis with CIs is the next milestone (analyzer upgrade).`);
+    : `\nReady for a read-out (≥${MIN}/arm). Run:  node measurement/codex-campaign.mjs analyze   (bootstrap CI + permutation p + Cliff's δ, Holm-corrected).`);
+}
+
+// Aggregate the event ledger into per-session metric sums tagged by arm.
+function loadSessions() {
+  const sessions = new Map();
+  let files = []; try { files = fs.readdirSync(eventsDir); } catch { return sessions; }
+  for (const f of files) {
+    let raw = ''; try { raw = fs.readFileSync(path.join(eventsDir, f), 'utf8'); } catch { continue; }
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue; let r; try { r = JSON.parse(line); } catch { continue; }
+      if (!r.session_key || (r.arm !== 'on' && r.arm !== 'off')) continue;
+      let s = sessions.get(r.session_key);
+      if (!s) { s = { arm: r.arm, m: {} }; sessions.set(r.session_key, s); }
+      for (const [k, v] of Object.entries(r.metrics || {})) s.m[k] = (s.m[k] || 0) + Number(v || 0);
+    }
+  }
+  return sessions;
+}
+
+const MIN_PER_ARM = 15;
+
+function analyze() {
+  const cfg = readJson(campaignFile);
+  console.log(`# Codex holdout analysis (scope: ${scope})`);
+  if (!cfg) { console.log('No campaign here. Start one first.'); return; }
+  console.log(`campaign: ${cfg.campaign_id}   off arm: ${cfg.off_pct}%   text-signals: ${cfg.text_signals ? 'on' : 'off'}\n`);
+
+  // qualified session = at least 2 user turns OR 2 tool calls (a real working session, not a no-op).
+  const arms = { on: [], off: [] };
+  for (const s of loadSessions().values()) {
+    const m = s.m; const o = {
+      user_turns: m.user_turn || 0, tool_calls: m.tool_call || 0, edits: m.edit || 0,
+      shell_calls: m.shell_call || 0, tool_failed: m.tool_failed || 0, reinstructions: m.reinstruction || 0,
+      subagents: m.subagent_start || 0, compactions: m.precompact || 0,
+    };
+    if (o.user_turns >= 2 || o.tool_calls >= 2) arms[s.arm].push(o);
+  }
+  const col = (arm, key) => arms[arm].map(o => o[key]);
+  console.log(`qualified sessions: on=${arms.on.length}, off=${arms.off.length} (floor per arm = ${MIN_PER_ARM})\n`);
+
+  // descriptive (always)
+  const DESC = ['user_turns', 'tool_calls', 'edits', 'shell_calls', 'subagents', 'compactions'];
+  console.log('## descriptive (mean | median)');
+  for (const k of DESC) console.log(`  ${k.padEnd(14)} on=${fmt(mean(col('on', k)))}|${fmt(median(col('on', k)))}   off=${fmt(mean(col('off', k)))}|${fmt(median(col('off', k)))}`);
+
+  if (arms.on.length < MIN_PER_ARM || arms.off.length < MIN_PER_ARM) {
+    console.log(`\n## verdict — UNDERPOWERED (park-until-proven): need ≥${MIN_PER_ARM} qualified sessions per arm. No verdict, no CI claim from a thin sample.`);
+    return;
+  }
+
+  // primary lower-is-better outcomes (the layer should REDUCE these). reinstructions only with text-signals.
+  const PRIMARY = ['tool_failed', ...(cfg.text_signals ? ['reinstructions'] : [])];
+  const rows = PRIMARY.map(k => {
+    const on = col('on', k), off = col('off', k);
+    return { k, ci: bootstrapDiffCI(on, off, { seed: 12345 }), p: permutationP(on, off, { seed: 999 }), cd: cliffsDelta(on, off) };
+  });
+  const adj = holm(rows.map(r => r.p));
+  console.log('\n## primary lower-is-better outcomes (on − off; negative = the always-on layer helps)');
+  rows.forEach((r, i) => {
+    console.log(`  ${r.k.padEnd(14)} Δmean=${fmt(r.ci.point)}  95% CI [${fmt(r.ci.lo)}, ${fmt(r.ci.hi)}]  p=${fmt(r.p, 3)} (Holm ${fmt(adj[i], 3)})  Cliff's δ=${fmt(r.cd.delta, 3)} (${r.cd.mag})`);
+  });
+  const anySig = rows.some((r, i) => adj[i] < 0.05);
+  console.log(anySig
+    ? '\n## verdict: at least one primary outcome differs after Holm correction — read the sign + CI. A CI that excludes 0 toward negative = the layer is paying for its context.'
+    : '\n## verdict: no primary outcome is distinguishable after correction (CIs include 0). lift≈0 is a BREAK-EVEN warning for an always-on layer, not a pass — it is spending context it is not visibly repaying.');
 }
 
 function stop() {
@@ -121,4 +188,5 @@ function stop() {
 
 if (cmd === 'start') start();
 else if (cmd === 'stop') stop();
+else if (cmd === 'analyze') analyze();
 else status();

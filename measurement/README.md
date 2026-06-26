@@ -61,6 +61,28 @@ campaign, let it accrue, read the analysis, then turn it off. Don't leave it on 
 5. Stop the campaign: `unset FABLE_MEASURE` (and remove the SessionStart entry). The guards go inert; the
    ledger stays for analysis.
 
+## Codex CLI campaign (host-neutral core)
+
+The Codex path uses the same idea with a race-free, privacy-hardened core (Codex fires same-event hooks
+concurrently, so each injector derives the arm from the SAME `HMAC(salt, campaign\0session)` as the logger —
+no shared marker). The ledger is **metadata only**: session/project are HMAC ids, never a raw id/cwd/prompt;
+text-derived flags appear only with `--text-signals` and even then as booleans.
+
+```bash
+node install.mjs --codex-full                                  # 1) install (provides the runtime logger)
+node measurement/codex-campaign.mjs start --campaign=c1 --allocation=50:50   # 2) seed salt + register logger
+#    → trust the logger in Codex with /hooks, then export the printed FABLE_MEASURE* vars
+node measurement/codex-campaign.mjs status                     # 3) per-arm counts + park-until-proven floor
+node measurement/codex-campaign.mjs analyze                    # 4) bootstrap CI + permutation p + Cliff's δ (Holm)
+node measurement/codex-campaign.mjs stop                       # 5) remove the logger; keep the data
+```
+
+`analyze` reports primary **lower-is-better** outcomes (e.g. failed tool results; re-instructions only with
+text-signals) as `on − off` with a 95% bootstrap CI, a Holm-corrected permutation p, and Cliff's delta — and
+refuses any verdict below 15 qualified sessions per arm (a qualified session has ≥2 user turns or ≥2 tool
+calls). A CI that includes 0 is a **break-even** warning for an always-on layer, not a pass. Like the Claude
+path, the Codex holdout measures the **injection layer**, not the base `AGENTS.md` (which stays in both arms).
+
 ## Honest limits
 
 - **It measures the hook/gate layer, not the base output style.** The always-on output style is loaded at
