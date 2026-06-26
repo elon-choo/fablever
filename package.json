@@ -1,12 +1,12 @@
 {
   "name": "fablever",
   "version": "1.2.0",
-  "description": "Make any Claude model (Opus/Sonnet/Haiku) work more like Claude Fable 5 in Claude Code — a behavioral working-style layer (output style + hooks + MCP) PLUS an experimental orchestration layer (runnable Workflow recipes for independent review, divergent exploration, decompose-and-fan-out). A style/structure transplant, not a capability transplant. Zero dependencies.",
+  "description": "A zero-dependency working-style + discipline layer for Claude Code AND Codex CLI: scope control, evidence-grounded completion, and deterministic delivery checks. Claude Code via output style + hooks + MCP; Codex CLI via AGENTS.md + hooks + MCP + on-demand Agent Skills. PLUS an experimental orchestration layer (runnable Workflow recipes for independent review, divergent exploration, decompose-and-fan-out). A style/structure transplant, not a capability transplant.",
   "license": "MIT",
   "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node eval/unsupported-claim-regression/run.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs && node test/install-matrix.mjs && node test/codex-install-test.mjs && node test/codex-skills-test.mjs && node test/privacy-canary/run.mjs",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node eval/unsupported-claim-regression/run.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs && node test/install-matrix.mjs && node test/codex-install-test.mjs && node test/codex-skills-test.mjs && node test/measurement-assignment-test.mjs && node test/privacy-canary/run.mjs",
     "test:safety": "node test/install-matrix.mjs",
     "test:privacy": "node test/privacy-canary/run.mjs",
     "test:mcp": "node test/mcp-test.js",
@@ -20,6 +20,7 @@
     "measure:collect": "node measurement/collect.mjs",
     "measure:analyze": "node measurement/analyze.mjs",
     "measure:status": "node measurement/status.mjs",
+    "test:measure": "node test/measurement-assignment-test.mjs",
     "doctor": "node tools/fable-doctor.mjs",
     "report": "node tools/fable-report.mjs",
     "ultra:score": "node eval/ultra/score.mjs",
@@ -32,8 +33,9 @@
   },
   "bin": { "fable-profile-mcp": "mcp/src/server.js" },
   "keywords": [
-    "claude", "claude-code", "anthropic", "fable", "mcp", "output-style",
-    "prompt-engineering", "agent", "llm", "developer-tools"
+    "claude", "claude-code", "anthropic", "codex", "codex-cli", "openai",
+    "fable", "mcp", "output-style", "agents-md", "agent-skills",
+    "scope-control", "delivery-gate", "prompt-engineering", "agent", "llm", "developer-tools"
   ],
   "engines": { "node": ">=18" },
   "dependencies": {},

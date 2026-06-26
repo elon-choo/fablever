@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/elon-choo/fablever/measurement/schemas/event.schema.json",
+  "title": "fablever measurement event row (v2)",
+  "description": "One metadata-only ledger row per lifecycle event. MUST NOT contain a raw session id, raw cwd, prompt, assistant text, command, or tool input/output. Identifiers are HMAC digests only; text-derived fields are boolean flags written only when FABLE_MEASURE_TEXT_SIGNALS=on.",
+  "type": "object",
+  "required": ["v", "campaign_id", "host", "session_key", "project_key", "arm", "event", "ts_ms", "metrics"],
+  "additionalProperties": false,
+  "properties": {
+    "v": { "const": 2 },
+    "campaign_id": { "type": "string", "minLength": 1 },
+    "host": { "enum": ["codex", "claude-code"] },
+    "session_key": { "type": "string", "pattern": "^s_[0-9a-f]{24}$", "description": "HMAC(salt, session_id) — never the raw id" },
+    "project_key": { "type": "string", "pattern": "^p_[0-9a-f]{24}$", "description": "HMAC(salt, cwd) — never the raw path" },
+    "arm": { "enum": ["on", "off"] },
+    "event": { "type": "string", "description": "lowercased lifecycle event name (sessionstart, userpromptsubmit, posttooluse, subagentstart, ...)" },
+    "ts_ms": { "type": "integer", "minimum": 0 },
+    "model": { "type": "string", "description": "low-cardinality model slug metadata" },
+    "permission_mode": { "type": "string", "description": "low-cardinality permission mode metadata" },
+    "metrics": {
+      "type": "object",
+      "description": "Integer counters/flags only. No string fields. Text-derived flags (e.g. reinstruction) appear only under the opt-in text-signals tier.",
+      "additionalProperties": { "type": "integer" }
+    }
+  }
+}

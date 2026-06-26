@@ -30,6 +30,8 @@ jobs:
         run: node test/codex-install-test.mjs
       - name: Codex Agent Skills install (discovery dir, opt-out, marker-free reversibility, honest frontmatter)
         run: node test/codex-skills-test.mjs
+      - name: Measurement core (race-invariant assignment + HMAC privacy + metadata-only ledger)
+        run: node test/measurement-assignment-test.mjs
       - name: Unsupported-claim lint-rule regression (deterministic, offline)
         run: node eval/unsupported-claim-regression/run.mjs
       - name: Scripts are valid and fail-safe
@@ -51,3 +53,7 @@ jobs:
           node --check tools/fable-doctor.mjs
           node --check tools/fable-report.mjs
           node --check test/codex-skills-test.mjs
+          node --check measurement/runtime/assign.cjs
+          node --check measurement/runtime/privacy.cjs
+          node --check measurement/hooks/codex-measure.js
+          node --check test/measurement-assignment-test.mjs

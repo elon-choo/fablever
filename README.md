@@ -67,7 +67,9 @@ node install.mjs        # universal installer — macOS, Linux, AND native Windo
 
 > **Or just ask your AI.** Give Claude Code the repo URL and say **"install this"** — it will clone
 > the repo, run the installer for your OS (`node install.mjs`), and tell you to restart. The default
-> needs **no API key** and costs nothing extra; after you restart, your **first message** kicks off a
+> needs **no separate API key or external-provider charge** — your normal Claude/Codex usage still
+> applies, and the always-on style adds a measured, amortizing token overhead (~14%/call, *not* a saving;
+> see [`eval/cost-latency/`](eval/cost-latency/)). After you restart, your **first message** kicks off a
 > quick two-question setup in your language.
 
 ## First run — it sets itself up, in your language

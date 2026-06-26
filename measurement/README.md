@@ -34,13 +34,20 @@ campaign, let it accrue, read the analysis, then turn it off. Don't leave it on 
 
 ## Run a campaign
 
-1. Register the hook (add to `~/.claude/settings.json` under `hooks.SessionStart`, alongside any existing
-   entries) and copy the hook into place:
+1. Register the holdout hook with the installer (reversible, marker-based — preferred):
+   ```bash
+   node install.mjs --with-measure-holdout          # installs + registers the SessionStart holdout hook
+   node install.mjs --with-measure-holdout --dry-run # preview first; writes nothing
+   # remove later: node install.mjs --no-measure-holdout
+   ```
+   <details><summary>Manual fallback (if you are not using the installer)</summary>
+
    ```bash
    cp measurement/holdout.js ~/.claude/hooks/fable-holdout.js
    # settings.json → hooks.SessionStart → add: { "hooks": [ { "type": "command",
    #   "command": "node $HOME/.claude/hooks/fable-holdout.js" } ] }
    ```
+   </details>
 2. Turn it on for your shell sessions:
    ```bash
    export FABLE_MEASURE=on        # in ~/.zshrc for a sustained campaign
