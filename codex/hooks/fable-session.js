@@ -65,7 +65,17 @@ function isHoldoutOff(sessionId) {
   return false;
 }
 
+// Opt-in, ZERO-CONTENT trust trace: if FABLE_HOOK_TRACE_FILE is set (the codex-native-ab harness sets it),
+// append a {hook, ts} line — no prompt, path, or session id. Its presence after a run proves Codex actually
+// ran (i.e. trusted) this command hook, so an H/S arm can't silently collapse to "hooks installed but inert".
+function traceHook(name) {
+  const f = process.env.FABLE_HOOK_TRACE_FILE;
+  if (!f) return;
+  try { fs.appendFileSync(f, JSON.stringify({ hook: name, ts: Date.now() }) + '\n'); } catch (_) {}
+}
+
 try {
+  traceHook('fable-session');
   if (isOff()) process.exit(0);
 
   // SessionStart event arrives as JSON on stdin: { source: "startup"|"clear"|"resume"|"compact", session_id }.

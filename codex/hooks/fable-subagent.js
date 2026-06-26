@@ -56,7 +56,15 @@ function isHoldoutOff(sessionId) {
   return false;
 }
 
+// Opt-in, ZERO-CONTENT trust trace (see fable-session.js) — proves Codex actually ran this hook.
+function traceHook(name) {
+  const f = process.env.FABLE_HOOK_TRACE_FILE;
+  if (!f) return;
+  try { fs.appendFileSync(f, JSON.stringify({ hook: name, ts: Date.now() }) + '\n'); } catch (_) {}
+}
+
 try {
+  traceHook('fable-subagent');
   if (isOff()) process.exit(0);
 
   // Read the SubagentStart event and skip injection for orchestration agent types. Fail-open: no stdin or

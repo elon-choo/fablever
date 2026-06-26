@@ -51,7 +51,15 @@ function isHoldoutOff(sessionId) {
   return false;
 }
 
+// Opt-in, ZERO-CONTENT trust trace (see fable-session.js) — proves Codex actually ran this hook.
+function traceHook(name) {
+  const f = process.env.FABLE_HOOK_TRACE_FILE;
+  if (!f) return;
+  try { fs.appendFileSync(f, JSON.stringify({ hook: name, ts: Date.now() }) + '\n'); } catch (_) {}
+}
+
 try {
+  traceHook('fable-reinject');
   if (isOff()) process.exit(0);
   // Read the UserPromptSubmit event only to honor the measurement holdout; the reminder text is constant.
   try { if (!process.stdin.isTTY) { const raw = fs.readFileSync(0, 'utf8'); if (raw && isHoldoutOff(String(JSON.parse(raw).session_id || '').trim())) process.exit(0); } } catch (_) {}

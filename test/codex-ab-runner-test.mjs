@@ -14,6 +14,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RUN = path.join(REPO, 'eval', 'codex-native-ab', 'run.mjs');
 const FAKE = path.join(REPO, 'test', 'fixtures', 'fake-codex.js');
 const FAKE_EAGER = path.join(REPO, 'test', 'fixtures', 'fake-codex-eager.js');
+const FAKE_TRUSTED = path.join(REPO, 'test', 'fixtures', 'fake-codex-trusted.js');
 
 let ok = 0, n = 0;
 const t = (cond, msg) => { n++; if (cond) { ok++; console.log('PASS:', msg); } else console.log('FAIL:', msg); };
@@ -114,6 +115,35 @@ function execOne(task, bin = FAKE) {
 {
   const { meta } = execOne('nochange-001', FAKE_EAGER);
   t(meta && meta.unnecessary_change === true, 'execute: editing an already-correct file → unnecessary change flagged');
+}
+
+// helper to run a specific arm (e.g. an H-arm that does a real project install + a fake codex)
+function execArm(task, arm, bin, extra = []) {
+  const home = mkdtempSync(path.join(tmpdir(), 'cab-home-'));
+  const out = path.join(mkdtempSync(path.join(tmpdir(), 'cab-out-')), 'out');
+  spawnSync(process.execPath, [RUN, `--codex-home=${home}`, `--arms=${arm}`, `--task=${task}`, `--out=${out}`, ...extra], { encoding: 'utf8', env: { ...process.env, FABLE_CODEX_BIN: bin } });
+  const meta = rj(path.join(out, task, `${arm}.meta.json`));
+  rmSync(home, { recursive: true, force: true }); rmSync(path.dirname(out), { recursive: true, force: true });
+  return meta;
+}
+
+// 9) the hook trace is zero-content (the trust mechanism leaks nothing)
+{
+  const tf = path.join(mkdtempSync(path.join(tmpdir(), 'cab-trace-')), 't.jsonl');
+  spawnSync(process.execPath, [path.join(REPO, 'codex', 'hooks', 'fable-session.js')], { input: JSON.stringify({ source: 'startup', session_id: 'SEKRET-sid', cwd: '/SEKRET-path' }), env: { PATH: process.env.PATH, FABLE_HOOK_TRACE_FILE: tf }, encoding: 'utf8' });
+  const trace = (() => { try { return readFileSync(tf, 'utf8'); } catch { return ''; } })();
+  t(/fable-session/.test(trace) && trace.trim().length > 0, 'hook trace: the SessionStart hook writes a trace line when FABLE_HOOK_TRACE_FILE is set');
+  t(!/SEKRET/.test(trace), 'hook trace: zero-content — no session id / cwd ends up in the trace');
+}
+
+// 10) H-arm hook-trust: trusted fake (writes trace) → fired; plain fake → not fired; --require-hook-trust drops
+{
+  const trusted = execArm('scope-001-stripped', 'H', FAKE_TRUSTED);
+  t(trusted && trusted.hook_fired === true && /verified/.test(trusted.hook_trust), 'H arm: hooks fired (trusted) → hook_trust verified');
+  const untrusted = execArm('scope-001-stripped', 'H', FAKE);
+  t(untrusted && untrusted.hook_fired === false && /UNVERIFIED/.test(untrusted.hook_trust), 'H arm: hooks did NOT fire → hook_trust UNVERIFIED (would silently collapse to M)');
+  const dropped = execArm('scope-001-stripped', 'H', FAKE, ['--require-hook-trust']);
+  t(dropped === null, 'H arm: --require-hook-trust drops a run whose hooks did not fire (not scored as a mislabeled arm)');
 }
 
 console.log(`\n${ok}/${n} checks passed`);

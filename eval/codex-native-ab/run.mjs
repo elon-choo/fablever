@@ -33,7 +33,8 @@ const SEED = Number(val('seed', '1')) || 1;
 const armSel = (val('arms', ARM_IDS.join(','))).split(',').map(s => s.trim()).filter(a => ARMS[a]);
 const taskSel = val('task', '');
 const MODEL = val('model', '');
-const assumeTrust = has('--assume-hook-trust');
+const assumeTrust = has('--assume-hook-trust');   // treat H/S hooks as trusted without checking the trace
+const requireTrust = has('--require-hook-trust');  // DROP an H/S run whose hooks did not actually fire
 
 function loadTasks() {
   const raw = fs.readFileSync(path.join(DIR, 'tasks.jsonl'), 'utf8');
@@ -109,8 +110,6 @@ function runOne(task, armId, evalHome, outDir) {
       const r = spawnSync(process.execPath, [INSTALL, ...arm.installArgs], { cwd: ws, env: safeCodexEnv(evalHome, { HOME: evalHome }).env, encoding: 'utf8' });
       meta.install_ok = r.status === 0;
     }
-    if (arm.requiresTrustedHooks) meta.hook_trust = assumeTrust ? 'assumed (--assume-hook-trust)' : 'UNVERIFIED — intention-to-treat (no probe confirmed hooks fired)';
-
     const prompt = fs.readFileSync(path.join(DIR, task.prompt_file), 'utf8').trim();
     const finalPath = path.join(ws, 'final.txt');
     const trace = path.join(ws, 'hooktrace.jsonl');
@@ -120,6 +119,20 @@ function runOne(task, armId, evalHome, outDir) {
     const events = String(r.stdout || '');
     const parsed = parseEvents(events);
     meta.counts = parsed.counts; meta.usage = parsed.usage; meta.failed = parsed.failed;
+
+    // Hook-trust check: an H/S arm is only valid if Codex actually RAN the hooks (trusted). The hooks append
+    // a zero-content line to the trace file when they fire; an empty/absent trace = hooks installed but inert
+    // (untrusted), which would make the arm silently equal to M. Record it, and — with --require-hook-trust —
+    // drop such a run rather than score a mislabeled arm.
+    if (arm.requiresTrustedHooks) {
+      const fired = assumeTrust || (() => { try { return fs.readFileSync(trace, 'utf8').trim().length > 0; } catch { return false; } })();
+      meta.hook_fired = fired;
+      meta.hook_trust = assumeTrust ? 'assumed (--assume-hook-trust)' : (fired ? 'verified (hooks fired)' : 'UNVERIFIED — hooks did not fire; trust them in Codex with /hooks');
+      if (!fired && requireTrust) {
+        process.stderr.write(`  drop  -> ${task.id}/${armId}: hooks did not fire and --require-hook-trust is set (untrusted H/S arm would collapse to M)\n`);
+        return null;
+      }
+    }
 
     const changed = changedFiles(path.join(DIR, task.fixture), ws);
     meta.changed_files = changed;
@@ -154,5 +167,6 @@ const tasks = loadTasks();
 const order = shuffleArms(SEED).filter(a => armSel.includes(a));
 const results = [];
 for (const task of tasks) for (const armId of order) results.push(runOne(task, armId, evalHome, outDir));
-process.stdout.write(`Wrote ${results.length} run(s) to ${outDir}\n`);
-if (JSON_OUT) process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+const written = results.filter(Boolean);
+process.stdout.write(`Wrote ${written.length} run(s) to ${outDir}${written.length < results.length ? ` (${results.length - written.length} dropped: untrusted hooks)` : ''}\n`);
+if (JSON_OUT) process.stdout.write(JSON.stringify(written, null, 2) + '\n');

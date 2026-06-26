@@ -31,7 +31,12 @@ copies auth, and passes a **token-free allowlist env** to the child (`lib/safe-e
   outcome matrix and reports the four pre-registered contrasts with an exact paired **McNemar** test,
   **Holm** correction, a sign-aware verdict, and park-until-proven below the pilot floor.
 
-**Pending (next increments):** the H/S **hook-trust probe** (refuse an untrusted H/S run); the **blind quality
-judge** (`judge.mjs`, a different-lab second opinion with order-swapped blind judging); and the
-**pilot → frozen confirmatory** task set (≥60 across the 6 domains, frozen after the pilot). Until those land
-this is the harness + scorer, not a result.
+- the H/S **hook-trust probe** (part of `node test/codex-ab-runner-test.mjs`): the Codex injector hooks write
+  a zero-content trace line when they fire, so each H/S run records whether Codex actually ran (trusted) the
+  hooks. `--require-hook-trust` DROPS a run whose hooks were inert rather than scoring an arm that silently
+  collapsed to M. The trace carries no prompt / path / session id (asserted).
+
+**Pending (next increments):** the **blind quality judge** (`judge.mjs`, a different-lab second opinion with
+order-swapped blind judging; reads adapter commands, never a key); and the **pilot → frozen confirmatory**
+task set (≥60 across the 6 domains, frozen after the pilot). Until those land this is the harness + scorer +
+trust gate, not a result.
