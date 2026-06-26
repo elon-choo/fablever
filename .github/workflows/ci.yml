@@ -36,6 +36,8 @@ jobs:
         run: node test/codex-campaign-test.mjs
       - name: Measurement read-out statistics (seeded bootstrap CI / permutation / Cliff's δ / Holm + analyze)
         run: node test/measurement-stats-test.mjs
+      - name: Codex-native A/B harness (offline fake-codex — dry-run purity, safe env, scorers, event parse)
+        run: node test/codex-ab-runner-test.mjs
       - name: Unsupported-claim lint-rule regression (deterministic, offline)
         run: node eval/unsupported-claim-regression/run.mjs
       - name: Scripts are valid and fail-safe
@@ -63,6 +65,14 @@ jobs:
           node --check measurement/hooks/codex-measure.js
           node --check measurement/codex-campaign.mjs
           node --check measurement/lib/stats.mjs
+          node --check measurement/runtime/holdout.cjs
+          node --check eval/codex-native-ab/run.mjs
+          node --check eval/codex-native-ab/lib/arms.mjs
+          node --check eval/codex-native-ab/lib/safe-env.mjs
+          node --check eval/codex-native-ab/lib/codex-events.mjs
           node --check test/measurement-assignment-test.mjs
           node --check test/codex-campaign-test.mjs
           node --check test/measurement-stats-test.mjs
+          node --check test/codex-ab-runner-test.mjs
+          node --check test/fixtures/fake-codex.js
+          node --check test/fixtures/fake-codex-eager.js

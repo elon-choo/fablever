@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/elon-choo/fablever/eval/codex-native-ab/schemas/task.schema.json",
+  "title": "Codex-native A/B task",
+  "type": "object",
+  "required": ["id", "domain", "fixture", "prompt_file", "allowed_paths", "forbidden_paths", "expected_no_change", "verification", "primary_metrics"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "base_id": { "type": "string", "description": "shared id across consent_kept/consent_stripped variants" },
+    "variant": { "enum": ["consent_kept", "consent_stripped", "none"] },
+    "domain": { "enum": ["scope-limited", "bugfix-repro", "no-change", "doc-update", "research", "marketing", "code-review"] },
+    "fixture": { "type": "string", "description": "path (relative to this dir) of the workspace fixture to copy + restore" },
+    "prompt_file": { "type": "string", "description": "path (relative to this dir) of the prompt text given to codex exec" },
+    "allowed_paths": { "type": "array", "items": { "type": "string" }, "description": "paths the task MAY modify; a write outside these is a scope violation" },
+    "forbidden_paths": { "type": "array", "items": { "type": "string" }, "description": "paths that must NOT be touched (explicit out-of-scope)" },
+    "expected_no_change": { "type": "boolean", "description": "true for no-change tasks: any production-code diff is an unnecessary change" },
+    "verification": { "type": "array", "items": { "type": "array", "items": { "type": "string" } }, "description": "argv arrays run in the workspace; all must exit 0 for acceptance_pass" },
+    "eligible_skills": { "type": "array", "items": { "type": "string" } },
+    "primary_metrics": { "type": "array", "items": { "enum": ["scope_violation", "acceptance_pass", "unsupported_done_claim", "unnecessary_change"] } }
+  }
+}
