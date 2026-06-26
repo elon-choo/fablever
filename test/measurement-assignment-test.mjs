@@ -74,7 +74,8 @@ function runHook(event, env) {
   if (existsSync(dir)) for (const f of readdirSync(dir)) rows.push(...readFileSync(path.join(dir, f), 'utf8').split('\n').filter(Boolean).map(JSON.parse));
   return { r, rows, ledgerText: existsSync(dir) ? readdirSync(dir).map(f => readFileSync(path.join(dir, f), 'utf8')).join('') : '' };
 }
-const newHome = () => mkdtempSync(path.join(tmpdir(), 'fable-measure-'));
+// The logger reads (never creates) the campaign salt — the campaign `start` seeds it. Mirror that here.
+const newHome = () => { const h = mkdtempSync(path.join(tmpdir(), 'fable-measure-')); writeFileSync(path.join(h, 'measurement-salt'), SALT, { mode: 0o600 }); return h; };
 
 // ---------------------------------------------------------------------------------------------------------
 // 3) measure hook: metadata-only row, HMAC ids, no raw session/cwd/prompt/secret

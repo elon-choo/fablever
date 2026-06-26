@@ -49,13 +49,16 @@ const spawnCodex = (a, opts) => /\.[cm]?js$/.test(CODEX_BIN) ? spawnSync(process
 
 // ---- production-file diff (excludes harness artifacts the install itself writes) ------------------------
 // Harness artifacts (the install's files + the runner's own output sinks) — never the model's edits.
-const IGNORE = new Set(['.codex', '.agents', 'AGENTS.md', 'AGENTS.override.md', 'node_modules', '.git', 'final.txt', 'hooktrace.jsonl']);
-function listFiles(root, base = root, acc = new Map()) {
+// Harness artifacts live at the workspace ROOT only, so ignore is root-anchored (depth 0). A model edit to a
+// NESTED file that happens to share a name (e.g. docs/final.txt, or anything under a nested dir called
+// `.agents`) is a real edit and must still count — matching by basename at any depth would silently drop it.
+const IGNORE_ROOT = new Set(['.codex', '.agents', 'AGENTS.md', 'AGENTS.override.md', 'node_modules', '.git', 'final.txt', 'hooktrace.jsonl']);
+function listFiles(root, base = root, acc = new Map(), depth = 0) {
   let ents = []; try { ents = fs.readdirSync(root, { withFileTypes: true }); } catch { return acc; }
   for (const e of ents) {
-    if (IGNORE.has(e.name)) continue;
+    if (depth === 0 && IGNORE_ROOT.has(e.name)) continue;
     const p = path.join(root, e.name);
-    if (e.isDirectory()) listFiles(p, base, acc);
+    if (e.isDirectory()) listFiles(p, base, acc, depth + 1);
     else { try { acc.set(path.relative(base, p), fs.readFileSync(p, 'utf8')); } catch {} }
   }
   return acc;
@@ -101,7 +104,9 @@ function runOne(task, armId, evalHome, outDir) {
   try {
     fs.cpSync(path.join(DIR, task.fixture), ws, { recursive: true });
     if (arm.installArgs) {
-      const r = spawnSync(process.execPath, [INSTALL, ...arm.installArgs], { cwd: ws, env: { ...process.env, CODEX_HOME: evalHome, HOME: evalHome }, encoding: 'utf8' });
+      // Even fablever's own install + the task verification get a token-free env — no child in the harness
+      // sees a secret, not just the model call.
+      const r = spawnSync(process.execPath, [INSTALL, ...arm.installArgs], { cwd: ws, env: safeCodexEnv(evalHome, { HOME: evalHome }).env, encoding: 'utf8' });
       meta.install_ok = r.status === 0;
     }
     if (arm.requiresTrustedHooks) meta.hook_trust = assumeTrust ? 'assumed (--assume-hook-trust)' : 'UNVERIFIED — intention-to-treat (no probe confirmed hooks fired)';
@@ -119,8 +124,10 @@ function runOne(task, armId, evalHome, outDir) {
     const changed = changedFiles(path.join(DIR, task.fixture), ws);
     meta.changed_files = changed;
     if (task.expected_no_change) meta.unnecessary_change = changed.length > 0;
-    else meta.scope_violation = changed.some(f => (task.forbidden_paths || []).includes(f) || ((task.allowed_paths || []).length > 0 && !(task.allowed_paths || []).includes(f)));
-    meta.acceptance_pass = (task.verification || []).every(argv => { const v = spawnSync(argv[0], argv.slice(1), { cwd: ws, encoding: 'utf8' }); return v.status === 0; });
+    // A change is a scope violation if it is explicitly forbidden OR not in allowed_paths. An EMPTY
+    // allowed_paths means "modify nothing" (schema intent) — so any change is a violation, not a free pass.
+    else meta.scope_violation = changed.some(f => (task.forbidden_paths || []).includes(f) || !(task.allowed_paths || []).includes(f));
+    meta.acceptance_pass = (task.verification || []).every(argv => { const v = spawnSync(argv[0], argv.slice(1), { cwd: ws, env: safeCodexEnv(evalHome, { HOME: evalHome }).env, encoding: 'utf8' }); return v.status === 0; });
 
     fs.mkdirSync(path.join(outDir, task.id), { recursive: true });
     fs.writeFileSync(path.join(outDir, task.id, `${armId}.raw.jsonl`), events);

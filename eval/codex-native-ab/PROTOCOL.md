@@ -84,3 +84,10 @@ recording their source SHA; they are frozen for a confirmatory run and never edi
   real-user productivity numbers.
 - Tool/command counts are "observed via the JSON event stream", which may not capture every execution path.
 - One model + one Codex version is not all models; results do not generalize beyond what was run.
+- The runner's `-o` final-message sink (`final.txt`) and hook trace live at the workspace root and are
+  excluded from the production-file diff; a model that wrote its entire deliverable to a root file literally
+  named `final.txt` would under-count its changes. Nested files (e.g. `docs/final.txt`) DO count — the
+  ignore-set is root-anchored, not by-basename-at-any-depth.
+- `acceptance_pass` is only as strong as each task's `verification` argv — it must be a BEHAVIORAL check
+  (assert the bug is fixed / the no-change file still works), not a syntax check, or the headline metric is a
+  no-op. The smoke fixtures ship behavioral `test.js` checks for exactly this reason.

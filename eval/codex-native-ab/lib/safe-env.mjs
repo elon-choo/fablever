@@ -8,8 +8,10 @@
 // Names we pass through (everything else is dropped). Deliberately tiny.
 const ALLOW = ['PATH', 'HOME', 'USER', 'LOGNAME', 'LANG', 'LC_ALL', 'LC_CTYPE', 'TERM', 'TMPDIR', 'TZ', 'SHELL', 'SystemRoot', 'COMSPEC', 'PATHEXT'];
 
-// Anything matching these is treated as a secret and must never reach the child (defense-in-depth assertion).
-const SECRET_RE = /(API_?KEY|ACCESS_?TOKEN|SECRET|PASSWORD|_TOKEN|AUTH|OPENAI|ANTHROPIC|GEMINI|OPENROUTER|CHATGPT|BEARER)/i;
+// Anything matching these is treated as a secret and must never reach the child (defense-in-depth assertion
+// on the `extra` arg; the allowlist above already drops everything else). Kept broad on purpose — `extra` is
+// fablever-controlled, so an over-match only drops a var, never leaks one.
+const SECRET_RE = /(API_?KEY|ACCESS_?TOKEN|_TOKEN|\bTOKEN\b|SECRET|PASSWORD|PASSWD|AUTH|CREDENTIAL|PRIVATE_?KEY|SIGNING_?KEY|SESSION_?KEY|DATABASE_URL|\bDSN\b|COOKIE|_PAT\b|BEARER|OPENAI|ANTHROPIC|GEMINI|GOOGLE|OPENROUTER|CHATGPT|GITHUB|GITLAB|AWS|GCP|AZURE)/i;
 
 export function safeCodexEnv(codexHome, extra = {}) {
   const src = process.env;

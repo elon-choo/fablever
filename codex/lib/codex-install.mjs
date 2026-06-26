@@ -382,12 +382,12 @@ function executeUninstall(R, log) {
     }
   }
 
-  // 4) runtime + profile home
+  // 4) runtime + profile home (rmrf the whole profile home so nothing lingers — runtime, version file, AND
+  // any campaign measure data under it. Uninstall is an explicit teardown; "removed" should mean removed.)
   rmrf(P.runtime);
-  for (const v of ['full', 'compact', 'core']) rmf(path.join(P.profileHome, `${v}.md`));
   rmf(P.installedVersion);
-  try { fs.rmdirSync(P.profileHome); } catch (_) {}
-  log('  done     -> Codex fablever install removed (AGENTS/hooks/config/skills restored to their pre-fablever content).');
+  rmrf(P.profileHome);
+  log('  done     -> Codex fablever install removed (AGENTS/hooks/config/skills + runtime/measure home restored to their pre-fablever content).');
 }
 
 // ---- STATUS ---------------------------------------------------------------------------------------------

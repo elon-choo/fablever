@@ -14,10 +14,15 @@
 // the source text. Fail-open: any error exits 0 with no stdout. Zero dependencies.
 const fs = require('fs');
 const path = require('path');
-const { readOrCreateSalt, anonId } = require('../runtime/privacy.cjs');
+const { anonId } = require('../runtime/privacy.cjs');
 const { assignArm } = require('../runtime/assign.cjs');
 
 const onish = v => /^(on|1|true|yes)$/i.test(String(v || ''));
+// model/permission_mode are host-set metadata, but we treat the event as untrusted: bound them so an
+// unexpected/oversized/secret-shaped value can never land verbatim in the ledger (metadata-only contract).
+const PERM_MODES = new Set(['default', 'plan', 'acceptedits', 'acceptedits-once', 'bypasspermissions', 'read-only', 'workspace-write', 'danger-full-access', 'unknown']);
+const safeModel = v => { const s = String(v || 'unknown'); return (s.length <= 40 && /^[\w.\-:]+$/.test(s)) ? s : 'other'; };
+const safePerm = v => { const s = String(v || 'unknown').toLowerCase(); return PERM_MODES.has(s) ? s : 'other'; };
 // user "steer me back" proxy (EN + KO) — applied ONLY to the user's own prompt, only in the opt-in tier.
 const REINSTRUCT = /\b(no,|nope|actually|that'?s wrong|not what i|undo|revert|stop,|wrong|instead|don'?t do)\b|아니|다시|틀렸|되돌|그게 아니|하지\s*마/i;
 const EDIT_TOOLS = /^(edit|write|multiedit|notebookedit|apply_patch|applypatch|update_plan)$/i;
@@ -42,7 +47,11 @@ try {
   const sessionId = String(ev.session_id || ev.sessionId || '').trim();
   if (!sessionId) process.exit(0);
 
-  const salt = readOrCreateSalt(baseDir);
+  // Read the campaign salt — do NOT create it. The campaign `start` seeds it once, before any session, so
+  // the injector guard (which only reads) and this logger always derive the same arm. If there is no salt
+  // (FABLE_MEASURE set without starting a campaign), stay silent rather than create one and risk a
+  // first-session arm mismatch where the guard injects but we log the session as the untreated baseline.
+  let salt; try { salt = fs.readFileSync(path.join(baseDir, 'measurement-salt')); } catch (_) { process.exit(0); }
   const sessionKey = anonId('s', sessionId, salt);
   const projectKey = anonId('p', ev.cwd || '', salt); // cwd is HMAC'd, never stored raw
   const arm = assignArm({ campaignId, sessionId, salt, offPercent: Number(process.env.FABLE_MEASURE_OFF_PCT || 50) });
@@ -79,8 +88,8 @@ try {
     arm,
     event: eventName,
     ts_ms: Date.now(),
-    model: String(ev.model || 'unknown'),
-    permission_mode: String(ev.permission_mode || 'unknown'),
+    model: safeModel(ev.model),
+    permission_mode: safePerm(ev.permission_mode),
     metrics,
   });
 } catch (_) {

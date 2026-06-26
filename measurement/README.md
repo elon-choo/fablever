@@ -94,3 +94,16 @@ path, the Codex holdout measures the **injection layer**, not the base `AGENTS.m
   graded productivity score. They are deliberately plural so no single one drives a conclusion; treat the
   verdict as directional.
 - **No keys, no network, no model calls.** Reads only the local ledger and your own transcripts.
+
+### Known limitations (surfaced by an adversarial review)
+
+- **Percentile bootstrap CI is mildly anti-conservative at the 15/arm floor** (~7% false exclusion of 0 vs
+  5% nominal). `analyze` prints this caveat; lean on the Holm-corrected p and a clearly-signed CI, and prefer
+  more sessions over reading right at the floor.
+- **`FABLE_MEASURE_OFF_PCT` defaults to 50** if unset — `start` prints the export, but if you skip it both the
+  guard and the logger silently use 50/50. Set it from the `start` output for any other allocation.
+- **The guard and logger agree only while the campaign salt is stable.** `start` seeds the salt once and the
+  logger only ever READS it (never creates one), so a normally-started campaign is consistent from session 1;
+  deleting/regenerating the salt mid-campaign would flip ~half of subsequent sessions' arms. Don't.
+- **Codex has no stable `SessionEnd` event**, so session duration is approximated from the first/last observed
+  event, and tool counts are "observed via hook-covered events" — some execution paths may not be captured.

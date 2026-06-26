@@ -40,7 +40,7 @@ t(adj.every((p, i) => p >= [0.01, 0.04, 0.03][i] && p <= 1), 'Holm: adjusted ≥
 t(adj[0] === Math.min(1, 0.01 * 3), 'Holm: smallest p scaled by m');
 
 // ---- analyze command on a synthesized ledger -----------------------------------------------------------
-function seedCampaign(home, { onN, offN, textSignals = false }) {
+function seedCampaign(home, { onN, offN, textSignals = false, onFailed = 0, offFailed = 2 }) {
   const measure = path.join(home, 'fable-profile', 'measure');
   const events = path.join(measure, 'events');
   mkdirSync(events, { recursive: true });
@@ -51,9 +51,8 @@ function seedCampaign(home, { onN, offN, textSignals = false }) {
     for (let i = 0; i < 3; i++) rows.push({ v: 2, campaign_id: 'st', host: 'codex', session_key: key, project_key: 'p_x', arm, event: 'posttooluse', ts_ms: 1, metrics: { tool_call: 1, ...(i < failed ? { tool_failed: 1 } : {}) } });
     writeFileSync(path.join(events, `${key}.jsonl`), rows.map(r => JSON.stringify(r)).join('\n') + '\n');
   };
-  // off arm fails MORE than on arm (so the layer "helps": on − off is negative)
-  for (let i = 0; i < onN; i++) writeSession(`s_on${i}`, 'on', 0);
-  for (let i = 0; i < offN; i++) writeSession(`s_off${i}`, 'off', 2);
+  for (let i = 0; i < onN; i++) writeSession(`s_on${i}`, 'on', onFailed);
+  for (let i = 0; i < offN; i++) writeSession(`s_off${i}`, 'off', offFailed);
   return measure;
 }
 const runAnalyze = home => spawnSync(process.execPath, [CLI, 'analyze'], { env: { ...process.env, HOME: home, USERPROFILE: home, CODEX_HOME: path.join(home, '.codex') }, encoding: 'utf8' });
@@ -72,8 +71,17 @@ const runAnalyze = home => spawnSync(process.execPath, [CLI, 'analyze'], { env: 
   seedCampaign(path.join(home, '.codex'), { onN: 20, offN: 20 });
   const r = runAnalyze(home);
   t(/qualified sessions: on=20, off=20/.test(r.stdout), 'analyze: counts qualified sessions per arm');
-  t(/tool_failed/.test(r.stdout) && /Holm/.test(r.stdout) && /Cliff's δ/.test(r.stdout), 'analyze: prints primary table with CI + Holm + Cliff δ');
-  t(/verdict:/.test(r.stdout), 'analyze: prints a verdict when powered');
+  t(/failed_tool_rate/.test(r.stdout) && /Holm/.test(r.stdout) && /Cliff's δ/.test(r.stdout), 'analyze: prints primary RATE table with CI + Holm + Cliff δ');
+  t(/(helps|HARMS|BREAK-EVEN)/.test(r.stdout), 'analyze: prints a sign-aware verdict when powered');
+  t(/helps/.test(r.stdout), 'analyze: off-arm fails more → layer correctly read as HELPS (negative Δ), not harm');
+  rmSync(home, { recursive: true, force: true });
+}
+// the always-on arm fails MORE → must be read as HARMS, never framed as a benefit (sign-aware verdict)
+{
+  const home = mkdtempSync(path.join(tmpdir(), 'mstat-harm-'));
+  seedCampaign(path.join(home, '.codex'), { onN: 20, offN: 20, onFailed: 2, offFailed: 0 });
+  const r = runAnalyze(home);
+  t(/HARMS/.test(r.stdout) && !/✓ helps/.test(r.stdout), 'analyze: on-arm fails more → HARMS, NOT framed as a win (the sign-blind bug is fixed)');
   rmSync(home, { recursive: true, force: true });
 }
 

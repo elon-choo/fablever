@@ -152,21 +152,30 @@ function analyze() {
     return;
   }
 
-  // primary lower-is-better outcomes (the layer should REDUCE these). reinstructions only with text-signals.
-  const PRIMARY = ['tool_failed', ...(cfg.text_signals ? ['reinstructions'] : [])];
-  const rows = PRIMARY.map(k => {
-    const on = col('on', k), off = col('off', k);
-    return { k, ci: bootstrapDiffCI(on, off, { seed: 12345 }), p: permutationP(on, off, { seed: 999 }), cd: cliffsDelta(on, off) };
+  // primary lower-is-better outcomes — as RATES, not raw counts, so a pure session-length imbalance (one arm
+  // simply running longer) can't masquerade as an effect. failed-tool RATE = tool_failed / tool_calls;
+  // re-instruction RATE = reinstructions / user_turns (text-signals only).
+  const rateCol = (arm, num, den) => arms[arm].map(o => o[num] / Math.max(1, o[den]));
+  const PRIMARY = [{ label: 'failed_tool_rate', num: 'tool_failed', den: 'tool_calls' },
+    ...(cfg.text_signals ? [{ label: 'reinstruction_rate', num: 'reinstructions', den: 'user_turns' }] : [])];
+  const rows = PRIMARY.map(P => {
+    const on = rateCol('on', P.num, P.den), off = rateCol('off', P.num, P.den);
+    return { label: P.label, ci: bootstrapDiffCI(on, off, { seed: 12345 }), p: permutationP(on, off, { seed: 999 }), cd: cliffsDelta(on, off) };
   });
   const adj = holm(rows.map(r => r.p));
-  console.log('\n## primary lower-is-better outcomes (on − off; negative = the always-on layer helps)');
+  console.log('\n## primary lower-is-better RATES (on − off; negative = the always-on layer REDUCES the bad rate)');
   rows.forEach((r, i) => {
-    console.log(`  ${r.k.padEnd(14)} Δmean=${fmt(r.ci.point)}  95% CI [${fmt(r.ci.lo)}, ${fmt(r.ci.hi)}]  p=${fmt(r.p, 3)} (Holm ${fmt(adj[i], 3)})  Cliff's δ=${fmt(r.cd.delta, 3)} (${r.cd.mag})`);
+    console.log(`  ${r.label.padEnd(18)} Δ=${fmt(r.ci.point, 3)}  95% CI [${fmt(r.ci.lo, 3)}, ${fmt(r.ci.hi, 3)}]  p=${fmt(r.p, 3)} (Holm ${fmt(adj[i], 3)})  Cliff's δ=${fmt(r.cd.delta, 3)} (${r.cd.mag})`);
   });
-  const anySig = rows.some((r, i) => adj[i] < 0.05);
-  console.log(anySig
-    ? '\n## verdict: at least one primary outcome differs after Holm correction — read the sign + CI. A CI that excludes 0 toward negative = the layer is paying for its context.'
-    : '\n## verdict: no primary outcome is distinguishable after correction (CIs include 0). lift≈0 is a BREAK-EVEN warning for an always-on layer, not a pass — it is spending context it is not visibly repaying.');
+  // Sign-aware: a significant outcome HELPS only if the layer reduced the bad rate (point < 0); a
+  // significant outcome with point > 0 means the always-on layer made it WORSE — never frame that as a win.
+  const sig = rows.filter((r, i) => adj[i] < 0.05);
+  const helps = sig.filter(r => r.ci.point < 0).map(r => r.label);
+  const harms = sig.filter(r => r.ci.point > 0).map(r => r.label);
+  console.log('\n## verdict (note: percentile bootstrap CI is mildly anti-conservative near the 15/arm floor — lean on Holm + a clearly-signed CI)');
+  if (harms.length) console.log(`  ⚠ HARMS: the always-on layer significantly INCREASED ${harms.join(', ')} — a net loss on those outcomes; do not keep it always-on for this workload.`);
+  if (helps.length) console.log(`  ✓ helps: the always-on layer significantly reduced ${helps.join(', ')} — it is paying for its context there.`);
+  if (!sig.length) console.log('  BREAK-EVEN: no primary rate is distinguishable after Holm correction (CIs include 0). lift≈0 is a warning for an always-on layer, not a pass — it spends context it is not visibly repaying.');
 }
 
 function stop() {
@@ -181,7 +190,9 @@ function stop() {
     if (hooks.hooks[ev].length === 0) delete hooks.hooks[ev];
   }
   if (Object.keys(hooks.hooks).length === 0) delete hooks.hooks;
-  fs.writeFileSync(P.hooksJson, JSON.stringify(hooks, null, 2) + '\n');
+  // Mirror the uninstall convention: if nothing is left, remove the file rather than leave an empty {}.
+  if (Object.keys(hooks).length === 0) { try { fs.unlinkSync(P.hooksJson); } catch (_) {} }
+  else fs.writeFileSync(P.hooksJson, JSON.stringify(hooks, null, 2) + '\n');
   console.log(`Stopped: removed ${removed} measure hook entr${removed === 1 ? 'y' : 'ies'} (collected data kept under ${measureHome}).`);
   console.log(`Now unset the campaign env:  unset FABLE_MEASURE FABLE_MEASURE_HOME FABLE_MEASURE_CAMPAIGN FABLE_MEASURE_OFF_PCT FABLE_MEASURE_TEXT_SIGNALS`);
 }
