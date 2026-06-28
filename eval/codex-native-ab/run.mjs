@@ -35,6 +35,10 @@ const taskSel = val('task', '');
 const MODEL = val('model', '');
 const assumeTrust = has('--assume-hook-trust');   // treat H/S hooks as trusted without checking the trace
 const requireTrust = has('--require-hook-trust');  // DROP an H/S run whose hooks did not actually fire
+// Pass Codex's --dangerously-bypass-hook-trust so the H/S project hooks actually fire under `codex exec`
+// (interactive /hooks trust does not carry to the throwaway per-task workspaces). Safe here: the hooks are
+// fablever's own, vetted, zero-content, fail-open. The trace gate still VERIFIES they fired.
+const trustHooks = has('--trust-hooks');
 
 function loadTasks() {
   const tasksFile = val('tasks', 'tasks.jsonl');               // --tasks=<file> to run a different task set
@@ -47,7 +51,7 @@ function loadTasks() {
   return tasks;
 }
 
-const codexArgs = (prompt, finalPath) => ['exec', '--json', '--ephemeral', '--skip-git-repo-check', '--ignore-user-config', '--sandbox', 'workspace-write', '-o', finalPath, ...(MODEL ? ['-m', MODEL] : []), prompt];
+const codexArgs = (prompt, finalPath) => ['exec', '--json', '--ephemeral', '--skip-git-repo-check', '--ignore-user-config', '--sandbox', 'workspace-write', ...(trustHooks ? ['--dangerously-bypass-hook-trust'] : []), '-o', finalPath, ...(MODEL ? ['-m', MODEL] : []), prompt];
 // Run the codex binary. A `.js`/`.mjs` CODEX_BIN (a fake shim, for offline harness tests) is run via node so
 // it works cross-platform; a real `codex` binary is spawned directly.
 const spawnCodex = (a, opts) => /\.[cm]?js$/.test(CODEX_BIN) ? spawnSync(process.execPath, [CODEX_BIN, ...a], opts) : spawnSync(CODEX_BIN, a, opts);
@@ -89,7 +93,7 @@ function plan() {
     codex_command_template: `${CODEX_BIN} ${codexArgs('<prompt>', '<workspace>/final.txt').join(' ')}`,
     network: 'Codex model access only (the model call). No other network.',
     credentials: 'the runner inspects/copies NO auth; a token-free allowlist env is passed to the child.',
-    hook_trust: 'H and S require trusted Codex hooks; the runner refuses them unless a probe confirms the hooks fired (or --assume-hook-trust for a controlled rerun).',
+    hook_trust: `H and S require Codex to actually run their hooks. Pass --trust-hooks (adds Codex's --dangerously-bypass-hook-trust, vetted fablever hooks only) so they fire under codex exec; the trace gate then verifies hook_fired. Add --require-hook-trust to DROP any H/S run whose hooks still didn't fire.${trustHooks ? '  [--trust-hooks ON]' : ''}`,
     scoring: 'scope_violation + acceptance_pass + unnecessary_change are computed here (path/exit based); unsupported_done_claim is scored by the FROZEN oracle in score.mjs, not by the code under test.',
     writes: 'nothing in --dry-run.',
   };
