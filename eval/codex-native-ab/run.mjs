@@ -37,7 +37,11 @@ const assumeTrust = has('--assume-hook-trust');   // treat H/S hooks as trusted 
 const requireTrust = has('--require-hook-trust');  // DROP an H/S run whose hooks did not actually fire
 
 function loadTasks() {
-  const raw = fs.readFileSync(path.join(DIR, 'tasks.jsonl'), 'utf8');
+  const tasksFile = val('tasks', 'tasks.jsonl');               // --tasks=<file> to run a different task set
+  // Resolve relative to the cwd the user typed it from, else relative to this eval dir; absolute wins.
+  const cands = [path.resolve(process.cwd(), tasksFile), path.resolve(DIR, tasksFile)];
+  const file = cands.find(c => { try { return fs.existsSync(c); } catch { return false; } }) || cands[1];
+  const raw = fs.readFileSync(file, 'utf8');
   let tasks = raw.split('\n').filter(l => l.trim()).map(l => JSON.parse(l));
   if (taskSel) { const want = new Set(taskSel.split(',')); tasks = tasks.filter(t => want.has(t.id)); }
   return tasks;
