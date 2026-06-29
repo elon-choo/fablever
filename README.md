@@ -22,9 +22,10 @@ and disciplined about stopping. Every project, every subagent, installable by an
 | you want… | install | why |
 |---|---|---|
 | **to try it / first time / a work or secure machine** ← *recommended start* | **style-only**: `node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp` | lowest surface — **no hooks, no MCP, no update check, no network**. Carries fablever's strongest robust evidence: **scope / do-not-overbuild discipline** (0% violations vs plain's 42%). |
-| the **delivery gate, subagent reach, `fable_check` / `fable_status` / `fable_taste`** | **default**: `node install.mjs` | adds hooks + MCP. Safe + private by test, but a larger surface — and it adds **no** measured quality or multi-step lift over style-only. |
+| the **delivery gate, subagent reach, on-demand skills, `fable_check` / `fable_status` / `fable_taste`** | **default**: `node install.mjs` | adds hooks + MCP + **on-demand Agent Skills** (auto-seed, plan-first — A/B-validated lift at **zero always-on cost**, pulled only when relevant). The always-on hooks/MCP add **no** measured quality lift over style-only; the new value is the on-demand skills and the opt-in stop-gate. |
+| **deterministic enforcement** of "show the check, or say not-verified" | **+ stop-gate**: `node install.mjs --with-stop-gate` | compiles the validated `fable_lint` rule into a Stop hook so it fires without the model self-invoking it — one nudge, never loops, fails open. Closes the style's one measured cost (more unsupported "it works" claims). |
 | a second-lab opinion on **high-stakes judgment / design review** | **+ xverify**: `node install.mjs --with-xverify=…` | only for judgment review. **Not** for enumerable defect-catch — there it added **0** recall over one strong model. |
-| **Codex CLI** instead of Claude Code | `node install.mjs --codex-style-only` | the same discipline via `AGENTS.md` (+ hooks/MCP with `--codex-full`). See [`docs/CODEX.md`](docs/CODEX.md). |
+| **Codex CLI** instead of Claude Code | `node install.mjs --codex-style-only` | the same discipline via `AGENTS.md` (+ hooks/MCP/skills with `--codex-full`). See [`docs/CODEX.md`](docs/CODEX.md) · the per-host optimum: [`docs/OPTIMAL-STACK.md`](docs/OPTIMAL-STACK.md). |
 
 **Do not install if you expect** lower cost (it is ~14%/call *more*), a raw-quality boost over plain Claude
 (it ties plain on quality), a reasoning-ceiling/capability lift (impossible by design), or a proven

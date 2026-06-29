@@ -63,9 +63,10 @@ switch (mode) {
   // subhook-on/off -> SubagentStart  (one-time injection into every spawned subagent, incl. background)
   case 'hook-on':
   case 'subhook-on':
-  case 'sesshook-on': {
+  case 'sesshook-on':
+  case 'stophook-on': {
     if (!arg) { console.error(`${mode} requires a hook command`); process.exit(2); }
-    const event = mode === 'subhook-on' ? 'SubagentStart' : mode === 'sesshook-on' ? 'SessionStart' : 'UserPromptSubmit';
+    const event = mode === 'subhook-on' ? 'SubagentStart' : mode === 'sesshook-on' ? 'SessionStart' : mode === 'stophook-on' ? 'Stop' : 'UserPromptSubmit';
     s.hooks = s.hooks || {};
     const arr = Array.isArray(s.hooks[event]) ? s.hooks[event] : [];
     if (!arr.some(e => entryHasHook(e, arg))) {
@@ -78,9 +79,10 @@ switch (mode) {
   }
   case 'hook-off':
   case 'subhook-off':
-  case 'sesshook-off': {
+  case 'sesshook-off':
+  case 'stophook-off': {
     if (!arg) { console.error(`${mode} requires a hook command`); process.exit(2); }
-    const event = mode === 'subhook-off' ? 'SubagentStart' : mode === 'sesshook-off' ? 'SessionStart' : 'UserPromptSubmit';
+    const event = mode === 'subhook-off' ? 'SubagentStart' : mode === 'sesshook-off' ? 'SessionStart' : mode === 'stophook-off' ? 'Stop' : 'UserPromptSubmit';
     if (s.hooks && Array.isArray(s.hooks[event])) {
       s.hooks[event] = s.hooks[event].filter(e => !entryHasHook(e, arg));
       if (s.hooks[event].length === 0) delete s.hooks[event];

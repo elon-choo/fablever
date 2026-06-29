@@ -7,6 +7,24 @@ positioning is unchanged throughout: **a style/structure transplant, not a capab
 ## [Unreleased]
 
 ### Added
+- **Per-host optimal-stack redefinition.** The default install now applies the evidence-optimal stack for
+  each host, grounded in our A/Bs and the only rigorous public studies (ETH AGENTbench
+  [arXiv:2602.11988](https://arxiv.org/abs/2602.11988); AGENTS.md efficiency
+  [arXiv:2601.20404](https://arxiv.org/html/2601.20404v2)), which independently confirm the thesis: a lean
+  instruction layer is the lever, capability bulk is a measured cost. Decision + competitor comparison:
+  [`docs/OPTIMAL-STACK.md`](docs/OPTIMAL-STACK.md).
+- **Claude Code Agent Skills, now actually installed.** `claude-code/skills/*` (`fable-seed`, `fable-plan`,
+  `fable-handoff`, `orchestrate`) existed in the repo but the installer never delivered them; the default
+  install now copies them to `~/.claude/skills/` behind a `.fable-skill` ownership marker (uninstall removes
+  only ours; a user-authored skill of the same name is left verbatim). Suppressed under style-only and
+  `--no-skills`. Zero always-on cost — a skill is inert until the model pulls it. (`test/skills-install-test.mjs`, 13/13)
+- **`fable-plan` skill (plan-first).** Ships the A/B-validated plan-first technique (hard multi-step, 9–1,
+  p=0.022) as an on-demand skill for both hosts, trigger-gated to hard work (a no-op on simple tasks).
+- **Opt-in deterministic stop-gate (`--with-stop-gate`).** A Claude Code Stop hook that compiles the
+  validated `fable_lint` unsupported-done-claim rule (regexes byte-identical to `mcp/src/server.js`) into
+  deterministic enforcement, so it fires without the model self-invoking the MCP tool — closing the style's
+  one measured cost (more unsupported "it works" claims, 8.3% vs 2.1%). One nudge, never loops, fails open;
+  kill switch `FABLE_STOP_GATE=off`. (`test/stopgate-test.mjs`, 17/17)
 - **Codex Agent Skills.** Five on-demand `fable-*` skills under `.agents/skills/` — `fable-scope-guard`,
   `fable-delivery-gate`, `fable-evidence-done`, `fable-review`, `fable-seed`. `--codex-full` installs them
   into the Codex discovery dir (`$HOME/.agents/skills` user scope, `<project>/.agents/skills` project scope);

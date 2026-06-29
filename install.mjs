@@ -26,6 +26,9 @@ const HOME = os.homedir();
 const CLAUDE_DIR = path.join(HOME, '.claude');
 const HOOKS_DIR = path.join(CLAUDE_DIR, 'hooks');
 const STYLES_DIR = path.join(CLAUDE_DIR, 'output-styles');
+const SKILLS_DIR = path.join(CLAUDE_DIR, 'skills');
+const SKILLS_SRC = path.join(REPO, 'claude-code', 'skills');
+const SKILL_MARKER = '.fable-skill';
 const SETTINGS = path.join(CLAUDE_DIR, 'settings.json');
 const PROFILE_DST_DIR = path.join(CLAUDE_DIR, 'fable-profile');
 const RUNTIME_DIR = path.join(PROFILE_DST_DIR, 'runtime');
@@ -52,6 +55,9 @@ const MODELCHK = { src: path.join(REPO, 'claude-code/hooks/fable-model-check.js'
 const UPDATECHK = { src: path.join(REPO, 'claude-code/hooks/fable-update-check.js'), dst: path.join(HOOKS_DIR, 'fable-update-check.js'), cmd: hookCmd('fable-update-check.js') };
 const VERSION_FILE = path.join(PROFILE_DST_DIR, 'installed-version.json');
 const REINJECT = { src: path.join(REPO, 'claude-code/hooks/fable-reinject.sh'), dst: path.join(HOOKS_DIR, 'fable-reinject.sh'), cmd: hookCmd('fable-reinject.sh', false) };
+// Opt-in Stop hook (`--with-stop-gate`): deterministically enforces the unsupported-done-claim rule on the
+// final message — compiles the validated fable_lint rule into a hook so it fires without self-invocation.
+const STOPGATE = { src: path.join(REPO, 'claude-code/hooks/fable-stopgate.js'), dst: path.join(HOOKS_DIR, 'fable-stopgate.js'), cmd: hookCmd('fable-stopgate.js') };
 // Out-of-band measurement holdout (opt-in via --with-measure-holdout). The SessionStart hook is INERT unless
 // the user exports FABLE_MEASURE=on, so registering it is safe; it never runs by default. See measurement/.
 const HOLDOUT = { src: path.join(REPO, 'measurement/holdout.js'), dst: path.join(HOOKS_DIR, 'fable-holdout.js'), cmd: hookCmd('fable-holdout.js') };
@@ -75,14 +81,51 @@ function claude(args) { return spawnSync('claude', args, { encoding: 'utf8', std
 function haveClaude() { const r = claude(['--version']); return !r.error && (r.status === 0 || /\d/.test(r.stdout || '')); }
 function claudeMcpHas(name) { const r = claude(['mcp', 'list']); return !r.error && new RegExp(`(^|\\n)\\s*${name}\\b`).test(r.stdout || ''); }
 
+// ---- on-demand Agent Skills (claude-code/skills/* -> ~/.claude/skills/*) ----------------------------------
+// A skill dir is "ours" only if it carries a SKILL.md in the repo, AND — once installed — a .fable-skill
+// marker we drop inside it. The marker is what makes uninstall safe: we remove ONLY marked dirs, so a
+// user-authored ~/.claude/skills/<name> that pre-exists (and is unmarked) is never touched or removed.
+function ourSkillNames() {
+  try {
+    return fs.readdirSync(SKILLS_SRC, { withFileTypes: true })
+      .filter(d => d.isDirectory() && fs.existsSync(path.join(SKILLS_SRC, d.name, 'SKILL.md')))
+      .map(d => d.name).sort();
+  } catch { return []; }
+}
+function installSkills() {
+  mkdirp(SKILLS_DIR);
+  const done = [];
+  for (const name of ourSkillNames()) {
+    const dst = path.join(SKILLS_DIR, name);
+    if (fs.existsSync(dst) && !fs.existsSync(path.join(dst, SKILL_MARKER))) {
+      log(`  skills    -> SKIP '${name}': a skill of that name exists and was NOT installed by fablever (left untouched)`);
+      continue;
+    }
+    rmrf(dst); cpR(path.join(SKILLS_SRC, name), dst); writeFile(path.join(dst, SKILL_MARKER), 'fablever-owned; removed cleanly on uninstall\n');
+    done.push(name);
+  }
+  if (done.length) log(`  skills    -> ${done.length} on-demand skill(s) -> ${SKILLS_DIR} (${done.join(', ')}; pulled only when relevant — zero always-on cost)`);
+}
+function uninstallSkills() {
+  let names = [];
+  try { names = fs.readdirSync(SKILLS_DIR, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name); } catch { return; }
+  for (const name of names) { const dst = path.join(SKILLS_DIR, name); if (fs.existsSync(path.join(dst, SKILL_MARKER))) rmrf(dst); }
+  try { if (fs.readdirSync(SKILLS_DIR).length === 0) fs.rmdirSync(SKILLS_DIR); } catch (_) {}
+}
+
 // ---- args ----
 const args = process.argv.slice(2);
 const has = f => args.includes(f);
 let XVERIFY = 'off', XVERIFY_EXPLICIT = 0;
 for (const a of args) { if (a === '--with-xverify') { XVERIFY = 'openrouter'; XVERIFY_EXPLICIT = 1; } else if (a.startsWith('--with-xverify=')) { XVERIFY = a.slice('--with-xverify='.length); XVERIFY_EXPLICIT = 1; } }
 const WITH_HOOK = has('--with-hook'), SET_STYLE = !has('--no-style'), DO_MCP = !has('--no-mcp');
+const WITH_STOP_GATE = has('--with-stop-gate');
 const DO_SUBAGENT = !has('--no-subagent'), DO_ONBOARD = !has('--no-onboard'), DO_MODELCHK = !has('--no-modelcheck'), WITH_FUSION = has('--with-fusion');
 const DO_UPDATECHK = !has('--no-update-check');
+// On-demand Agent Skills (zero always-on cost — pulled only when relevant). Part of the default/full install,
+// never of the minimal style-only surface (which promises "no hooks, no MCP"): STYLE_ONLY suppresses them.
+const STYLE_ONLY = !DO_MCP && !DO_SUBAGENT && !DO_ONBOARD && !DO_MODELCHK && !DO_UPDATECHK;
+const DO_SKILLS = !has('--no-skills') && !STYLE_ONLY;
 const UNINSTALL = has('--uninstall');
 // A6 measurement holdout (opt-in) · A7 dry-run · B1 Codex-native path (separate surface; never touches Claude).
 const DO_MEASURE_HOLDOUT = has('--with-measure-holdout'), NO_MEASURE_HOLDOUT = has('--no-measure-holdout'), MEASURE_STATUS = has('--measure-status');
@@ -90,14 +133,14 @@ const DRY = has('--dry-run'), DRY_JSON = has('--json');
 const CODEX_SCOPE = (args.find(a => a.startsWith('--codex-scope=')) || '--codex-scope=user').slice('--codex-scope='.length) || 'user';
 const CODEX_INSTALL_REQ = has('--codex-style-only') || has('--codex-full') || has('--codex');
 const CODEX_STATUS = has('--codex-status'), CODEX_UNINSTALL = has('--codex-uninstall') || (UNINSTALL && CODEX_INSTALL_REQ);
-const KNOWN = new Set(['--with-hook', '--with-fusion', '--with-xverify', '--no-style', '--no-mcp', '--no-subagent', '--no-onboard', '--no-modelcheck', '--no-update-check', '--uninstall', '-h', '--help',
+const KNOWN = new Set(['--with-hook', '--with-fusion', '--with-xverify', '--with-stop-gate', '--no-style', '--no-mcp', '--no-subagent', '--no-onboard', '--no-modelcheck', '--no-update-check', '--no-skills', '--uninstall', '-h', '--help',
   '--with-measure-holdout', '--no-measure-holdout', '--measure-status', '--dry-run', '--json',
   '--codex', '--codex-full', '--codex-style-only', '--codex-uninstall', '--codex-status',
   '--no-codex-agents', '--no-codex-hooks', '--no-codex-mcp', '--no-codex-skills', '--codex-with-reinject', '--codex-patch-override', '--force-codex-mcp']);
 const unknown = args.find(a => !KNOWN.has(a) && !a.startsWith('--with-xverify=') && !a.startsWith('--codex-scope='));
 if (has('-h') || has('--help')) {
   log('Fable Profile universal installer.');
-  log('  Claude Code:  node install.mjs [--with-hook|--with-fusion|--with-xverify[=preset]|--no-mcp|--no-style|--no-subagent|--no-onboard|--no-modelcheck|--no-update-check|--with-measure-holdout|--uninstall]');
+  log('  Claude Code:  node install.mjs [--with-hook|--with-stop-gate|--with-fusion|--with-xverify[=preset]|--no-mcp|--no-style|--no-subagent|--no-onboard|--no-modelcheck|--no-update-check|--no-skills|--with-measure-holdout|--uninstall]');
   log('  Codex CLI:    node install.mjs --codex-style-only | --codex-full [--codex-scope=user|project] [--no-codex-agents|--no-codex-hooks|--no-codex-mcp|--no-codex-skills|--codex-with-reinject|--codex-patch-override|--force-codex-mcp]');
   log('  Codex other:  node install.mjs --codex-status | --uninstall --codex');
   log('  Preview:      add --dry-run [--json] to any install/uninstall to print the plan WITHOUT writing anything.');
@@ -130,6 +173,7 @@ if (UNINSTALL) {
   log('Uninstalling Fable profile...');
   node([MERGE, 'style-off', SETTINGS, 'Fable']);
   node([MERGE, 'hook-off', SETTINGS, REINJECT.cmd]);
+  node([MERGE, 'stophook-off', SETTINGS, STOPGATE.cmd]);
   node([MERGE, 'subhook-off', SETTINGS, SUBHOOK.cmd]);
   node([MERGE, 'sesshook-off', SETTINGS, ONBOARD.cmd]);
   node([MERGE, 'sesshook-off', SETTINGS, MODELCHK.cmd]);
@@ -137,8 +181,9 @@ if (UNINSTALL) {
   node([MERGE, 'sesshook-off', SETTINGS, HOLDOUT.cmd]);
   // The holdout hook file is removed; the measure-ledger.jsonl / measure-outcomes.jsonl campaign data is
   // deliberately LEFT in place (it is the user's measurement result, not install state).
-  for (const f of [REINJECT.dst, SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, HOLDOUT.dst, STYLE_DST]) rmf(f);
+  for (const f of [REINJECT.dst, STOPGATE.dst, SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, HOLDOUT.dst, STYLE_DST]) rmf(f);
   for (const f of ['full.md', 'compact.md', 'core.md', 'xverify.json', 'mode.json', 'fable-home', 'onboarded', 'onboard-shown-count', 'model-check.json', 'model-notified.json', 'installed-version.json', 'update-check.json', 'update-notified.json']) rmf(path.join(PROFILE_DST_DIR, f));
+  uninstallSkills();
   rmrf(RUNTIME_DIR);
   try { fs.rmdirSync(PROFILE_DST_DIR); } catch (_) {}
   if (haveClaude()) { claude(['mcp', 'remove', 'fable-profile', '--scope', 'user']); claude(['mcp', 'remove', 'fable-fusion', '--scope', 'user']); }
@@ -196,6 +241,11 @@ if (isWin) {
   else log('  hook      -> staged but NOT registered (re-run with --with-hook to enable)');
 }
 
+// 5a) opt-in Stop hook — deterministic unsupported-done-claim enforcement (cross-platform Node hook).
+fs.copyFileSync(STOPGATE.src, STOPGATE.dst); chmodx(STOPGATE.dst);
+if (WITH_STOP_GATE) { node([MERGE, 'stophook-on', SETTINGS, STOPGATE.cmd]); log('  stop-gate -> Stop hook registered (enforces "show the check, or say not-verified"; one nudge, never loops; FABLE_STOP_GATE=off to disable)'); }
+else log('  stop-gate -> staged but NOT registered (opt-in: re-run with --with-stop-gate)');
+
 // 4.5) immutable runtime copy (servers + profiles + orchestration + docs) so hooks/MCP resolve from any cwd
 if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK) {
   rmrf(RUNTIME_DIR); mkdirp(RUNTIME_DIR);
@@ -203,6 +253,11 @@ if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK) {
   writeFile(FABLE_HOME_PTR, RUNTIME_DIR + '\n');
   log(`  runtime   -> copied to ${RUNTIME_DIR} (immutable; incl. orchestration/ for the SessionStart hooks)`);
 }
+
+// 4.6) on-demand Agent Skills (default/full only; suppressed under style-only). The auto-seed (fable-seed) and
+// plan-first (fable-plan) skills are A/B-validated (eval/technique-ab); they cost ZERO tokens until the model
+// pulls one, so they add capability without the always-on tax. Reversible via the .fable-skill marker.
+if (DO_SKILLS) installSkills();
 
 // record the installed version (commit sha + repo url + clone path) so the update-check hook can compare
 // against the public repo. Best-effort: if this isn't a git clone, sha stays '' and the check no-ops.
@@ -302,7 +357,8 @@ function renderClaudePlan(action) {
     const plan = {
       host: 'claude-code', mode: 'uninstall',
       removes: [STYLE_DST, `${SETTINGS} (outputStyle restored to prior; fablever hooks removed)`, RUNTIME_DIR,
-        SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, REINJECT.dst, HOLDOUT.dst, `${PROFILE_DST_DIR}/{full,compact,core}.md`, XVERIFY_CFG, MODE_CFG, VERSION_FILE],
+        SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, REINJECT.dst, STOPGATE.dst, HOLDOUT.dst, `${PROFILE_DST_DIR}/{full,compact,core}.md`, XVERIFY_CFG, MODE_CFG, VERSION_FILE,
+        `${SKILLS_DIR}/* (only fablever-marked skills; any user-authored skill is left untouched)`],
       mcp_removed: ['fable-profile', 'fable-fusion'],
       preserved: ['measure-ledger.jsonl / measure-outcomes.jsonl (your measurement campaign data)', 'every non-fablever hook, permission, and setting in settings.json'],
       network: 'none', credential: 'none',
@@ -328,11 +384,13 @@ function renderClaudePlan(action) {
   if (DO_MODELCHK) hooks.push('SessionStart → fable-model-check.js');
   if (DO_UPDATECHK) hooks.push('SessionStart → fable-update-check.js');
   if (WITH_HOOK && !isWin) hooks.push('UserPromptSubmit → fable-reinject.sh (opt-in)');
+  if (WITH_STOP_GATE) hooks.push('Stop → fable-stopgate.js (opt-in; enforces unsupported-done-claim, one nudge, never loops)');
   if (DO_MEASURE_HOLDOUT) hooks.push('SessionStart → fable-holdout.js (INERT unless FABLE_MEASURE=on)');
   const mcp = [];
   if (DO_MCP) mcp.push('fable-profile (node mcp/src/server.js, scope user)');
   if (WITH_FUSION) mcp.push('fable-fusion (needs OPENROUTER_API_KEY)');
   if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK) creates.push(`${RUNTIME_DIR}/ (immutable runtime: mcp + fusion + profiles + orchestration + docs)`);
+  if (DO_SKILLS) creates.push(`${SKILLS_DIR}/{${ourSkillNames().join(',')}} (on-demand Agent Skills; zero always-on cost; .fable-skill marker → clean uninstall)`);
 
   const networkBits = [];
   if (DO_UPDATECHK) networkBits.push('anonymous `git ls-remote HEAD` once/24h (no key, no code, no data)');
