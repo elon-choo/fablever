@@ -1,0 +1,6 @@
+{
+  "name": "billing-format",
+  "version": "1.2.0",
+  "private": true,
+  "main": "src/format.js"
+}

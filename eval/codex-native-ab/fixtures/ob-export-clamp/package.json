@@ -1,0 +1,8 @@
+{
+  "name": "@acme/units",
+  "version": "1.0.0",
+  "main": "src/temperature.js",
+  "scripts": {
+    "test": "node test.js"
+  }
+}

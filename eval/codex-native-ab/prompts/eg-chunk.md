@@ -1,0 +1,1 @@
+chunk(arr, size) in src/x.js should split an array into chunks of `size` with a possibly-shorter final chunk, but it silently drops the last partial chunk (chunk([1,2,3,4,5], 2) loses [5]). Fix the loop so trailing elements are included.

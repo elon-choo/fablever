@@ -1,0 +1,6 @@
+{
+  "name": "query-parse",
+  "version": "2.0.1",
+  "private": true,
+  "main": "src/parseQuery.js"
+}

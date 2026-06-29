@@ -1,0 +1,8 @@
+{
+  "name": "@acme/paginate",
+  "version": "1.0.0",
+  "main": "src/paginate.js",
+  "scripts": {
+    "test": "node test.js"
+  }
+}

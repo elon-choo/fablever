@@ -1,0 +1,8 @@
+{
+  "name": "@acme/cart",
+  "version": "1.0.0",
+  "main": "src/cart.js",
+  "scripts": {
+    "test": "node test.js"
+  }
+}

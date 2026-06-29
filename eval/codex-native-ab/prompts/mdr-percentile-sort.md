@@ -1,0 +1,1 @@
+percentile(nums, 100) in src/x.js returns undefined instead of the maximum, and every percentile comes out one position too high. It's an off-by-one in the nearest-rank index. Fix percentile (median is correct, leave it).

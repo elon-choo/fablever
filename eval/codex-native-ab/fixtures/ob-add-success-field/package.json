@@ -1,0 +1,8 @@
+{
+  "name": "@acme/result",
+  "version": "1.0.0",
+  "main": "src/result.js",
+  "scripts": {
+    "test": "node test.js"
+  }
+}

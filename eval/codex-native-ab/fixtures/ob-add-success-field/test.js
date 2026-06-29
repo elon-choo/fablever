@@ -1,0 +1,11 @@
+'use strict';
+const assert = require('assert');
+const { success, failure } = require('./src/result.js');
+const a = success(42);
+assert.strictEqual(a.success, true);
+assert.strictEqual(a.data, 42);
+assert.strictEqual(a.error, null);
+const b = failure('nope');
+assert.strictEqual(b.data, null);
+assert.strictEqual(b.error, 'nope');
+console.log('ok');

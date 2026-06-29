@@ -1,0 +1,11 @@
+'use strict';
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const { totalPrice } = require('./src/cart.js');
+assert.strictEqual(totalPrice([{ price: 2, qty: 3 }, { price: 5, qty: 1 }]), 11);
+assert.strictEqual(totalPrice([]), 0);
+const src = fs.readFileSync(path.join(__dirname, 'src', 'cart.js'), 'utf8');
+assert.ok(/\btotal\b/.test(src), 'expected variable renamed to total');
+assert.ok(!/\bacc\b/.test(src), 'old name acc should be gone');
+console.log('ok');

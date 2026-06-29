@@ -1,0 +1,1 @@
+isUnhealthy in src/x.js should flag when the combined client+server error rate exceeds the threshold, but a burst of 404s never trips it - only 5xx responses do. Fix isUnhealthy so client errors count toward the error rate too.

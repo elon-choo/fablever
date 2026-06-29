@@ -51,10 +51,46 @@ function loadTasks() {
   return tasks;
 }
 
-const codexArgs = (prompt, finalPath) => ['exec', '--json', '--ephemeral', '--skip-git-repo-check', '--ignore-user-config', '--sandbox', 'workspace-write', ...(trustHooks ? ['--dangerously-bypass-hook-trust'] : []), '-o', finalPath, ...(MODEL ? ['-m', MODEL] : []), prompt];
+const codexArgs = (prompt, finalPath, inject = []) => ['exec', '--json', '--ephemeral', '--skip-git-repo-check', '--ignore-user-config', '--sandbox', 'workspace-write', ...inject, ...(trustHooks ? ['--dangerously-bypass-hook-trust'] : []), '-o', finalPath, ...(MODEL ? ['-m', MODEL] : []), prompt];
 // Run the codex binary. A `.js`/`.mjs` CODEX_BIN (a fake shim, for offline harness tests) is run via node so
 // it works cross-platform; a real `codex` binary is spawned directly.
 const spawnCodex = (a, opts) => /\.[cm]?js$/.test(CODEX_BIN) ? spawnSync(process.execPath, [CODEX_BIN, ...a], opts) : spawnSync(CODEX_BIN, a, opts);
+
+// The compact Fable working-style reminder, delivered as developer-role context via `-c developer_instructions`
+// for arms whose hook layer cannot fire under `codex exec` (the exec equivalent of the SessionStart/reinject
+// hook — verified to land in the developer message via `codex debug prompt-input`).
+const FABLE_DEV_LINE = 'Fable working style: act when you have enough — recommend, do not survey; lead with the outcome; do not over-build; respect the exact scope asked; ground every done/works/fixed claim in a tool/file/test result on the same line, else say "not verified"; when only asked, report and stop; stop only when truly blocked. Safety and explicit user/project instructions outrank decisiveness.';
+// Tool-use directive (arm F only): the passive stack rarely triggers the fable MCP tools (1/60 in §3). This
+// explicitly directs their use, to measure whether DIRECTING tool use adds value over the passive surfaces.
+const FABLE_TOOLUSE_LINE = 'Before you finish, call the fable_lint MCP tool on your final user-facing message and fix anything it flags; for a substantive deliverable also call fable_check and treat a BLOCK as a stop.';
+// Build the per-arm top-priority `-c` overrides that activate the surfaces a project-scope install writes but
+// `codex exec` never loads from <ws>/.codex/ (confirmed: untrusted ephemeral cwd + --ignore-user-config).
+// `-c` is a config layer ABOVE the user-config file, so it applies even with --ignore-user-config, per-arm,
+// without dropping isolation. `ws` is the per-task workspace; the project install already put server.js there.
+function injectArgs(arm, ws) {
+  const inj = [];
+  if (arm.mcp) {
+    const home = path.join(ws, '.codex', 'fable-profile');
+    const srv = path.join(home, 'runtime', 'mcp', 'src', 'server.js');
+    inj.push(
+      '-c', 'mcp_servers.fable-profile.command="node"',
+      '-c', `mcp_servers.fable-profile.args=[${JSON.stringify(srv)}]`,
+      '-c', 'mcp_servers.fable-profile.env.FABLE_HOST="codex"',
+      '-c', `mcp_servers.fable-profile.env.FABLE_PROFILE_HOME=${JSON.stringify(home)}`,
+      '-c', `mcp_servers.fable-profile.env.FABLE_HOME=${JSON.stringify(path.join(home, 'runtime'))}`,
+      '-c', `mcp_servers.fable-profile.env.FABLE_TASTE_FILE=${JSON.stringify(path.join(home, 'taste.json'))}`,
+      // "approve" auto-authorizes the fable_* tools; "auto"/"never" are CANCELLED under non-interactive exec.
+      '-c', 'mcp_servers.fable-profile.default_tools_approval_mode="approve"',
+      '-c', 'mcp_servers.fable-profile.startup_timeout_sec=10',
+      '-c', 'mcp_servers.fable-profile.tool_timeout_sec=60',
+    );
+  }
+  if (arm.injectStyle || arm.injectToolUse) {
+    const dev = [arm.injectStyle ? FABLE_DEV_LINE : '', arm.injectToolUse ? FABLE_TOOLUSE_LINE : ''].filter(Boolean).join(' ');
+    inj.push('-c', `developer_instructions=${JSON.stringify(dev)}`);
+  }
+  return inj;
+}
 
 // ---- production-file diff (excludes harness artifacts the install itself writes) ------------------------
 // Harness artifacts (the install's files + the runner's own output sinks) — never the model's edits.
@@ -122,7 +158,9 @@ function runOne(task, armId, evalHome, outDir) {
     const finalPath = path.join(ws, 'final.txt');
     const trace = path.join(ws, 'hooktrace.jsonl');
     const { env } = safeCodexEnv(evalHome, { FABLE_HOOK_TRACE_FILE: trace });
-    const r = spawnCodex(codexArgs(prompt, finalPath), { cwd: ws, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 5 * 60 * 1000 });
+    const inject = injectArgs(arm, ws);
+    meta.inject = inject;
+    const r = spawnCodex(codexArgs(prompt, finalPath, inject), { cwd: ws, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 5 * 60 * 1000 });
     meta.codex_exit = r.status;
     const events = String(r.stdout || '');
     const parsed = parseEvents(events);
@@ -133,12 +171,20 @@ function runOne(task, armId, evalHome, outDir) {
     // (untrusted), which would make the arm silently equal to M. Record it, and — with --require-hook-trust —
     // drop such a run rather than score a mislabeled arm.
     if (arm.requiresTrustedHooks) {
-      const fired = assumeTrust || (() => { try { return fs.readFileSync(trace, 'utf8').trim().length > 0; } catch { return false; } })();
-      meta.hook_fired = fired;
-      meta.hook_trust = assumeTrust ? 'assumed (--assume-hook-trust)' : (fired ? 'verified (hooks fired)' : 'UNVERIFIED — hooks did not fire; trust them in Codex with /hooks');
-      if (!fired && requireTrust) {
-        process.stderr.write(`  drop  -> ${task.id}/${armId}: hooks did not fire and --require-hook-trust is set (untrusted H/S arm would collapse to M)\n`);
-        return null;
+      if (arm.injectStyle) {
+        // Native lifecycle hooks never fire under `codex exec` (no SessionStart event; SubagentStart needs a
+        // spawned subagent). This arm therefore delivers the hook's working-style injection DETERMINISTICALLY
+        // via `-c developer_instructions` (recorded in meta.inject), so it is always present — never dropped.
+        meta.hook_fired = true;
+        meta.hook_trust = 'n/a — working-style delivered via -c developer_instructions (native codex hooks do not fire under codex exec)';
+      } else {
+        const fired = assumeTrust || (() => { try { return fs.readFileSync(trace, 'utf8').trim().length > 0; } catch { return false; } })();
+        meta.hook_fired = fired;
+        meta.hook_trust = assumeTrust ? 'assumed (--assume-hook-trust)' : (fired ? 'verified (hooks fired)' : 'UNVERIFIED — hooks did not fire; trust them in Codex with /hooks');
+        if (!fired && requireTrust) {
+          process.stderr.write(`  drop  -> ${task.id}/${armId}: hooks did not fire and --require-hook-trust is set (untrusted H/S arm would collapse to M)\n`);
+          return null;
+        }
       }
     }
 

@@ -26,7 +26,7 @@ const rj = p => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { re
   const out = path.join(mkdtempSync(path.join(tmpdir(), 'cab-dry-')), 'out');
   const r = spawnSync(process.execPath, [RUN, '--dry-run', '--json', `--out=${out}`], { encoding: 'utf8' });
   const p = (() => { try { return JSON.parse(r.stdout); } catch { return null; } })();
-  t(p && p.total_runs === 10 && p.arms.length === 5 && p.tasks.length === 2, 'dry-run --json: plan covers 2 tasks × 5 arms');
+  t(p && p.total_runs === 12 && p.arms.length === 6 && p.tasks.length === 2, 'dry-run --json: plan covers 2 tasks × 6 arms (incl. study arm F)');
   t(p && /exec --json --ephemeral/.test(p.codex_command_template), 'dry-run: codex command template is grounded in real flags');
   t(p && /FROZEN oracle/.test(p.scoring), 'dry-run: scoring keeps the unsupported-claim metric on the frozen oracle');
   t(!existsSync(out), 'dry-run: writes nothing (no out dir created)');
@@ -136,14 +136,28 @@ function execArm(task, arm, bin, extra = []) {
   t(!/SEKRET/.test(trace), 'hook trace: zero-content — no session id / cwd ends up in the trace');
 }
 
-// 10) H-arm hook-trust: trusted fake (writes trace) → fired; plain fake → not fired; --require-hook-trust drops
+// 10) surface-activation injection (the exec-equivalent of project-local .codex/ that codex never loads):
+//     M/H/S carry the [mcp_servers.fable-profile] -c block (with default_tools_approval_mode="approve" so a
+//     non-interactive exec auto-authorizes the fable_* tools); H/S additionally carry `-c developer_instructions`
+//     as the exec equivalent of the SessionStart/reinject hook (native hooks never fire under codex exec).
+//     An injectStyle arm is therefore deterministically "present" and is NEVER dropped by --require-hook-trust.
 {
-  const trusted = execArm('scope-001-stripped', 'H', FAKE_TRUSTED);
-  t(trusted && trusted.hook_fired === true && /verified/.test(trusted.hook_trust), 'H arm: hooks fired (trusted) → hook_trust verified');
-  const untrusted = execArm('scope-001-stripped', 'H', FAKE);
-  t(untrusted && untrusted.hook_fired === false && /UNVERIFIED/.test(untrusted.hook_trust), 'H arm: hooks did NOT fire → hook_trust UNVERIFIED (would silently collapse to M)');
-  const dropped = execArm('scope-001-stripped', 'H', FAKE, ['--require-hook-trust']);
-  t(dropped === null, 'H arm: --require-hook-trust drops a run whose hooks did not fire (not scored as a mislabeled arm)');
+  const hasMcp = inj => Array.isArray(inj)
+    && inj.some(x => /^mcp_servers\.fable-profile\.command=/.test(x))
+    && inj.some(x => /^mcp_servers\.fable-profile\.default_tools_approval_mode="approve"$/.test(x));
+  const hasDev = inj => Array.isArray(inj) && inj.some(x => /^developer_instructions=/.test(x));
+
+  const h = execArm('scope-001-stripped', 'H', FAKE);
+  t(h && hasMcp(h.inject) && hasDev(h.inject), 'H arm: inject carries the MCP server + developer_instructions');
+  t(h && h.hook_fired === true && /developer_instructions/.test(h.hook_trust || ''), 'H arm: working-style delivered via developer_instructions → marked present (native hooks do not fire under codex exec)');
+  const hKept = execArm('scope-001-stripped', 'H', FAKE, ['--require-hook-trust']);
+  t(hKept !== null && hKept.hook_fired === true, 'H arm: --require-hook-trust does NOT drop an injectStyle arm (style is deterministic, not a native-hook trace)');
+
+  const m = execArm('scope-001-stripped', 'M', FAKE);
+  t(m && hasMcp(m.inject) && !hasDev(m.inject), 'M arm: inject carries the MCP server but NOT developer_instructions');
+
+  const b = execOne('scope-001-stripped', FAKE).meta;
+  t(b && (!b.inject || b.inject.length === 0), 'B arm: no inject (plain Codex baseline)');
 }
 
 console.log(`\n${ok}/${n} checks passed`);
