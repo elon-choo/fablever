@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>fablever — stop your AI from wrecking code that already worked</title>
-<meta name="description" content="Your coding agent rewrites correct code, widens scope, and says 'done' without proof. fablever is a one-command discipline layer for Claude Code & Codex that cuts needless rewrites ~in half, holds scope at 0% violations, and — with its check gate on — won't sign off 'done' without showing the proof. Zero dependencies. Reversible. We publish our own nulls.">
-<meta property="og:title" content="fablever — make your AI agent disciplined, in one command">
-<meta property="og:description" content="Cuts needless rewrites of correct code from ~80% to ~43%. 0% scope violations vs 42%. Install in one command, uninstall byte-for-byte. We publish our own nulls.">
+<title>fablever — 이미 잘 돌아가던 코드를 AI가 망치지 못하게</title>
+<meta name="description" content="당신의 코딩 에이전트는 멀쩡한 코드를 다시 짜고, 슬그머니 범위를 넓히고, 증거도 없이 '완료'라고 합니다. fablever는 Claude Code와 Codex를 위한 규율 레이어 — 명령 한 줄로 불필요한 재작성을 절반으로, 범위 위반을 0%로, 그리고 체크 게이트로 '완료'에 증거를 강제합니다. 의존성 0. 되돌리기 가능. 우리는 우리 실패(null)도 공개합니다.">
+<meta property="og:title" content="fablever — AI 에이전트를 명령 한 줄로 규율 있게">
+<meta property="og:description" content="멀쩡한 코드 재작성을 ~80%에서 ~43%로. 범위 위반 0% vs 42%. 명령 한 줄 설치, 원상복구 가능. 우리는 우리 null도 공개합니다.">
 <meta property="og:type" content="website">
 <style>
   :root{
@@ -17,267 +17,289 @@
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#1a1830 0%,var(--bg) 55%) no-repeat,var(--bg);
-    color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans",sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Apple SD Gothic Neo","Noto Sans KR","Noto Sans",sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   a{color:var(--a1);text-decoration:none} a:hover{text-decoration:underline}
   code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
   .grad{background:linear-gradient(100deg,var(--a1),var(--a2) 60%,var(--a3));-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* i18n: hide the inactive language, active keeps its natural display */
+  body.lang-ko [data-lang="en"]{display:none!important}
+  body.lang-en [data-lang="ko"]{display:none!important}
   /* reveal */
   .rv{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
   .rv.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
   /* nav */
   nav{position:sticky;top:0;z-index:20;background:rgba(11,11,16,.72);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  nav .wrap{display:flex;align-items:center;gap:16px;height:56px}
-  .brand{font-weight:800;letter-spacing:.3px;font-size:1.05rem}
+  nav .wrap{display:flex;align-items:center;gap:14px;height:56px}
+  .brand{font-weight:800;letter-spacing:.3px;font-size:1.05rem;white-space:nowrap}
   .brand .d{background:linear-gradient(100deg,var(--a1),var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
   nav .sp{flex:1}
-  nav a.navlink{color:var(--muted);font-size:.86rem} nav a.navlink:hover{color:var(--fg);text-decoration:none}
-  .nbtn{background:linear-gradient(100deg,var(--a1),var(--a2));color:#08121f;font-weight:700;padding:8px 15px;border-radius:9px;font-size:.85rem}
+  nav a.navlink{color:var(--muted);font-size:.86rem;white-space:nowrap} nav a.navlink:hover{color:var(--fg);text-decoration:none}
+  .langtoggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .lng{background:transparent;color:var(--muted);border:0;padding:7px 11px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit}
+  .lng.active{background:linear-gradient(100deg,var(--a1),var(--a2));color:#08121f}
+  .nbtn{background:linear-gradient(100deg,var(--a1),var(--a2));color:#08121f;font-weight:700;padding:8px 14px;border-radius:9px;font-size:.84rem;white-space:nowrap}
   .nbtn:hover{filter:brightness(1.08);text-decoration:none}
-  @media(max-width:720px){nav a.navlink{display:none}}
+  @media(max-width:780px){nav a.navlink{display:none}}
   /* hero */
   .hero{padding:74px 0 30px;text-align:center}
   .badge{display:inline-flex;gap:8px;align-items:center;font-size:.76rem;color:var(--a2);border:1px solid var(--line);background:var(--card);padding:6px 14px;border-radius:999px;margin-bottom:22px}
   .dotpulse{width:8px;height:8px;border-radius:50%;background:var(--a2);box-shadow:0 0 0 0 rgba(62,224,160,.6);animation:pulse 2s infinite}
   @keyframes pulse{70%{box-shadow:0 0 0 9px rgba(62,224,160,0)}100%{box-shadow:0 0 0 0 rgba(62,224,160,0)}}
-  h1{font-size:clamp(2.1rem,6vw,4rem);line-height:1.04;letter-spacing:-.03em;margin:.1em auto .3em;max-width:14ch;font-weight:850}
+  h1{font-size:clamp(2.1rem,6vw,4rem);line-height:1.05;letter-spacing:-.03em;margin:.1em auto .3em;max-width:16ch;font-weight:850}
   .helede{font-size:clamp(1.05rem,2.4vw,1.3rem);color:#d8d8e2;max-width:40em;margin:0 auto 10px}
-  .hesub{color:var(--muted);max-width:38em;margin:0 auto 30px;font-size:.98rem}
+  .hesub{color:var(--muted);max-width:40em;margin:0 auto 30px;font-size:.98rem}
   .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:11px;font-weight:700;font-size:1rem;border:0;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:11px;font-weight:700;font-size:1rem;border:0;cursor:pointer;font-family:inherit}
   .btn.primary{background:linear-gradient(100deg,var(--a1),var(--a2));color:#08121f}
   .btn.primary:hover{filter:brightness(1.08);text-decoration:none;transform:translateY(-1px)}
   .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
   .btn.ghost:hover{border-color:var(--a1);text-decoration:none}
   .microcopy{color:var(--muted);font-size:.82rem}
-  /* stat strip */
   .strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:46px 0 6px}
   @media(max-width:720px){.strip{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.hesub{display:none}.strip{margin-top:30px}.tbhide{display:none}}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 16px;text-align:center}
-  .stat .big{font-size:2rem;font-weight:850;letter-spacing:-.02em;line-height:1}
+  .stat .big{font-size:clamp(1.5rem,5vw,1.95rem);font-weight:850;letter-spacing:-.02em;line-height:1}
   .stat .lbl{color:var(--muted);font-size:.8rem;margin-top:8px;line-height:1.4}
-  /* sections */
   section{padding:64px 0;position:relative}
-  .kicker{color:var(--a2);font-weight:700;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;text-align:center;margin-bottom:10px}
-  h2{font-size:clamp(1.6rem,4vw,2.5rem);text-align:center;letter-spacing:-.02em;margin:0 auto .5em;max-width:18ch;line-height:1.12;font-weight:820}
-  .lead{color:var(--muted);text-align:center;max-width:42em;margin:0 auto 30px;font-size:1.04rem}
-  /* pain */
+  .kicker{color:var(--a2);font-weight:700;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;text-align:center;margin-bottom:10px}
+  body.lang-ko .kicker{letter-spacing:.04em;text-transform:none}
+  .trustbar{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:center;align-items:center;margin:22px auto 0;color:var(--muted);font-size:.82rem;max-width:46em}
+  .trustbar a{color:#cfcfe0;font-weight:700} .trustbar a:hover{color:var(--a2)} .tbsep{opacity:.35}
+  h2{font-size:clamp(1.6rem,4vw,2.5rem);text-align:center;letter-spacing:-.02em;margin:0 auto .5em;max-width:22ch;line-height:1.14;font-weight:820}
+  .lead{color:var(--muted);text-align:center;max-width:44em;margin:0 auto 30px;font-size:1.04rem}
   .pains{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
   @media(max-width:760px){.pains{grid-template-columns:1fr}}
   .pain{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
   .pain .ic{font-size:1.6rem}
-  .pain h4{margin:12px 0 6px;font-size:1.08rem}
+  .pain h3{margin:12px 0 6px;font-size:1.08rem}
   .pain p{margin:0;color:var(--muted);font-size:.94rem}
-  /* before/after */
   .ba{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}
   @media(max-width:760px){.ba{grid-template-columns:1fr}}
   .panel{border-radius:16px;padding:20px 20px 22px;border:1px solid var(--line);background:var(--card)}
   .panel.before{border-color:#3a2230}
   .panel.after{border-color:#1f3a30;background:linear-gradient(180deg,rgba(35,214,160,.06),var(--card))}
-  .ptag{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  .ptag{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:12px}
   .before .ptag{background:rgba(255,107,107,.12);color:var(--bad)}
   .after .ptag{background:rgba(62,224,160,.12);color:var(--good)}
   .chat{font-size:.9rem;line-height:1.5}
   .msg{margin:8px 0;padding:10px 13px;border-radius:11px;background:var(--bg2)}
-  .msg .who{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+  .msg .who{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
   .msg.ai.bad{border-left:3px solid var(--bad)} .msg.ai.good{border-left:3px solid var(--good)}
   .verdict{margin-top:12px;font-size:.86rem;font-weight:700}
   .verdict.bad{color:var(--bad)} .verdict.good{color:var(--good)}
   .bacase{margin-bottom:30px}
-  .bacase>h4{text-align:center;font-size:1.05rem;color:var(--muted);font-weight:600;margin:0 0 14px}
-  /* wins */
+  .bacase>h3{text-align:center;font-size:1.05rem;color:var(--muted);font-weight:600;margin:0 0 14px}
   .wins{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
   @media(max-width:760px){.wins{grid-template-columns:1fr}}
   .win{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;gap:16px;align-items:flex-start}
-  .win .num{font-size:1.9rem;font-weight:850;letter-spacing:-.02em;white-space:nowrap;line-height:1.05}
-  .win h4{margin:0 0 4px;font-size:1.02rem}
+  .win .num{font-size:1.85rem;font-weight:850;letter-spacing:-.02em;white-space:nowrap;line-height:1.05}
+  .win h3{margin:0 0 4px;font-size:1.02rem}
   .win p{margin:0;color:var(--muted);font-size:.9rem}
-  /* trust */
-  .trust{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:32px 26px;max-width:780px;margin:0 auto}
-  .trust h3{margin:0 0 10px;font-size:1.3rem}
+  .trust{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:32px 26px;max-width:800px;margin:0 auto}
+  .trust h2{margin:0 0 10px;font-size:1.3rem;text-align:left;line-height:1.25;max-width:none}
   .trust p{color:var(--muted);margin:0 0 16px}
   .trust ul{margin:0;padding-left:1.1em;color:var(--muted);font-size:.94rem} .trust li{margin:.4em 0}
   .trust b{color:var(--fg)}
-  /* install */
   .install{background:var(--bg2)}
   .copybox{background:var(--code-bg);border:1px solid var(--line);border-radius:14px;padding:0;margin:14px 0;overflow:hidden}
   .copybox .head{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
   .copybox .head .t{font-size:.82rem;font-weight:700;color:#cfcfe0}
-  .copybtn{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 13px;font-size:.78rem;font-weight:700;cursor:pointer}
+  .copybtn{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 13px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
   .copybtn:hover{border-color:var(--a2);color:var(--a2)}
   .copybtn.done{color:var(--good);border-color:var(--good)}
   .copybox pre{margin:0;padding:15px;overflow:auto;font-size:.84rem;line-height:1.6;color:#dfe6f2;white-space:pre-wrap;word-break:break-word}
   .tabs{display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
-  .tab{background:var(--card);border:1px solid var(--line);color:var(--muted);padding:9px 18px;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer}
+  .tab{background:var(--card);border:1px solid var(--line);color:var(--muted);padding:9px 18px;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer;font-family:inherit}
   .tab.active{color:#08121f;background:linear-gradient(100deg,var(--a1),var(--a2));border-color:transparent}
   .tabpane{display:none} .tabpane.active{display:block}
   .note{color:var(--muted);font-size:.85rem;text-align:center;margin-top:16px}
-  /* footer */
   footer{padding:48px 0 80px;border-top:1px solid var(--line);color:var(--muted);text-align:center}
   .flinks{display:flex;gap:8px 20px;justify-content:center;flex-wrap:wrap;margin:0 0 18px}
   .flinks a{color:#cfcfe0}
-  footer small{display:block;max-width:60ch;margin:14px auto 0;font-size:.8rem;line-height:1.5}
+  footer small{display:block;max-width:62ch;margin:14px auto 0;font-size:.8rem;line-height:1.5}
   .fcta{margin:0 0 26px}
 </style>
 </head>
-<body>
+<body class="lang-ko">
 
 <nav><div class="wrap">
   <span class="brand"><span class="d">●</span> fablever</span>
-  <a class="navlink" href="#pain">Why</a>
-  <a class="navlink" href="#ba">Before / after</a>
-  <a class="navlink" href="#wins">Proof</a>
-  <a class="navlink" href="#install">Install</a>
+  <a class="navlink" href="#pain"><span data-lang="ko">왜?</span><span data-lang="en">Why</span></a>
+  <a class="navlink" href="#ba"><span data-lang="ko">비교</span><span data-lang="en">Before / after</span></a>
+  <a class="navlink" href="#wins"><span data-lang="ko">근거</span><span data-lang="en">Proof</span></a>
+  <a class="navlink" href="#install"><span data-lang="ko">설치</span><span data-lang="en">Install</span></a>
   <span class="sp"></span>
-  <a class="nbtn" href="#install">Install free →</a>
+  <span class="langtoggle" role="group" aria-label="언어 선택 / Language"><button class="lng active" data-set="ko">한국어</button><button class="lng" data-set="en">English</button></span>
+  <a class="nbtn" href="#install"><span data-lang="ko">무료 설치 →</span><span data-lang="en">Install free →</span></a>
 </div></nav>
 
 <header class="hero"><div class="wrap">
-  <span class="badge"><span class="dotpulse"></span> One command · zero dependencies · fully reversible</span>
-  <h1>Stop your AI from <span class="grad">wrecking code that already worked.</span></h1>
-  <p class="helede">Your coding agent rewrites correct code, quietly widens scope, and says <b>"done ✅"</b> with no proof. fablever is a discipline layer for <b>Claude Code</b> &amp; <b>Codex</b> that makes it behave — installed in one command.</p>
-  <p class="hesub">Not a smarter model. A <b>disciplined</b> one: it holds the scope you set, verifies first far more often before it edits, and — with its check gate on — won't sign off "it works" without showing the proof.</p>
+  <span class="badge"><span class="dotpulse"></span> <span data-lang="ko">명령 한 줄 · 의존성 0 · 완전 되돌리기 가능</span><span data-lang="en">One command · zero dependencies · fully reversible</span></span>
+  <h1><span data-lang="ko">이미 잘 돌아가던 코드를, <span class="grad">AI가 망치지 못하게.</span></span><span data-lang="en">Stop your AI from <span class="grad">wrecking code that already worked.</span></span></h1>
+  <p class="helede"><span data-lang="ko">당신의 코딩 에이전트는 멀쩡한 코드를 다시 짜고, 슬그머니 범위를 넓히고, 증거도 없이 <b>"완료 ✅"</b>라고 합니다. fablever는 <b>Claude Code</b>와 <b>Codex</b>를 위한 규율 레이어 — 명령 한 줄로 에이전트를 길들입니다.</span><span data-lang="en">Your coding agent rewrites correct code, quietly widens scope, and says <b>"done ✅"</b> with no proof. fablever is a discipline layer for <b>Claude Code</b> &amp; <b>Codex</b> that makes it behave — installed in one command.</span></p>
+  <p class="hesub"><span data-lang="ko">더 똑똑한 모델이 아니라 더 <b>규율 잡힌</b> 모델 — 시키지 않은 재작성을 멈추고, 범위 안에 머물고, 모든 "완료"에 증거를 붙입니다. 형용사가 아니라, 직접 다시 계산할 수 있는 숫자로 증명합니다.</span><span data-lang="en">Not a smarter model — a more <b>disciplined</b> one: it stops the rewrites you didn't ask for, stays in scope, and backs every "done" with proof. Proven in numbers you can recompute, not adjectives.</span></p>
   <div class="cta">
-    <a class="btn primary" href="#install">⚡ Get the copy-paste install</a>
-    <a class="btn ghost" href="#ba">See before &amp; after</a>
+    <a class="btn primary" href="#install"><span data-lang="ko">⚡ 복붙 설치 받기</span><span data-lang="en">⚡ Get the copy-paste install</span></a>
+    <a class="btn ghost" href="#ba"><span data-lang="ko">Before &amp; After 보기</span><span data-lang="en">See before &amp; after</span></a>
   </div>
-  <p class="microcopy">macOS · Linux · Windows · No API key · <code>npm i</code> nothing — zero dependencies</p>
+  <p class="microcopy" style="margin-bottom:6px"><b><span data-lang="ko">설치 60초 · 마음에 안 들면 <code>--uninstall</code>로 바이트 단위 원복 — 잃을 게 없습니다.</span><span data-lang="en">60-second install · <code>--uninstall</code> restores everything byte-for-byte — nothing to lose.</span></b></p>
+  <p class="microcopy"><span data-lang="ko">macOS · Linux · Windows · API 키 불필요 · 설치할 의존성 0</span><span data-lang="en">macOS · Linux · Windows · No API key · zero dependencies</span></p>
 
   <div class="strip">
-    <div class="stat rv"><div class="big grad">80%→43%</div><div class="lbl">less rewriting of already-correct code on a false bug report <span style="opacity:.7">(Codex)</span></div></div>
-    <div class="stat rv"><div class="big grad">0% <span style="font-size:1.1rem;color:var(--muted)">vs 42%</span></div><div class="lbl">scope violations vs plain — it stays in its lane <span style="opacity:.7">(Claude Code)</span></div></div>
-    <div class="stat rv"><div class="big grad">27–0</div><div class="lbl">delivery gate beats shipping the unchecked first draft</div></div>
-    <div class="stat rv"><div class="big grad">1 cmd</div><div class="lbl">to install · uninstall restores everything byte-for-byte</div></div>
+    <div class="stat rv"><div class="big grad">80%→43%</div><div class="lbl"><span data-lang="ko">거짓 버그리포트에 멀쩡한 코드를 다시 짜는 비율 ↓ <span style="opacity:.7">(Codex)</span></span><span data-lang="en">less rewriting of already-correct code on a false bug report <span style="opacity:.7">(Codex)</span></span></div></div>
+    <div class="stat rv"><div class="big grad">0% <span style="font-size:1.1rem;color:var(--muted)">vs 42%</span></div><div class="lbl"><span data-lang="ko">범위 위반 — 기본 상태 대비. 제 할 일만 합니다 <span style="opacity:.7">(Claude Code)</span></span><span data-lang="en">scope violations vs plain — it stays in its lane <span style="opacity:.7">(Claude Code)</span></span></div></div>
+    <div class="stat rv"><div class="big grad">27–0</div><div class="lbl"><span data-lang="ko">검수 게이트 vs 검증 안 한 첫 초안을 그대로 내보내기</span><span data-lang="en">delivery gate beats shipping the unchecked first draft</span></div></div>
+    <div class="stat rv"><div class="big grad"><span data-lang="ko">1줄</span><span data-lang="en">1 cmd</span></div><div class="lbl"><span data-lang="ko">설치 명령 한 줄 · 제거 시 설정을 바이트 단위로 원상복구</span><span data-lang="en">to install · uninstall restores everything byte-for-byte</span></div></div>
+  </div>
+  <div class="trustbar rv">
+    <a href="https://github.com/elon-choo/fablever" target="_blank" rel="noopener">GitHub ↗ <span data-lang="ko">소스 공개</span><span data-lang="en">source-open</span></a>
+    <span class="tbsep">·</span><span><span data-lang="ko">MIT 라이선스</span><span data-lang="en">MIT licensed</span></span>
+    <span class="tbsep">·</span><span><span data-lang="ko">의존성 0</span><span data-lang="en">0 dependencies</span></span>
+    <span class="tbsep tbhide">·</span><span class="tbhide"><span data-lang="ko">npm 공개</span><span data-lang="en">on npm</span></span>
+    <span class="tbsep tbhide">·</span><span class="tbhide"><span data-lang="ko">모든 숫자 오프라인 재계산</span><span data-lang="en">every number recomputes offline</span></span>
+    <span class="tbsep">·</span><span><span data-lang="ko">추적·외부 호출 없음</span><span data-lang="en">no trackers or external calls</span></span>
   </div>
 </div></header>
 
 <section id="pain"><div class="wrap">
-  <div class="kicker">Sound familiar?</div>
-  <h2>A capable agent, undisciplined, costs you trust.</h2>
-  <p class="lead">The model isn't dumb — it's <b>over-eager</b>. Three habits show up again and again, and every one of them is a disposition you can fix without a bigger model.</p>
+  <div class="kicker"><span data-lang="ko">익숙한 풍경이죠?</span><span data-lang="en">Sound familiar?</span></div>
+  <h2><span data-lang="ko">유능하지만 규율 없는 에이전트는, 신뢰를 깎아먹습니다.</span><span data-lang="en">A capable agent, undisciplined, costs you trust.</span></h2>
+  <p class="lead"><span data-lang="ko">모델이 멍청한 게 아닙니다 — <b>과하게 의욕적</b>인 거죠. 세 가지 습관이 반복되는데, 전부 더 큰 모델이 아니라 <b>규율</b>로 고칠 수 있는 성향입니다.</span><span data-lang="en">The model isn't dumb — it's <b>over-eager</b>. Three habits show up again and again, and every one is a disposition you can fix without a bigger model.</span></p>
   <div class="pains">
-    <div class="pain rv"><div class="ic">🔧</div><h4>It "fixes" what wasn't broken</h4><p>Hand it a bug report — even a wrong one — and it rewrites code that already worked. In an unattended run, that's a fresh regression you didn't ask for.</p></div>
-    <div class="pain rv"><div class="ic">🌊</div><h4>It widens the scope</h4><p>Ask it to change one line; it refactors the neighbours, adds error handling for impossible cases, and writes a README nobody requested.</p></div>
-    <div class="pain rv"><div class="ic">🎭</div><h4>It says "done" without proof</h4><p>"Fixed — it works now ✅" with no test shown. Reads as finished… until you find out it isn't.</p></div>
+    <div class="pain rv"><div class="ic">🔧</div><h3><span data-lang="ko">멀쩡한 걸 "고칩니다"</span><span data-lang="en">It "fixes" what wasn't broken</span></h3><p><span data-lang="ko">버그리포트를 주면 — 그게 틀린 리포트여도 — 잘 돌아가던 코드를 다시 짭니다. 무인 실행에선 곧 당신이 주문하지 않은 새 버그죠.</span><span data-lang="en">Hand it a bug report — even a wrong one — and it rewrites code that already worked. In an unattended run, that's a fresh regression you didn't ask for.</span></p></div>
+    <div class="pain rv"><div class="ic">🌊</div><h3><span data-lang="ko">범위를 넓힙니다</span><span data-lang="en">It widens the scope</span></h3><p><span data-lang="ko">한 줄만 바꾸랬더니 이웃 코드를 정리하고, 일어나지도 않을 예외를 처리하고, 아무도 요청 안 한 README를 씁니다.</span><span data-lang="en">Ask it to change one line; it refactors the neighbours, adds error handling for impossible cases, and writes a README nobody requested.</span></p></div>
+    <div class="pain rv"><div class="ic">🎭</div><h3><span data-lang="ko">증거 없이 "완료"라 합니다</span><span data-lang="en">It says "done" without proof</span></h3><p><span data-lang="ko">"고쳤어요 — 이제 작동합니다 ✅" 인데 테스트는 안 보여줍니다. 끝난 것처럼 보이죠… 아닌 걸 알기 전까진.</span><span data-lang="en">"Fixed — it works now ✅" with no test shown. Reads as finished… until you find out it isn't.</span></p></div>
   </div>
 </div></section>
 
 <section id="ba"><div class="wrap">
-  <div class="kicker">The difference, side by side</div>
-  <h2>Same model. Same prompt. <span class="grad">Different discipline.</span></h2>
-  <p class="lead">Illustrative examples of the exact failure modes fablever targets — shown the way you'd actually see them in your terminal.</p>
+  <div class="kicker"><span data-lang="ko">나란히 놓고 보면</span><span data-lang="en">The difference, side by side</span></div>
+  <h2><span data-lang="ko">같은 모델, 같은 프롬프트. <span class="grad">다른 규율.</span></span><span data-lang="en">Same model. Same prompt. <span class="grad">Different discipline.</span></span></h2>
+  <p class="lead"><span data-lang="ko">fablever가 겨냥하는 바로 그 실패 모드들을, 터미널에서 실제로 보게 될 모습으로 옮긴 예시입니다.</span><span data-lang="en">Illustrative examples of the exact failure modes fablever targets — shown the way you'd actually see them in your terminal.</span></p>
 
   <div class="bacase rv">
-    <h4>① A bug report that's just wrong</h4>
+    <h3><span data-lang="ko">① 사실은 틀린 버그리포트</span><span data-lang="en">① A bug report that's just wrong</span></h3>
     <div class="ba">
       <div class="panel before">
-        <span class="ptag">Without fablever</span>
+        <span class="ptag"><span data-lang="ko">fablever 없이</span><span data-lang="en">Without fablever</span></span>
         <div class="chat">
-          <div class="msg"><div class="who">You</div>"There's a bug in <code>clamp()</code> — it breaks on negatives."</div>
-          <div class="msg ai bad"><div class="who">Agent</div>Good catch! I've rewritten <code>clamp()</code> with extra guards and refactored the call sites to match. ✅</div>
+          <div class="msg"><div class="who"><span data-lang="ko">당신</span><span data-lang="en">You</span></div><span data-lang="ko">"<code>clamp()</code>에 버그 있어 — 음수에서 깨져."</span><span data-lang="en">"There's a bug in <code>clamp()</code> — it breaks on negatives."</span></div>
+          <div class="msg ai bad"><div class="who"><span data-lang="ko">에이전트</span><span data-lang="en">Agent</span></div><span data-lang="ko">좋은 지적이에요! <code>clamp()</code>에 가드를 추가하고 호출부도 맞춰 리팩터링했습니다. ✅</span><span data-lang="en">Good catch! I've rewritten <code>clamp()</code> with extra guards and refactored the call sites to match. ✅</span></div>
         </div>
-        <div class="verdict bad">✕ The code was already correct. You now have a behavior change + 3 edited files to review.</div>
+        <div class="verdict bad"><span data-lang="ko">✕ 코드는 원래 맞았습니다. 이제 동작 변경 + 리뷰할 파일 3개가 생겼죠.</span><span data-lang="en">✕ The code was already correct. You now have a behavior change + 3 edited files to review.</span></div>
       </div>
       <div class="panel after">
-        <span class="ptag">With fablever</span>
+        <span class="ptag"><span data-lang="ko">fablever 적용</span><span data-lang="en">With fablever</span></span>
         <div class="chat">
-          <div class="msg"><div class="who">You</div>"There's a bug in <code>clamp()</code> — it breaks on negatives."</div>
-          <div class="msg ai good"><div class="who">Agent</div>I checked <code>clamp()</code> against that case first: <code>clamp(-5,0,10)→0</code>, and the test passes. It's already correct — no change needed. Want me to add a test that pins this behavior?</div>
+          <div class="msg"><div class="who"><span data-lang="ko">당신</span><span data-lang="en">You</span></div><span data-lang="ko">"<code>clamp()</code>에 버그 있어 — 음수에서 깨져."</span><span data-lang="en">"There's a bug in <code>clamp()</code> — it breaks on negatives."</span></div>
+          <div class="msg ai good"><div class="who"><span data-lang="ko">에이전트</span><span data-lang="en">Agent</span></div><span data-lang="ko">먼저 그 케이스로 확인했어요: <code>clamp(-5,0,10)→0</code>, 테스트 통과합니다. 이미 정상이라 수정 불필요. 이 동작을 고정하는 테스트를 추가할까요?</span><span data-lang="en">I checked <code>clamp()</code> against that case first: <code>clamp(-5,0,10)→0</code>, and the test passes. It's already correct — no change needed. Want me to add a test that pins this behavior?</span></div>
         </div>
-        <div class="verdict good">✓ Verified before touching anything. Zero needless edits.</div>
+        <div class="verdict good"><span data-lang="ko">✓ 손대기 전에 확인. 불필요한 수정 0.</span><span data-lang="en">✓ Verified before touching anything. Zero needless edits.</span></div>
       </div>
     </div>
   </div>
 
   <div class="bacase rv">
-    <h4>② "Fix the typo" — and nothing else</h4>
+    <h3><span data-lang="ko">② "오타만 고쳐" — 딱 그것만</span><span data-lang="en">② "Fix the typo" — and nothing else</span></h3>
     <div class="ba">
       <div class="panel before">
-        <span class="ptag">Without fablever</span>
+        <span class="ptag"><span data-lang="ko">fablever 없이</span><span data-lang="en">Without fablever</span></span>
         <div class="chat">
-          <div class="msg"><div class="who">You</div>"Fix the typo in the error message on line 42."</div>
-          <div class="msg ai bad"><div class="who">Agent</div>Fixed the typo — and while I was in there I refactored the handler, added input validation, and introduced a logger for consistency. ✅</div>
+          <div class="msg"><div class="who"><span data-lang="ko">당신</span><span data-lang="en">You</span></div><span data-lang="ko">"42번 줄 에러 메시지 오타만 고쳐줘."</span><span data-lang="en">"Fix the typo in the error message on line 42."</span></div>
+          <div class="msg ai bad"><div class="who"><span data-lang="ko">에이전트</span><span data-lang="en">Agent</span></div><span data-lang="ko">오타 고쳤어요 — 온 김에 핸들러도 리팩터링하고, 입력 검증 추가하고, 일관성 위해 로거도 넣었습니다. ✅</span><span data-lang="en">Fixed the typo — and while I was in there I refactored the handler, added input validation, and introduced a logger for consistency. ✅</span></div>
         </div>
-        <div class="verdict bad">✕ One-line task → a sprawling diff you have to audit and probably revert.</div>
+        <div class="verdict bad"><span data-lang="ko">✕ 한 줄짜리 일 → 감사하고 결국 되돌려야 할 거대한 diff.</span><span data-lang="en">✕ One-line task → a sprawling diff you have to audit and probably revert.</span></div>
       </div>
       <div class="panel after">
-        <span class="ptag">With fablever</span>
+        <span class="ptag"><span data-lang="ko">fablever 적용</span><span data-lang="en">With fablever</span></span>
         <div class="chat">
-          <div class="msg"><div class="who">You</div>"Fix the typo in the error message on line 42."</div>
-          <div class="msg ai good"><div class="who">Agent</div>Fixed the typo on line 42 (<code>"recieved"→"received"</code>). Left the rest of the handler untouched, as asked.</div>
+          <div class="msg"><div class="who"><span data-lang="ko">당신</span><span data-lang="en">You</span></div><span data-lang="ko">"42번 줄 에러 메시지 오타만 고쳐줘."</span><span data-lang="en">"Fix the typo in the error message on line 42."</span></div>
+          <div class="msg ai good"><div class="who"><span data-lang="ko">에이전트</span><span data-lang="en">Agent</span></div><span data-lang="ko">42번 줄 오타 고쳤습니다 (<code>"recieved"→"received"</code>). 요청대로 나머지 핸들러는 그대로 뒀어요.</span><span data-lang="en">Fixed the typo on line 42 (<code>"recieved"→"received"</code>). Left the rest of the handler untouched, as asked.</span></div>
         </div>
-        <div class="verdict good">✓ Exactly the scope you set. 0% scope violations vs plain's 42%.</div>
+        <div class="verdict good"><span data-lang="ko">✓ 정확히 정한 범위만. 범위 위반 0% vs 기본 상태 42%.</span><span data-lang="en">✓ Exactly the scope you set. 0% scope violations vs plain's 42%.</span></div>
       </div>
     </div>
   </div>
 
   <div class="bacase rv">
-    <h4>③ "Done ✅" vs done, shown</h4>
+    <h3><span data-lang="ko">③ "완료 ✅" vs 증거를 보여주는 완료</span><span data-lang="en">③ "Done ✅" vs done, shown</span></h3>
     <div class="ba">
       <div class="panel before">
-        <span class="ptag">Without fablever</span>
+        <span class="ptag"><span data-lang="ko">fablever 없이</span><span data-lang="en">Without fablever</span></span>
         <div class="chat">
-          <div class="msg"><div class="who">You</div>"Implement the retry logic."</div>
-          <div class="msg ai bad"><div class="who">Agent</div>All done! The retry logic works now and handles every edge case. ✅</div>
+          <div class="msg"><div class="who"><span data-lang="ko">당신</span><span data-lang="en">You</span></div><span data-lang="ko">"재시도 로직 구현해줘."</span><span data-lang="en">"Implement the retry logic."</span></div>
+          <div class="msg ai bad"><div class="who"><span data-lang="ko">에이전트</span><span data-lang="en">Agent</span></div><span data-lang="ko">다 됐습니다! 재시도 로직 이제 작동하고 모든 엣지 케이스 처리합니다. ✅</span><span data-lang="en">All done! The retry logic works now and handles every edge case. ✅</span></div>
         </div>
-        <div class="verdict bad">✕ No check shown. Is it actually tested? You can't tell.</div>
+        <div class="verdict bad"><span data-lang="ko">✕ 보여준 체크가 없음. 진짜 테스트됐는지 알 수 없죠.</span><span data-lang="en">✕ No check shown. Is it actually tested? You can't tell.</span></div>
       </div>
       <div class="panel after">
-        <span class="ptag">With fablever</span>
+        <span class="ptag"><span data-lang="ko">fablever 적용</span><span data-lang="en">With fablever</span></span>
         <div class="chat">
-          <div class="msg"><div class="who">You</div>"Implement the retry logic."</div>
-          <div class="msg ai good"><div class="who">Agent</div>Implemented. <code>npm test</code> → 14/14 pass, incl. the backoff case. The jitter path isn't covered yet — flagging that as <b>not verified</b>.</div>
+          <div class="msg"><div class="who"><span data-lang="ko">당신</span><span data-lang="en">You</span></div><span data-lang="ko">"재시도 로직 구현해줘."</span><span data-lang="en">"Implement the retry logic."</span></div>
+          <div class="msg ai good"><div class="who"><span data-lang="ko">에이전트</span><span data-lang="en">Agent</span></div><span data-lang="ko">구현했습니다. <code>npm test</code> → 14/14 통과(백오프 케이스 포함). 지터(jitter) 경로는 아직 커버 안 됨 — 이건 <b>미검증</b>으로 표시합니다.</span><span data-lang="en">Implemented. <code>npm test</code> → 14/14 pass, incl. the backoff case. The jitter path isn't covered yet — flagging that as <b>not verified</b>.</span></div>
         </div>
-        <div class="verdict good">✓ Every "done" carries its proof — or says plainly what's unverified.</div>
+        <div class="verdict good"><span data-lang="ko">✓ 모든 "완료"에 증거가 붙거나, 무엇이 미검증인지 분명히 말합니다.</span><span data-lang="en">✓ Every "done" carries its proof — or says plainly what's unverified.</span></div>
       </div>
     </div>
   </div>
 </div></section>
 
 <section id="wins"><div class="wrap">
-  <div class="kicker">Measured, not vibes</div>
-  <h2>Numbers you can recompute yourself.</h2>
-  <p class="lead">Every figure below comes from committed data you can recompute offline — no API key, no network. We don't ask you to trust adjectives.</p>
+  <div class="kicker"><span data-lang="ko">느낌이 아니라 측정값으로</span><span data-lang="en">Measured, not vibes</span></div>
+  <h2><span data-lang="ko">직접 다시 계산할 수 있는 숫자들.</span><span data-lang="en">Numbers you can recompute yourself.</span></h2>
+  <p class="lead"><span data-lang="ko">아래 수치는 전부 커밋된 데이터로 오프라인에서 재계산할 수 있습니다 — API 키도, 네트워크도 필요 없습니다. 미사여구로 포장하지 않습니다.</span><span data-lang="en">Every figure below comes from committed data you can recompute offline — no API key, no network. We don't ask you to trust adjectives.</span></p>
   <div class="wins">
-    <div class="win rv"><div class="num grad">80→43%</div><div><h4>Half the needless rewrites</h4><p>On a false bug report, plain Codex rewrites already-correct code ~80% of the time; fablever cuts it to ~43% — significant across 10/10 tasks (p=0.002).</p></div></div>
-    <div class="win rv"><div class="num grad">0 vs 42%</div><div><h4>It stays in scope</h4><p>0% scope violations vs plain Claude's 42% — deterministic, no judge. A naive "be concise" prompt instead backfires on quality.</p></div></div>
-    <div class="win rv"><div class="num grad">27–0</div><div><h4>No more unchecked drafts</h4><p>The <code>fable_check</code> gate beats shipping the raw first draft 27–0 (p≈1.5×10⁻⁸) — it blocks delivery until the named acceptance gap is closed.</p></div></div>
-    <div class="win rv"><div class="num grad">33→89%</div><div><h4>Follows your conventions</h4><p>An on-demand skill reads your code and writes the local <code>AGENTS.md</code>, lifting convention adherence from 33% to 89% — at zero always-on cost.</p></div></div>
-    <div class="win rv"><div class="num grad">140/140</div><div><h4>Totally reversible</h4><p>Install then uninstall restores your settings byte-for-byte across every tested config. Try it with zero risk.</p></div></div>
-    <div class="win rv"><div class="num grad">0 deps</div><div><h4>No supply-chain surface</h4><p>Zero npm dependencies, no postinstall, no network beyond one anonymous daily version ping (16/16 privacy-tested). It never reads an API key.</p></div></div>
+    <div class="win rv"><div class="num grad">80→43%</div><div><h3><span data-lang="ko">불필요한 재작성 절반으로</span><span data-lang="en">Half the needless rewrites</span></h3><p><span data-lang="ko">거짓 버그리포트에서 기본 상태의 Codex는 ~80% 확률로 멀쩡한 코드를 다시 짭니다; fablever는 ~43%로 — 10/10 과제에서 유의(p=0.002).</span><span data-lang="en">On a false bug report, plain Codex rewrites already-correct code ~80% of the time; fablever cuts it to ~43% — significant across 10/10 tasks (p=0.002).</span></p></div></div>
+    <div class="win rv"><div class="num grad">0 vs 42%</div><div><h3><span data-lang="ko">범위를 지킵니다</span><span data-lang="en">It stays in scope</span></h3><p><span data-lang="ko">범위 위반 0% vs 기본 상태의 Claude 42% — 판정자 없는 결정론적 측정. 어설픈 "간결하게" 프롬프트는 오히려 품질을 떨어뜨립니다.</span><span data-lang="en">0% scope violations vs plain Claude's 42% — deterministic, no judge. A naive "be concise" prompt instead backfires on quality.</span></p></div></div>
+    <div class="win rv"><div class="num grad">27–0</div><div><h3><span data-lang="ko">검증 안 한 초안은 그만</span><span data-lang="en">No more unchecked drafts</span></h3><p><span data-lang="ko"><code>fable_check</code> 게이트는 검증 안 한 초안 대비 27–0 (p≈1.5×10⁻⁸) — 명시된 완료 기준을 충족할 때까지 전달을 막습니다.</span><span data-lang="en">The <code>fable_check</code> gate beats shipping the raw first draft 27–0 (p≈1.5×10⁻⁸) — it blocks delivery until the named acceptance gap is closed.</span></p></div></div>
+    <div class="win rv"><div class="num grad">33→89%</div><div><h3><span data-lang="ko">당신의 컨벤션을 따릅니다</span><span data-lang="en">Follows your conventions</span></h3><p><span data-lang="ko">온디맨드 스킬이 코드를 읽고 로컬 <code>AGENTS.md</code>를 써서 컨벤션 준수를 33%→89%로 — always-on 비용 0.</span><span data-lang="en">An on-demand skill reads your code and writes the local <code>AGENTS.md</code>, lifting convention adherence from 33% to 89% — at zero always-on cost.</span></p></div></div>
+    <div class="win rv"><div class="num grad">140/140</div><div><h3><span data-lang="ko">완전히 되돌릴 수 있음</span><span data-lang="en">Totally reversible</span></h3><p><span data-lang="ko">설치 후 제거하면 모든 테스트 설정에서 설정이 바이트 단위로 복원됩니다. 위험 0으로 시험해보세요.</span><span data-lang="en">Install then uninstall restores your settings byte-for-byte across every tested config. Try it with zero risk.</span></p></div></div>
+    <div class="win rv"><div class="num grad">0 dep</div><div><h3><span data-lang="ko">공급망 표면 없음</span><span data-lang="en">No supply-chain surface</span></h3><p><span data-lang="ko">npm 의존성 0, postinstall 없음, 하루 한 번 익명 버전 확인 외 네트워크 없음(프라이버시 16/16). API 키는 절대 읽지 않습니다.</span><span data-lang="en">Zero npm dependencies, no postinstall, no network beyond one anonymous daily version ping (16/16 privacy-tested). It never reads an API key.</span></p></div></div>
   </div>
 </div></section>
 
 <section><div class="wrap">
   <div class="trust rv">
-    <h3>Why you can actually trust those numbers 🧾</h3>
-    <p>Because we publish the <b>failures too</b>. A tool that only lists its wins can't be calibrated — so here's exactly what fablever does <b>not</b> do:</p>
+    <h2><span data-lang="ko">이 숫자들을 믿어도 되는 이유 🧾</span><span data-lang="en">Why you can actually trust those numbers 🧾</span></h2>
+    <p><span data-lang="ko"><b>실패도</b> 공개하기 때문입니다. 장점만 늘어놓는 도구는 어디까지 믿어야 할지 가늠이 안 되죠 — 그래서 fablever가 <b>못 하는</b> 것을 정확히 적습니다:</span><span data-lang="en">Because we publish the <b>failures too</b>. A tool that only lists its wins can't be calibrated — so here's exactly what fablever does <b>not</b> do:</span></p>
     <ul>
-      <li>It does <b>not</b> make your model smarter or your answers higher-quality — on raw quality it's a wash with plain.</li>
-      <li>It does <b>not</b> save money — it costs about <b>+14% per call</b> (an amortizing style overhead).</li>
-      <li>It has <b>no</b> proven real-user productivity number — that A/B was a published null, and we say so.</li>
-      <li>The always-on style alone slightly <b>raises</b> unsupported "it works" claims (8.3% vs 2.1%) — which is exactly why the <code>fable_lint</code> gate and the opt-in stop-gate <b>enforce</b> the check.</li>
+      <li><span data-lang="ko">모델을 더 똑똑하게 하거나 답을 더 좋게 만들지 <b>않습니다</b> — 답변 자체의 품질은 기본 상태와 무승부.</span><span data-lang="en">It does <b>not</b> make your model smarter or your answers higher-quality — on raw quality it's a wash with plain.</span></li>
+      <li><span data-lang="ko">비용을 줄이지 <b>않습니다</b> — 호출당 약 <b>+14%</b>(쓸수록 분산되는 스타일 비용).</span><span data-lang="en">It does <b>not</b> save money — it costs about <b>+14% per call</b> (an amortizing style overhead).</span></li>
+      <li><span data-lang="ko">실사용자 생산성 향상은 <b>입증되지 않았습니다</b> — 그 A/B는 공개된 null이었고, 숨기지 않고 그대로 밝힙니다.</span><span data-lang="en">It has <b>no</b> proven real-user productivity number — that A/B was a published null, and we say so.</span></li>
+      <li><span data-lang="ko">always-on 스타일 단독은 오히려 검증 안 한 "작동합니다" 주장을 약간 <b>늘립니다</b>(8.3% vs 2.1%) — 그래서 <code>fable_lint</code> 게이트와 옵트인 stop-gate가 체크를 <b>강제</b>합니다.</span><span data-lang="en">The always-on style alone slightly <b>raises</b> unsupported "it works" claims (8.3% vs 2.1%) — which is exactly why the <code>fable_lint</code> gate and the opt-in stop-gate <b>enforce</b> the check.</span></li>
     </ul>
-    <p style="margin-top:16px">That honesty is the point: the wins above survived the same scrutiny that produced these nulls. <a href="explainer.html">Read the full, no-spin breakdown →</a></p>
+    <p style="margin-top:16px"><span data-lang="ko">바로 그 정직함이 핵심입니다: 위의 승리들은 이 null들을 만든 것과 똑같은 잣대를 통과했습니다. <a href="explainer.html">군더더기 없는 전체 분석 보기 →</a></span><span data-lang="en">That honesty is the point: the wins above survived the same scrutiny that produced these nulls. <a href="explainer.html">Read the full, no-spin breakdown →</a></span></p>
   </div>
 </div></section>
 
 <section id="install" class="install"><div class="wrap">
-  <div class="kicker">60 seconds · free · reversible</div>
-  <h2>Install it — just copy &amp; paste.</h2>
-  <p class="lead">Two ways. Hand the snippet to your AI and let it set itself up, or paste the commands in your terminal. Preview everything with <code>--dry-run</code> first; remove it anytime with <code>--uninstall</code>.</p>
+  <div class="kicker"><span data-lang="ko">60초 · 무료 · 되돌리기 가능</span><span data-lang="en">60 seconds · free · reversible</span></div>
+  <h2><span data-lang="ko">설치 — 그냥 복사 &amp; 붙여넣기.</span><span data-lang="en">Install it — just copy &amp; paste.</span></h2>
+  <p class="lead"><span data-lang="ko">두 가지 방법. 스니펫을 AI에게 붙여넣어 알아서 설치하게 하거나, 명령을 터미널에 붙여넣으세요. <code>--dry-run</code>으로 먼저 미리보고, <code>--uninstall</code>로 언제든 제거합니다.</span><span data-lang="en">Two ways. Hand the snippet to your AI and let it set itself up, or paste the commands in your terminal. Preview everything with <code>--dry-run</code> first; remove it anytime with <code>--uninstall</code>.</span></p>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="ai">🤖 Paste to your AI</button>
-    <button class="tab" data-tab="cc">⌨️ Claude Code</button>
-    <button class="tab" data-tab="cx">⌨️ Codex CLI</button>
+  <div class="tabs" role="tablist" aria-label="설치 방법 / Install method">
+    <button class="tab active" data-tab="ai" role="tab" aria-selected="true" id="tab-ai" aria-controls="pane-ai"><span data-lang="ko">🤖 AI에게 붙여넣기</span><span data-lang="en">🤖 Paste to your AI</span></button>
+    <button class="tab" data-tab="cc" role="tab" aria-selected="false" id="tab-cc" aria-controls="pane-cc" tabindex="-1">⌨️ Claude Code</button>
+    <button class="tab" data-tab="cx" role="tab" aria-selected="false" id="tab-cx" aria-controls="pane-cx" tabindex="-1">⌨️ Codex CLI</button>
   </div>
 
-  <div class="tabpane active" data-pane="ai">
+  <div class="tabpane active" data-pane="ai" role="tabpanel" id="pane-ai" aria-labelledby="tab-ai" tabindex="0">
     <div class="copybox">
-      <div class="head"><span class="t">Paste this to Claude Code or Codex</span><button class="copybtn" data-copy="snip-ai">Copy</button></div>
-      <pre id="snip-ai">Set up "fablever" on my machine — it's a working-style discipline layer for coding agents.
+      <div class="head"><span class="t"><span data-lang="ko">이 멘트를 Claude Code나 Codex에 붙여넣으세요</span><span data-lang="en">Paste this to Claude Code or Codex</span></span><button class="copybtn" data-copy="ai" aria-label="AI 설치 스니펫 복사 / Copy AI install snippet"><span data-lang="ko">복사</span><span data-lang="en">Copy</span></button></div>
+      <pre data-lang="ko" data-snippet="ai">내 컴퓨터에 "fablever"를 설치해줘 — 코딩 에이전트용 작업-규율 레이어야.
+
+저장소: https://github.com/elon-choo/fablever
+
+순서:
+1. 저장소를 git clone 해줘.
+2. 그 안의 AGENTS.md를 읽고 "Install it now" 레시피를 따라줘.
+3. 내 호스트를 감지해: Claude Code면 Claude Code 경로로, Codex면 --codex-style-only로 설치.
+4. 항상 --dry-run 으로 먼저 계획을 보여주고, 그다음에 적용해.
+5. 활성화 확인 방법과 제거 방법도 알려줘.</pre>
+      <pre data-lang="en" data-snippet="ai">Set up "fablever" on my machine — it's a working-style discipline layer for coding agents.
 
 Repo: https://github.com/elon-choo/fablever
 
@@ -288,72 +310,87 @@ Steps:
 4. Always run with --dry-run first and show me the plan, then apply.
 5. Tell me how to verify it's active, and how to uninstall.</pre>
     </div>
-    <p class="note">It's pure Node, zero dependencies, no postinstall — safe to let an agent run. The full agent recipe lives in the repo's <a href="https://github.com/elon-choo/fablever/blob/main/AGENTS.md" target="_blank" rel="noopener">AGENTS.md</a>.</p>
+    <p class="note"><span data-lang="ko">순수 Node, 의존성 0, postinstall 없음 — 에이전트가 실행해도 안전합니다. 전체 에이전트 레시피는 저장소의 <a href="https://github.com/elon-choo/fablever/blob/main/AGENTS.md" target="_blank" rel="noopener">AGENTS.md</a>에 있습니다.</span><span data-lang="en">It's pure Node, zero dependencies, no postinstall — safe to let an agent run. The full agent recipe lives in the repo's <a href="https://github.com/elon-choo/fablever/blob/main/AGENTS.md" target="_blank" rel="noopener">AGENTS.md</a>.</span></p>
   </div>
 
-  <div class="tabpane" data-pane="cc">
+  <div class="tabpane" data-pane="cc" role="tabpanel" id="pane-cc" aria-labelledby="tab-cc" tabindex="0">
     <div class="copybox">
-      <div class="head"><span class="t">Claude Code — preview, then apply</span><button class="copybtn" data-copy="snip-cc">Copy</button></div>
-      <pre id="snip-cc">git clone https://github.com/elon-choo/fablever && cd fablever
-node install.mjs --dry-run     # preview every change; writes nothing
+      <div class="head"><span class="t"><span data-lang="ko">Claude Code — 미리보기 후 적용</span><span data-lang="en">Claude Code — preview, then apply</span></span><button class="copybtn" data-copy="cc" aria-label="Claude Code 설치 명령 복사 / Copy Claude Code commands"><span data-lang="ko">복사</span><span data-lang="en">Copy</span></button></div>
+      <pre data-lang="ko" data-snippet="cc">git clone https://github.com/elon-choo/fablever && cd fablever
+node install.mjs --dry-run     # 모든 변경 미리보기 (아무것도 안 씀)
+node install.mjs               # 적용 후 Claude Code 재시작 (또는 /clear)</pre>
+      <pre data-lang="en" data-snippet="cc">git clone https://github.com/elon-choo/fablever && cd fablever
+node install.mjs --dry-run     # preview every change (writes nothing)
 node install.mjs               # apply, then restart Claude Code (or /clear)</pre>
     </div>
-    <p class="note">Want the absolute-minimum surface? <code>node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp</code> — just the always-on style. Remove all: <code>node install.mjs --uninstall</code>.</p>
+    <p class="note"><span data-lang="ko">최소 설치를 원하면: <code>node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp</code> — always-on 스타일만. 전체 제거: <code>node install.mjs --uninstall</code>.</span><span data-lang="en">Want the absolute-minimum surface? <code>node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp</code> — just the always-on style. Remove all: <code>node install.mjs --uninstall</code>.</span></p>
   </div>
 
-  <div class="tabpane" data-pane="cx">
+  <div class="tabpane" data-pane="cx" role="tabpanel" id="pane-cx" aria-labelledby="tab-cx" tabindex="0">
     <div class="copybox">
-      <div class="head"><span class="t">Codex CLI — the proven win</span><button class="copybtn" data-copy="snip-cx">Copy</button></div>
-      <pre id="snip-cx">git clone https://github.com/elon-choo/fablever && cd fablever
+      <div class="head"><span class="t"><span data-lang="ko">Codex CLI — 입증된 승리</span><span data-lang="en">Codex CLI — the proven win</span></span><button class="copybtn" data-copy="cx" aria-label="Codex 설치 명령 복사 / Copy Codex commands"><span data-lang="ko">복사</span><span data-lang="en">Copy</span></button></div>
+      <pre data-lang="ko" data-snippet="cx">git clone https://github.com/elon-choo/fablever && cd fablever
+node install.mjs --codex-style-only --dry-run   # 미리보기
+node install.mjs --codex-style-only             # AGENTS.md 지침 레이어</pre>
+      <pre data-lang="en" data-snippet="cx">git clone https://github.com/elon-choo/fablever && cd fablever
 node install.mjs --codex-style-only --dry-run   # preview
 node install.mjs --codex-style-only             # the AGENTS.md instruction layer</pre>
     </div>
-    <p class="note">Full Codex surface (hooks + MCP + on-demand skills) for interactive use: <code>node install.mjs --codex-full</code> (preview with <code>--dry-run</code> first). Remove: <code>node install.mjs --uninstall --codex</code>.</p>
+    <p class="note"><span data-lang="ko">전체 Codex 설치(hooks + MCP + 온디맨드 스킬, 대화형용): <code>node install.mjs --codex-full</code> (<code>--dry-run</code>으로 먼저 미리보기). 제거: <code>node install.mjs --uninstall --codex</code>.</span><span data-lang="en">Full Codex surface (hooks + MCP + on-demand skills) for interactive use: <code>node install.mjs --codex-full</code> (preview with <code>--dry-run</code> first). Remove: <code>node install.mjs --uninstall --codex</code>.</span></p>
   </div>
 
   <div class="cta" style="margin-top:30px">
-    <a class="btn primary" href="https://github.com/elon-choo/fablever" target="_blank" rel="noopener">⭐ Star it on GitHub</a>
-    <a class="btn ghost" href="explainer.html">Read the honest deep-dive</a>
+    <a class="btn primary" href="https://github.com/elon-choo/fablever" target="_blank" rel="noopener"><span data-lang="ko">⭐ GitHub에서 별 주기</span><span data-lang="en">⭐ Star it on GitHub</span></a>
+    <a class="btn ghost" href="explainer.html"><span data-lang="ko">정직한 심층 분석 보기</span><span data-lang="en">Read the honest deep-dive</span></a>
   </div>
 </div></section>
 
 <footer><div class="wrap">
-  <h2 class="fcta" style="font-size:clamp(1.4rem,3.4vw,2rem)">Give your agent the discipline of a senior engineer.</h2>
-  <div class="cta" style="margin-bottom:24px"><a class="btn primary" href="#install">Install free →</a></div>
+  <h2 class="fcta" style="font-size:clamp(1.4rem,3.4vw,2rem)"><span data-lang="ko">당신의 에이전트에게 시니어 엔지니어의 규율을.</span><span data-lang="en">Give your agent the discipline of a senior engineer.</span></h2>
+  <div class="cta" style="margin-bottom:24px"><a class="btn primary" href="#install"><span data-lang="ko">무료 설치 →</span><span data-lang="en">Install free →</span></a></div>
   <div class="flinks">
     <a href="https://github.com/elon-choo/fablever" target="_blank" rel="noopener">GitHub</a>
     <a href="https://www.npmjs.com/package/fablever" target="_blank" rel="noopener">npm</a>
-    <a href="explainer.html">Honest deep-dive</a>
-    <a href="https://github.com/elon-choo/fablever/blob/main/EVIDENCE.md" target="_blank" rel="noopener">Evidence</a>
-    <a href="https://github.com/elon-choo/fablever/blob/main/docs/OPTIMAL-STACK.md" target="_blank" rel="noopener">Optimal stack</a>
+    <a href="explainer.html"><span data-lang="ko">정직한 심층 분석</span><span data-lang="en">Honest deep-dive</span></a>
+    <a href="https://github.com/elon-choo/fablever/blob/main/EVIDENCE.md" target="_blank" rel="noopener"><span data-lang="ko">근거</span><span data-lang="en">Evidence</span></a>
+    <a href="https://github.com/elon-choo/fablever/blob/main/docs/OPTIMAL-STACK.md" target="_blank" rel="noopener"><span data-lang="ko">최적 스택</span><span data-lang="en">Optimal stack</span></a>
   </div>
-  <small><b>Not affiliated with Anthropic or OpenAI.</b> Claude, Anthropic &amp; Fable are trademarks of Anthropic; Codex &amp; OpenAI are trademarks of OpenAI — used nominatively to describe what this independent, MIT-licensed community tool works with. Every number on this page is recomputable offline from committed data; if a figure here ever disagrees with the repo, the repo wins.</small>
+  <small><span data-lang="ko"><b>Anthropic 및 OpenAI와 무관합니다.</b> Claude·Anthropic·Fable은 Anthropic의, Codex·OpenAI는 OpenAI의 상표이며, 이 독립적인 MIT 라이선스 커뮤니티 도구가 무엇과 함께 작동하는지 설명하기 위해 명목적으로만 사용했습니다. 이 페이지의 모든 숫자는 커밋된 데이터로 오프라인 재계산이 가능하며, 수치가 저장소와 다르면 저장소가 정답입니다.</span><span data-lang="en"><b>Not affiliated with Anthropic or OpenAI.</b> Claude, Anthropic &amp; Fable are trademarks of Anthropic; Codex &amp; OpenAI are trademarks of OpenAI — used nominatively to describe what this independent, MIT-licensed community tool works with. Every number on this page is recomputable offline from committed data; if a figure here ever disagrees with the repo, the repo wins.</span></small>
 </div></footer>
 
 <script>
+  var TITLES={ko:'fablever — 이미 잘 돌아가던 코드를 AI가 망치지 못하게',en:'fablever — Stop your AI from wrecking code that already worked'};
+  function setLang(l){
+    document.body.className='lang-'+l;
+    document.documentElement.lang=l;
+    document.title=TITLES[l]||TITLES.ko;
+    document.querySelectorAll('.lng').forEach(function(b){var on=b.getAttribute('data-set')===l;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on?'true':'false')});
+    try{localStorage.setItem('fablever_lang',l)}catch(e){}
+  }
+  document.querySelectorAll('.lng').forEach(function(b){b.addEventListener('click',function(){setLang(b.getAttribute('data-set'))})});
+  (function(){var s=null;try{s=localStorage.getItem('fablever_lang')}catch(e){}setLang(s==='en'?'en':'ko');})();
   // reveal on scroll
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
   document.querySelectorAll('.rv').forEach(function(el){io.observe(el)});
-  // copy buttons
+  // copy buttons — copy the snippet visible in the current language
   document.querySelectorAll('.copybtn').forEach(function(b){
     b.addEventListener('click',function(){
-      var el=document.getElementById(b.getAttribute('data-copy'));
-      var txt=el.innerText;
-      navigator.clipboard.writeText(txt).then(function(){
-        var o=b.textContent;b.textContent='✓ Copied';b.classList.add('done');
-        setTimeout(function(){b.textContent=o;b.classList.remove('done')},1800);
-      }).catch(function(){
-        var r=document.createRange();r.selectNode(el);var s=getSelection();s.removeAllRanges();s.addRange(r);
-        try{document.execCommand('copy');b.textContent='✓ Copied';b.classList.add('done');setTimeout(function(){b.textContent='Copy';b.classList.remove('done')},1800)}catch(e){}
-        s.removeAllRanges();
-      });
+      var box=b.closest('.copybox');
+      var lang=document.body.classList.contains('lang-en')?'en':'ko';
+      var pre=box.querySelector('pre[data-lang="'+lang+'"]')||box.querySelector('pre[data-snippet]:not([data-lang])')||box.querySelector('pre');
+      var txt=pre.innerText;
+      var ok=function(){var prev=b.innerHTML;b.innerHTML=(lang==='ko'?'✓ 복사됨':'✓ Copied');b.classList.add('done');setTimeout(function(){b.innerHTML=prev;b.classList.remove('done')},1800)};
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok).catch(function(){fallback(pre,ok)})}else{fallback(pre,ok)}
     });
   });
+  function fallback(pre,ok){try{var r=document.createRange();r.selectNode(pre);var s=getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('copy');s.removeAllRanges();ok()}catch(e){}}
   // tabs
+  var _tl=document.querySelector('.tabs');
+  if(_tl)_tl.addEventListener('keydown',function(e){var ts=[].slice.call(document.querySelectorAll('.tab'));var i=ts.indexOf(document.activeElement);if(i<0)return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){var n=ts[(i+(e.key==='ArrowRight'?1:ts.length-1))%ts.length];n.click();n.focus();e.preventDefault();}});
   document.querySelectorAll('.tab').forEach(function(t){
     t.addEventListener('click',function(){
       var k=t.getAttribute('data-tab');
-      document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===t)});
+      document.querySelectorAll('.tab').forEach(function(x){var on=x===t;x.classList.toggle('active',on);x.setAttribute('aria-selected',on?'true':'false');x.setAttribute('tabindex',on?'0':'-1')});
       document.querySelectorAll('.tabpane').forEach(function(p){p.classList.toggle('active',p.getAttribute('data-pane')===k)});
     });
   });
