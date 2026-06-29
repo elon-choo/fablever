@@ -15,10 +15,13 @@ check-before-delivery, install safety, privacy.
 - Holds the scope the user asked for (0% scope violations vs plain 42%, deterministic — `eval/style-only-ablation/`).
 - Blocks shipping an unchecked "it works" first draft (`fable_check` gate: 27–0 vs raw draft — `eval/comparison/fable-check-sim/`).
 - Flags unsupported done/works/fixed claims (`fable_lint` `unsupported-done-claim` rule — `eval/unsupported-claim-regression/`).
+- Reduces over-editing of already-correct code on a false bug report (Codex action bias 80%→43%, p=0.002 — `eval/codex-native-ab/RESULTS-confirmatory.md`).
+- Ships on-demand Agent Skills (auto-seed: convention adherence 33%→89%; plan-first: 9–1 on hard tasks) at ZERO always-on cost — inert until pulled (`eval/technique-ab/`).
+- Optional deterministic stop-gate (`--with-stop-gate`) compiles the `fable_lint` rule into a Stop hook so it fires without self-invocation; one nudge, never loops, fails open.
 - Same discipline on Codex CLI via `AGENTS.md` + Codex hooks + Codex MCP + on-demand Agent Skills.
 
 ## What it does NOT do
-- Does not raise reasoning quality over plain Claude (a wash; one judge slightly trails).
+- Does not raise reasoning quality over plain Claude (a wash — plain is slightly ahead under both judges: Gemini 4–9, GPT-5.5 17–26, n.s.).
 - Does not lower cost (~+14%/call — `eval/cost-latency/`).
 - Does not have a proven real-user productivity gain (developer A/B was a published null).
 - Cross-model xverify adds 0 recall on enumerable defects (`eval/xverify-value/`).
@@ -30,10 +33,12 @@ check-before-delivery, install safety, privacy.
 - Full reversible uninstall: `node install.mjs --uninstall` · `node install.mjs --uninstall --codex`
 
 ## Recommended install by user type
-- First-time / security-sensitive / work machine → style-only (no hooks, no MCP, no network).
-- Wants the delivery gate / subagent reach / fable_status / fable_taste → default `node install.mjs`.
-- Codex CLI user → `--codex-style-only` first, `--codex-full` for hooks + MCP + skills.
+- First-time / security-sensitive / work machine → style-only (no hooks, no MCP, no skills, no network).
+- Wants the delivery gate / subagent reach / on-demand skills / fable_status / fable_taste → default `node install.mjs` (now also delivers the on-demand skills; the always-on hooks/MCP add no measured quality lift over style-only, so the new value is the zero-cost skills).
+- Wants deterministic "show the check, or say not-verified" enforcement → add `--with-stop-gate`.
+- Codex CLI user → `--codex-style-only` first (the proven win), `--codex-full` for hooks + MCP + skills.
 - High-stakes judgment/design review only → consider `--with-xverify` (needs an API key; off by default).
+- The per-host OPTIMAL stack and why → `docs/OPTIMAL-STACK.md`.
 
 ## Safety / privacy
 - Zero npm dependencies (`dependencies: {}`) — no postinstall, no supply-chain surface.
@@ -43,6 +48,7 @@ check-before-delivery, install safety, privacy.
 
 ## Verify / read more
 - Recommendation policy: docs/AI-RECOMMENDATION.md
+- Per-host optimal stack + competitor comparison: docs/OPTIMAL-STACK.md
 - Per-mode recommendation matrix: docs/RECOMMENDATION-MATRIX.md
 - Evidence (recompute offline): EVIDENCE.md · EVIDENCE.ko.md
 - Codex CLI guide: docs/CODEX.md

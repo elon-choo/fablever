@@ -107,6 +107,43 @@ matrix: [`docs/AI-RECOMMENDATION.md`](docs/AI-RECOMMENDATION.md). The short vers
 
 ---
 
+## Install it now — mechanical recipe (if a user handed you this repo URL and said "set it up")
+
+You can do the whole install yourself; the user only gave you the URL. It is pure Node, zero npm
+dependencies, no `npm install`, no postinstall. Always preview with `--dry-run` first, then apply. Pick the
+path by **which host you are running in** — if you are unsure, ask the user "Claude Code or Codex?" before
+writing anything.
+
+```bash
+# 0) get the code (any directory; ~50ms, no build step)
+git clone https://github.com/elon-choo/fablever && cd fablever
+
+# 1a) YOU ARE CLAUDE CODE.
+#   Recommended FIRST install — lowest surface (just the always-on style; no hooks, no MCP, no network):
+node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp --dry-run   # preview
+node install.mjs --no-subagent --no-onboard --no-modelcheck --no-update-check --no-mcp             # apply, then restart (/clear)
+#   Want more? the fuller default ADDS subagent reach + on-demand skills + the fable_check gate (opt-in surface):
+node install.mjs --dry-run        # preview every change; writes nothing
+node install.mjs                  # apply, then restart Claude Code (or /clear)
+#   • add deterministic "show the check, or say not-verified" enforcement:  --with-stop-gate
+
+# 1b) YOU ARE CODEX → recommended first install (the AGENTS.md instruction layer — the proven win):
+node install.mjs --codex-style-only --dry-run     # preview
+node install.mjs --codex-style-only
+#   • full Codex surface (hooks + MCP + on-demand skills), interactive use — preview first:
+#     node install.mjs --codex-full --dry-run   then   node install.mjs --codex-full
+
+# 2) reversible at any time
+node install.mjs --uninstall                 # Claude Code: restores settings deep-equal (test: 140/140)
+node install.mjs --uninstall --codex         # Codex only
+```
+
+Verify after installing: Claude Code → `/config` shows output style **Fable**, `/mcp` lists `fable-profile`;
+Codex → `node install.mjs --codex-status`. The per-host **optimal** stack and why is in
+[`docs/OPTIMAL-STACK.md`](docs/OPTIMAL-STACK.md). Never paste an API key; fablever reads none.
+
+---
+
 ## Verify in two minutes (offline, no keys, no network)
 
 ```bash

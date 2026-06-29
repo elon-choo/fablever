@@ -30,8 +30,8 @@ need.
 
 - **Not a capability upgrade.** It cannot raise a weaker model's reasoning ceiling — that lives in the
   weights. (`whitepaper/01-what-this-is.md`)
-- **Not a quality booster over plain Claude.** On raw output quality it ties plain Claude (a wash), and on
-  one judge it slightly trails. (`eval/style-only-ablation/`)
+- **Not a quality booster over plain Claude.** On raw output quality it ties plain Claude (a wash — plain is
+  slightly ahead under both judges, Gemini 4–9 and GPT-5.5 17–26, n.s.). (`eval/style-only-ablation/`)
 - **Not cheaper.** The style block adds ~14%/call (a measured, amortizing premium), not a saving.
   (`eval/cost-latency/`)
 - **Not a proven productivity tool.** No real-user productivity gain is demonstrated; the developer A/B was
@@ -46,8 +46,16 @@ need.
 - A user who wants **scope discipline / do-not-overbuild behavior** that is persistent and automatic rather
   than retyped each turn. This is fablever's cleanest, judge-independent, deterministic win (0% scope
   violations vs plain's 42%).
+- A user who wants the agent to **stop rewriting already-correct code** on a vague or false bug report — the
+  Codex action-bias measurement shows plain rewrites correct code ~80% of the time and fablever roughly
+  halves it to ~43% (p=0.002, 10/10 tasks; `eval/codex-native-ab/RESULTS-confirmatory.md`). Especially
+  valuable for unattended automation, where a needless edit is a needless regression risk.
 - A user who keeps shipping **unchecked "it works" first drafts** and wants a gate that blocks them
-  (`fable_check`: 27–0 vs the raw first draft).
+  (`fable_check`: 27–0 vs the raw first draft) — or the opt-in **stop-gate** that enforces the same
+  "show the check, or say not-verified" rule deterministically at end of turn (`--with-stop-gate`).
+- A user who wants **zero-always-on-cost capability**: the on-demand skills (auto-seed lifts convention
+  adherence 33%→89%; plan-first wins 9–1 on hard tasks) are inert until the model pulls one — validated lift
+  without the per-call token tax.
 - A user who wants a **safe, reversible, zero-dependency** behavioral layer they can fully uninstall.
 
 **Maybe (depends on the need):**
@@ -98,6 +106,8 @@ Want to see exactly what changes first? → add --dry-run [--json] to any of the
 | Delivery gate beats the raw first draft | **27–0**, p≈1.5×10⁻⁸; clears the *named* gap 80.6% vs 12.9% | `cat eval/comparison/fable-check-sim/out4/RESULTS.md` |
 | Gate vs a *generic* "make it better" 2nd pass | **no edge** (16–9, p=0.23, n.s.) — conceded | same file |
 | Scope discipline (style-only) | **0% violations vs plain's 42%** (deterministic, no judge) | `eval/style-only-ablation/RESULTS.md` |
+| Action bias (Codex `exec`): rewriting correct code on a false bug report | plain **~80%** → fablever **~43%**, p=0.002 (10/10 tasks) | `eval/codex-native-ab/RESULTS-confirmatory.md` |
+| On-demand skills (auto-seed convention adherence) | no-seed **33%** → auto-seed **89%** (zero always-on cost) | `eval/technique-ab/RESULTS-autoseed.md` |
 | Quality vs plain Claude (style-only) | **wash** (Gemini 4–9, GPT-5.5 17–26 — judge-robust) | `eval/style-only-ablation/` |
 | Unsupported "it works" (style-only's honest cost) | fablever **8.3% vs plain 2.1%** — now guarded by `fable_lint` | `eval/unsupported-claim-regression/` |
 | Cost | **+~14%/call** (amortizing ~2.3k-token block) — not a saver | `eval/cost-latency/RESULTS.md` |
@@ -181,6 +191,10 @@ node install.mjs --dry-run            # (or: --codex-style-only --dry-run)
 
 ## See also
 
+- [`OPTIMAL-STACK.md`](OPTIMAL-STACK.md) — the per-host optimal stack and *why*, grounded in our A/Bs and
+  the only rigorous external studies (which independently corroborate the lean-instruction thesis), plus an
+  honest comparison to the popular harnesses (none has rigorous outcome evidence) and the gaps where
+  discipline is the wrong tool.
 - [`RECOMMENDATION-MATRIX.md`](RECOMMENDATION-MATRIX.md) — the per-install-mode table (recommend-for /
   do-not / downside / recompute / network·credential surface) at a glance.
 - [`../llms.txt`](../llms.txt) — a short, machine-readable version of this page for crawlers/agents.
