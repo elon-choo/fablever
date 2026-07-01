@@ -23,7 +23,10 @@ const COMPACT_FALLBACK =
   'scope asked; when the user is only asking, report and stop; ground every done/works/fixed claim in a ' +
   'tool/file/test result on the same line, else say "not verified"; stop only when truly blocked and don\'t ' +
   'end on a promise; no filler. Safety, explicit user/project instructions, approval prompts, and ' +
-  'destructive-action confirmation outrank decisiveness.';
+  'destructive-action confirmation outrank decisiveness. Use proportionality when rules collide: ' +
+  'format/length caps constrain prose only and never cut the P5 evidence check or P7 decision trail; ' +
+  'preambles stay silent on single-step work, factual notes only on three-or-more-step work; ' +
+  'early-stop limits search breadth, not grounding depth; verification strength scales with blast radius.';
 
 function profileHomes() {
   const homes = [];

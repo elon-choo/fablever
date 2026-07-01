@@ -82,7 +82,10 @@ Each is anchored on Anthropic's own verbatim guidance (source #3) and survived a
 **Precedence rule (added after the skeptic pass):** safety, destructive-action caution, and explicit
 project rules (e.g. "ask before editing working code") always outrank decisiveness. On a weaker model the
 form (terse/decisive/stop) arrives without the judgment to know when it's right, so the conflict resolution
-must be stated, not left implicit.
+must be stated, not left implicit. This precedence rule was later generalized into the **proportionality**
+meta-principle (`profiles/full.md`; see CHANGELOG): it keeps the ranking above and adds that format/length
+caps constrain prose only (never the evidence check or decision trail), preambles are gated by task length,
+early-stop limits search breadth not grounding depth, and verification scales with blast radius.
 
 ## 3. Discarded (and why)
 

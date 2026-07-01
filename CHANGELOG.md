@@ -7,6 +7,20 @@ positioning is unchanged throughout: **a style/structure transplant, not a capab
 ## [Unreleased]
 
 ### Added
+- **Proportionality meta-principle for conflict resolution.** Added *"Use proportionality to resolve
+  conflicts"* to the working-style profiles (`profiles/full.md`, `profiles/compact.md`, `profiles/core.md`):
+  apply the strongest rule matching the task's actual risk and scope, and don't let newer discipline erase
+  the older principles — safety, destructive-action caution, explicit user/project rules, and host
+  approval/sandbox rules outrank decisiveness; format and length caps constrain prose only and never cut the
+  P5 evidence check or P7 decision trail; preambles/progress notes are gated by task length (silent for
+  single-step, one short preamble plus factual notes for three-or-more-step, private reasoning never
+  narrated); early-stop limits search breadth only, not grounding depth; verification strength scales with
+  blast radius. Enforced by five new `fable_lint` conflict guards (`missing-safety-precedence`,
+  `missing-cap-evidence-trail-exemption`, `missing-preamble-task-gate`, `missing-early-stop-grounding-depth`,
+  `missing-verification-proportionality`) that fire only when a profile/discipline-upgrade draft states both
+  sides of a conflict without the resolving hierarchy; conflict-regression eval in `eval/conflict-regression/`.
+  Propagated to the shipped codex fragment (`codex/AGENTS.fable.md`), the Claude subagent brief, the three
+  Codex hook fallbacks, and both READMEs.
 - **Per-host optimal-stack redefinition.** The default install now applies the evidence-optimal stack for
   each host, grounded in our A/Bs and the only rigorous public studies (ETH AGENTbench
   [arXiv:2602.11988](https://arxiv.org/abs/2602.11988); AGENTS.md efficiency

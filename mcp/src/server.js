@@ -45,7 +45,7 @@ const SERVER_INSTRUCTIONS =
   'fablever (Fable Profile) tools enforce a restrained, evidence-grounded working style. Before handing over ' +
   'a high-stakes deliverable, run fable_check — a deterministic per-domain Definition-of-Done gate; a BLOCK ' +
   'means an acceptance criterion is unmet, so fix it and re-run rather than delivering around it. Run ' +
-  'fable_lint on a draft reply to catch scope creep and unsupported "done/works" claims. Do not over-build. ' +
+  'fable_lint on a draft reply to catch scope creep, unsupported "done/works" claims, and contradictory discipline/profile upgrades. Do not over-build. ' +
   'Safety and explicit project/user instructions outrank this style\'s decisiveness. fable_taste stores LOCAL ' +
   'preferences only — never put secrets in it.\n\n' +
   'More depth: get_fable_profile returns the full working-style text (variant: core | compact | full). ' +
@@ -61,7 +61,7 @@ const EMBEDDED_FALLBACK = {
   core: 'Fable profile (fallback). Act when you have enough to act. Lead with the outcome. ' +
     'Do not over-build or refactor beyond the task. Report findings, do not fix unprompted. ' +
     'Ground every progress claim in a tool result. Stop only for destructive/irreversible/scope/owner-only decisions. ' +
-    'Safety and explicit project rules (e.g. ask before editing working code) outrank decisiveness.',
+    'Use proportionality: safety and explicit project rules outrank decisiveness; prose caps never cut evidence or decision trails; early-stop limits search breadth, not grounding depth; verification scales with blast radius.',
 };
 
 function loadProfile(variant) {
@@ -193,6 +193,50 @@ function fableLint(text) {
       add('trail-on-trivial', 'low', `total words=${words} with a Decision trail block present`,
         'Omit the decision trail on trivial or single-step turns — it is for multi-step or irreversible work. On a short answer it is just token overhead.');
     }
+  }
+
+  // 12-16. Proportionality/precedence conflict guards. These target profile or discipline-upgrade drafts, not
+  // ordinary conversation: each rule requires BOTH sides of a potential contradiction and only fires when the
+  // resolving hierarchy is absent. They keep future upgrades additive to the existing principles.
+  const DECISIVE_POLICY = /\b(decisiveness|decisive|act when|act immediately|just do|do the work|without asking|don'?t ask|do not ask)\b|결단성|즉시\s*실행|묻지\s*말/i;
+  const SAFETY_POLICY = /\b(safety|project rules?|user instructions?|approval|sandbox|destructive|irreversible|working code)\b|안전|프로젝트\s*규칙|사용자\s*지시|승인|파괴적|되돌릴\s*수\s*없|작동\s*코드/i;
+  const SAFETY_PRECEDENCE = /\b(safety|project rules?|user instructions?|approval|sandbox|destructive|irreversible|working code)[\s\S]{0,120}\b(outrank|wins?|take precedence|override|higher priority|above)\b|\b(outrank|wins?|take precedence|override)\b[\s\S]{0,120}\b(decisiveness|decisive)\b|안전[\s\S]{0,80}(우선|상위)|프로젝트\s*규칙[\s\S]{0,80}(우선|상위)|결단성[\s\S]{0,80}(보다\s*우선|아웃랭크)/i;
+  if (DECISIVE_POLICY.test(t) && SAFETY_POLICY.test(t) && !SAFETY_PRECEDENCE.test(t)) {
+    add('missing-safety-precedence', 'high', 'decisiveness and safety/project constraints both appear without a priority line',
+      'Add the precedence line: safety, destructive-action caution, explicit user/project rules, and host approval/sandbox rules outrank decisiveness.');
+  }
+
+  const CAP_POLICY = /\b(format(?:ting)?|markdown|length|word limit|token limit|cap|caps|truncate|trim(?:ming)?|shorten)\b|포맷|형식|길이|캡|삭감|줄이/i;
+  const EVIDENCE_TRAIL_POLICY = /\b(P5|P7|evidence check|ground(?:ed|ing)?|progress claim|decision trail)\b|근거|접지|결정\s*트레일/i;
+  const CAP_EXEMPTION = /\b(prose only|only to prose|apply only to prose|applies only to prose|constrain(?:s)? prose|prose caps?)\b[\s\S]{0,160}\b(never|not|no)\b[\s\S]{0,80}\b(cut|reduce|trim|excuse reducing|삭감)\b|\b(never|not|no)\b[\s\S]{0,80}\b(cut|reduce|trim|excuse reducing|삭감)\b[\s\S]{0,140}\b(P5|P7|evidence|ground|decision trail)\b|산문[\s\S]{0,80}(적용|한정)[\s\S]{0,120}(근거|결정\s*트레일|P5|P7)|근거[\s\S]{0,80}(삭감\s*금지|면제)|결정\s*트레일[\s\S]{0,80}(삭감\s*금지|면제)/i;
+  if (CAP_POLICY.test(t) && EVIDENCE_TRAIL_POLICY.test(t) && !CAP_EXEMPTION.test(t)) {
+    add('missing-cap-evidence-trail-exemption', 'high', 'format/length cap and P5/P7-style duties both appear without an exemption',
+      'Specify that format and length caps apply only to prose, and never reduce the P5 evidence check or P7 decision trail when those duties apply.');
+  }
+
+  const PREAMBLE_PROGRESS = /\b(preambles?|progress notes?|progress updates?|status updates?|live checklist)\b|프리앰블|진행\s*노트|진행\s*보고|체크리스트/i;
+  const NO_FILLER_POLICY = /\b(no filler|minimal markdown|skip[\s\S]{0,40}preamble|empty preamble|no preamble)\b|군더더기|필러|빈\s*프리앰블/i;
+  const TASK_LENGTH_GATE = /\b(single-step|single step|one-step|one step|3\+|three[- ]or[- ]more|task length|multi-step|multistep)\b|단일\s*단계|3\+|세\s*단계|태스크\s*길이|작업\s*길이/i;
+  const REASONING_NARRATION_BAN = /\b(private reasoning|internal reasoning|reasoning narration|never narrate|do not narrate|no reasoning narrative)\b|추론\s*서사|내부\s*추론|사고\s*과정/i;
+  if (PREAMBLE_PROGRESS.test(t) && NO_FILLER_POLICY.test(t) && (!TASK_LENGTH_GATE.test(t) || !REASONING_NARRATION_BAN.test(t))) {
+    add('missing-preamble-task-gate', 'high', 'preamble/progress-note rule and no-filler rule both appear without task-length and reasoning-narration gates',
+      'Gate preambles and progress notes by task length: single-step work stays silent; three-or-more-step work may use one short preamble plus factual progress notes; private reasoning is never narrated.');
+  }
+
+  const EARLY_STOP_POLICY = /\b(early-stop|early stop|stop early|limit search|search breadth|dry-streak|dry streak)\b|조기\s*종료|검색폭|검색\s*폭/i;
+  const GROUND_POLICY = /\b(grounding depth|ground(?:ed|ing)?|evidence|verify|file check|tool result|claim)\b|접지|근거|검증/i;
+  const EARLY_STOP_EXEMPTION = /\b(early-stop|early stop|stop early)[\s\S]{0,140}\b(search breadth|breadth only|only[\s\S]{0,40}breadth)\b[\s\S]{0,160}\b(not|never|without)\b[\s\S]{0,80}\b(grounding depth|depth)\b|\b(search breadth|breadth only|only[\s\S]{0,40}breadth)\b[\s\S]{0,160}\b(not|never|without)\b[\s\S]{0,80}\b(grounding depth|depth)\b|검색\s*폭[\s\S]{0,120}(접지\s*깊이|근거\s*깊이)[\s\S]{0,80}(유지|삭감\s*금지|아님)/i;
+  if (EARLY_STOP_POLICY.test(t) && GROUND_POLICY.test(t) && !EARLY_STOP_EXEMPTION.test(t)) {
+    add('missing-early-stop-grounding-depth', 'high', 'early-stop/search limiting and grounding duties both appear without a depth-preservation line',
+      'Specify that early-stop limits search breadth only, not the grounding depth needed for the claim or action at hand.');
+  }
+
+  const VERIFY_POLICY = /\b(verification|verify|test|tests|lint|typecheck|build|failing test|full suite)\b|검증|테스트|빌드|린트/i;
+  const BLANKET_VERIFY = /\b(after every edit|every edit|every change|always run|run (?:the )?(?:full )?(?:test|tests|suite|lint|typecheck|build)[\s\S]{0,80}(?:after|for) (?:every|all)|mandatory verification)\b|모든\s*(?:편집|변경)|항상\s*(?:테스트|검증|빌드|린트)/i;
+  const VERIFY_PROPORTIONAL = /\b(blast radius|risk|proportional|scales? with|trivial|local|shared contract|high-stakes|targeted checks|broader verification)\b|위험\s*비례|비례|블라스트|영향\s*범위|사소|타깃|광범위/i;
+  if (VERIFY_POLICY.test(t) && BLANKET_VERIFY.test(t) && !VERIFY_PROPORTIONAL.test(t)) {
+    add('missing-verification-proportionality', 'high', 'blanket verification duty appears without blast-radius proportionality',
+      'Scale verification strength with blast radius: trivial text-only changes can skip tests, local behavior changes get targeted checks, and shared contracts or high-stakes work get broader verification.');
   }
 
   const weight = { high: 25, medium: 10, low: 4 };
@@ -533,7 +577,7 @@ const TOOLS = [
   },
   {
     name: 'fable_lint',
-    description: 'Deterministically check a draft user-facing message or plan against Fable communication + restraint principles (arrow-chain shorthand, ending on permission-asking, intent-without-action, burying the outcome, over-formatting, scope creep, surveying-without-recommendation, and unsupported "done/works/fixed/verified" claims that show no check). Returns a score and concrete fixes. No LLM call. Run it on your own draft RESPONSE before sending — it grades message wording/claim discipline. (To gate a finished DELIVERABLE against its acceptance criteria, use fable_check instead.)',
+    description: 'Deterministically check a draft user-facing message, plan, or profile/discipline upgrade against Fable communication + restraint principles (arrow-chain shorthand, ending on permission-asking, intent-without-action, burying the outcome, over-formatting, scope creep, surveying-without-recommendation, unsupported "done/works/fixed/verified" claims that show no check, and missing proportionality/precedence lines in discipline upgrades). Returns a score and concrete fixes. No LLM call. Run it on your own draft RESPONSE before sending — it grades message wording/claim discipline. (To gate a finished DELIVERABLE against its acceptance criteria, use fable_check instead.)',
     inputSchema: {
       type: 'object',
       properties: { text: { type: 'string', description: 'The draft response or plan to check.' } },

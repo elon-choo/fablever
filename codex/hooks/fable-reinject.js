@@ -15,8 +15,10 @@ const path = require('path');
 const CORE_FALLBACK =
   'Fable reminder: act when you have enough (recommend, don\'t survey); lead with the outcome; don\'t ' +
   'over-build; ground every done/works claim in a tool result on the same line, else say "not verified"; ' +
-  'stop only when truly blocked, don\'t end on a promise; no filler. Safety, explicit instructions, and ' +
-  'approval prompts outrank decisiveness.';
+  'stop only when truly blocked, don\'t end on a promise; no filler. Use proportionality when rules ' +
+  'collide: safety, destructive-action caution, explicit user/project rules, and host approval/sandbox ' +
+  'rules outrank decisiveness; format/length ' +
+  'caps trim prose only, never the evidence check or decision trail; verification scales with blast radius.';
 
 function profileHomes() {
   const homes = [];

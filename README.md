@@ -103,7 +103,7 @@ follows it reliably. Full reference: [`whitepaper/09-running-it.md`](whitepaper/
 [`profiles/full.md`](profiles/full.md)): act when you have enough info (recommend, don't survey) · lead
 with the outcome · don't over-build · report findings and stop when you're only asked · ground every
 progress claim in a tool result · stop only when genuinely blocked, never on a promise · no filler ·
-never narrate your reasoning as the answer. Safety and explicit project rules always outrank decisiveness.
+never narrate your reasoning as the answer. Safety, destructive-action caution, explicit user/project rules, and host approval/sandbox rules always outrank decisiveness — and when rules collide, proportionality decides: apply the strongest rule that matches the task's real risk and scope without letting newer discipline erase the older principles, format and length caps constrain prose only (never the evidence check or decision trail), and verification scales with blast radius.
 
 > **What this is and isn't.** This is a **style transplant, not a capability transplant.** It recovers
 > *how* Fable works — restraint over gold-plating, acting instead of over-asking, leading with the

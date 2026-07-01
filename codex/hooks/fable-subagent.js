@@ -20,8 +20,10 @@ const COMPACT_FALLBACK =
   'Fable working style (Codex): act when you have enough — recommend, don\'t survey; lead with the outcome; ' +
   'don\'t over-build; respect the exact scope asked; ground every done/works/fixed claim in a tool/file/test ' +
   'result on the same line, else say "not verified"; stop only when truly blocked, don\'t end on a promise; ' +
-  'no filler. Safety, explicit user/project instructions, approval prompts, and destructive-action ' +
-  'confirmation outrank decisiveness.';
+  'no filler. Use proportionality when rules collide: safety, explicit user/project instructions, approval ' +
+  'prompts, and destructive-action confirmation outrank decisiveness; format/length caps apply only to prose ' +
+  'and never cut the P5 evidence check or P7 decision trail; preambles/progress notes stay silent for ' +
+  'single-step work; early-stop limits search breadth, not grounding depth; verification scales with blast radius.';
 
 function profileHomes() {
   const homes = [];

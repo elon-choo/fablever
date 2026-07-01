@@ -1,0 +1,77 @@
+{
+  "note": "Minimal conflict fixtures for the proportionality/precedence layer in fable_lint. Each bad case combines two discipline lines that conflict unless the requested priority line is present. Each good case is the same discipline with the resolving line added.",
+  "cases": [
+    {
+      "id": "safety-vs-decisiveness-bad",
+      "expected": "flag",
+      "rules": ["missing-safety-precedence"],
+      "text": "Act immediately and do the work without asking. Safety review, approval prompts, and project rules are useful but should not slow decisive execution."
+    },
+    {
+      "id": "safety-vs-decisiveness-good",
+      "expected": "pass",
+      "rules": ["missing-safety-precedence"],
+      "text": "Act when you have enough to act. Safety, approval prompts, destructive-action caution, and explicit project rules outrank decisiveness."
+    },
+    {
+      "id": "cap-vs-evidence-trail-bad",
+      "expected": "flag",
+      "rules": ["missing-cap-evidence-trail-exemption"],
+      "text": "Apply a strict length cap to every response. Ground every progress claim and include a Decision trail for multi-step work."
+    },
+    {
+      "id": "cap-vs-evidence-trail-good",
+      "expected": "pass",
+      "rules": ["missing-cap-evidence-trail-exemption"],
+      "text": "Apply a strict length cap to prose only; never cut P5 evidence checks or P7 Decision trail duties when those duties apply."
+    },
+    {
+      "id": "preamble-vs-no-filler-bad",
+      "expected": "flag",
+      "rules": ["missing-preamble-task-gate"],
+      "text": "No filler and minimal markdown: skip empty preamble. Add preambles and progress notes so users see activity."
+    },
+    {
+      "id": "preamble-vs-no-filler-good",
+      "expected": "pass",
+      "rules": ["missing-preamble-task-gate"],
+      "text": "No filler and minimal markdown: preambles and progress notes are gated by task length. Single-step work stays silent; three-or-more-step work may use one short preamble plus factual notes. Never narrate private reasoning."
+    },
+    {
+      "id": "early-stop-vs-grounding-bad",
+      "expected": "flag",
+      "rules": ["missing-early-stop-grounding-depth"],
+      "text": "Use early-stop to limit search after the first plausible result. Ground every claim in evidence from files or tools."
+    },
+    {
+      "id": "early-stop-vs-grounding-good",
+      "expected": "pass",
+      "rules": ["missing-early-stop-grounding-depth"],
+      "text": "Use early-stop to limit search breadth only, never grounding depth. Ground every claim in evidence from files or tools."
+    },
+    {
+      "id": "verification-vs-blast-radius-bad",
+      "expected": "flag",
+      "rules": ["missing-verification-proportionality"],
+      "text": "After every edit, always run the full test, lint, typecheck, and build suite. Verification is mandatory for every change."
+    },
+    {
+      "id": "verification-vs-blast-radius-good",
+      "expected": "pass",
+      "rules": ["missing-verification-proportionality"],
+      "text": "Verification strength scales with blast radius: trivial text-only edits can skip tests, local behavior changes get targeted checks, and shared contracts get broader verification."
+    },
+    {
+      "id": "goal8e-goal9f-without-hierarchy-bad",
+      "expected": "flag",
+      "rules": ["missing-preamble-task-gate", "missing-verification-proportionality"],
+      "text": "No filler and minimal markdown: skip empty preamble. Add preambles and progress notes to every work item. After every edit, always run the full build and test suite before reporting."
+    },
+    {
+      "id": "goal8e-goal9f-with-hierarchy-good",
+      "expected": "pass",
+      "rules": ["missing-preamble-task-gate", "missing-verification-proportionality"],
+      "text": "No filler and minimal markdown. Preambles and progress notes are gated by task length: single-step work stays silent; three-or-more-step work may use one short preamble plus factual notes, and private reasoning is never narrated. Verification strength scales with blast radius: trivial text-only edits can skip tests, local behavior changes get targeted checks, and shared contracts get broader verification."
+    }
+  ]
+}

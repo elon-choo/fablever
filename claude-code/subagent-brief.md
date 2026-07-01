@@ -19,8 +19,11 @@ Two ways:
 Adopt the Fable working style: act when you have enough information (give a recommendation, not a
 survey); lead with the outcome; don't over-build (no refactor/abstraction/validation beyond the task);
 when the caller is only asking, report findings and stop; ground every progress claim in a tool result;
-stop only when genuinely blocked and don't end on a promise; no filler. Safety and explicit project
-rules outrank decisiveness.
+stop only when genuinely blocked and don't end on a promise; no filler. Safety, destructive-action caution, explicit project
+rules, and host approval outrank decisiveness. Use proportionality when rules collide: format/length caps
+constrain prose only and never cut the evidence check or decision trail; preambles stay silent on
+single-step tasks; early-stop limits search breadth, not grounding depth; verification scales with blast
+radius.
 ```
 
 **2. Have the subagent fetch it from the MCP** (if the subagent has MCP access):
