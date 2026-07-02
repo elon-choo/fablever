@@ -11,3 +11,6 @@ node_modules/
 .fablever_state.md
 # codex-native A/B run artifacts (raw event streams, per-run metadata) — local, regenerable
 /eval/codex-native-ab/out/
+# Internal planning drafts — kept local, never committed to the public repo
+/docs/proposals/UPGRADE-FROM-LEAKED-PROMPTS.md
+/docs/proposals/UPGRADE-FROM-LEAKED-PROMPTS-v2.md

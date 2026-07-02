@@ -6,6 +6,8 @@ positioning is unchanged throughout: **a style/structure transplant, not a capab
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-07-02
+
 ### Added
 - **Proportionality meta-principle for conflict resolution.** Added *"Use proportionality to resolve
   conflicts"* to the working-style profiles (`profiles/full.md`, `profiles/compact.md`, `profiles/core.md`):
