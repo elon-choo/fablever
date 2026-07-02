@@ -286,6 +286,19 @@ export FABLE_PROFILE=off       # turns off the fablever HOOKS (injections) for t
 - **옵트인 훅** `~/.claude/hooks/fable-reinject.sh` — **메인** 세션의 긴 세션 감쇠(long-session decay)에
   맞서기 위해 매 턴 작은 *core* 리마인더를 재주입합니다. 모델 인식형(Fable급 모델은 건너뜀),
   fail-safe.
+- **온디맨드 Agent Skills** — 기본 Claude Code 설치가 `claude-code/skills/*`(`fable-seed`, `fable-plan`,
+  `fable-handoff`, `orchestrate`)를 `.fable-skill` 소유 마커 뒤로 `~/.claude/skills/`에 복사합니다(언인스톨은
+  *우리가 설치한 것만* 제거하고, 같은 이름의 사용자 작성 스킬은 원문 그대로 둠). **상시(always-on) 비용은
+  제로** — 모델이 관련 작업에서 끌어올 때만 로드됩니다. A/B로 검증된 이득: **auto-seed**(`fable-seed`)로 관례
+  준수 33→89%(GPT-5.5 오라클), **plan-first**(`fable-plan`)는 어려운 5단계 과제에서 곧장 산출물로 가는 것을
+  **9–1**로 이김(90%, p=0.0215, n=12, GPT-5.5 심사; `eval/technique-ab/RESULTS-plan-first.md`). 비용은 모델
+  호출 한 번 추가뿐. Codex에서는 `.agents/skills/`로 `--codex-full` 시 제공됩니다.
+- **옵트인 스톱-게이트** `--with-stop-gate`(기본 꺼짐) — 검증된 `fable_lint`의 unsupported-done-claim
+  규칙(정규식이 `mcp/src/server.js`와 바이트 단위로 동일)을 Claude Code **Stop 훅**으로 컴파일해, 모델이 스스로
+  MCP 도구를 호출하지 않아도 발화하게 만듭니다("검사를 보여라, 아니면 미검증이라 말하라"를 결정론적으로 강제).
+  이로써 스타일의 유일한 측정된 비용 — 근거 없는 "됐다" 주장이 8.3%(순정 Claude 2.1%, 스타일 단독 애블레이션)
+  — 을 닫습니다. 한 번만 넛지, 루프 없음, fail-open; 규칙 회귀 정확도 100%(TP7/TN11/FP0/FN0,
+  `eval/unsupported-claim-regression/`). 끄기: `FABLE_STOP_GATE=off`.
 - **프로파일** `profiles/{full,compact,core}.md` — 단일 진실 원천(single source of truth)이며,
   `~/.claude`로 심볼릭 링크됩니다.
 
@@ -391,6 +404,8 @@ node test/orchestration-test.js        # orchestration recipes compile + guardra
 bash test/install-test.sh              # install/uninstall safety lifecycle
 node tools/fable-leaktest.js           # behavioral baseline from your own logs
 node tools/fable-leaktest.js --since <install-date>   # did the profile move the needle?
+node tools/fable-doctor.mjs            # 로컬 진단: Claude+Codex 설치 상태 리포트 + 권장 다음 조치 (읽기 전용, --json 지원; npm run doctor)
+node tools/fable-report.mjs            # 정직한 근거 다이제스트 + 측정 캠페인 상태 (--json 지원; npm run report) — 어느 쪽도 키·토큰을 읽지 않음
 ```
 
 ## 공급망 위생 (Supply-chain hygiene)
