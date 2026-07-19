@@ -42,6 +42,13 @@ its ceiling. These non-claims are load-bearing and stated throughout the repo:
   **gate closed 0 multi-step gaps** style-only didn't already cover. Both clean-looking oracles ship with
   validation. Verify: [`EVALS.md`](EVALS.md), [`eval/cost-latency/`](eval/cost-latency/),
   [`eval/xverify-value/`](eval/xverify-value/), [`eval/multistep-gate/`](eval/multistep-gate/).
+- **No claim that it writes better hero copy.** The profile now also governs hero/landing/ad copy — for
+  copy that has to hook a cold reader in the first two seconds, warmth outranks terseness, starting from the
+  worry the reader walked in with rather than a clever fragment (it does not loosen the get-to-the-point
+  discipline for emails, reports, or code). You can read the principle itself in [`profiles/full.md`](profiles/full.md).
+  What is **not** asserted is that it produces better copy than plain: that rests on a handful of
+  owner-judged blind comparisons, far too few to be powered, so **no effect size is claimed and no number is
+  published here** — publishing one would break this file's own rule that every figure recomputes offline.
 - **Not a capability upgrade.** It cannot raise a weaker model's reasoning ceiling. It
   changes working *style* and collaboration *structure*. Verify: README's "What this is and
   isn't" box and [`whitepaper/01-what-this-is.md`](whitepaper/01-what-this-is.md) §1.1.

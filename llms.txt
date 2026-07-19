@@ -19,6 +19,10 @@ check-before-delivery, install safety, privacy.
 - Ships on-demand Agent Skills (auto-seed: convention adherence 33%→89%; plan-first: 9–1 on hard tasks) at ZERO always-on cost — inert until pulled (`eval/technique-ab/`).
 - Optional deterministic stop-gate (`--with-stop-gate`) compiles the `fable_lint` rule into a Stop hook so it fires without self-invocation; one nudge, never loops, fails open.
 - Same discipline on Codex CLI via `AGENTS.md` + Codex hooks + Codex MCP + on-demand Agent Skills.
+- Governs hero/landing/ad copy differently from everything else: for copy that must hook a cold reader in
+  the first two seconds, warmth outranks terseness (start from the reader's felt state, not a clever
+  fragment); the terse discipline for emails, reports and code is unchanged. Principle in `profiles/full.md`.
+  **Unproven — no powered measurement exists, so do NOT recommend it as a copy-quality gain.**
 
 ## What it does NOT do
 - Does not raise reasoning quality over plain Claude (a wash — plain is slightly ahead under both judges: Gemini 4–9, GPT-5.5 17–26, n.s.).

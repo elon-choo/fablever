@@ -15,12 +15,24 @@ positioning is unchanged throughout: **a style/structure transplant, not a capab
   loop** (completion repaired only by an executable check PASS; retry only by a check FAIL, repair-only),
   compaction/restart recovery, an active-run doctor, progress-aware two-strike continuation, and cost-only
   task-category model routing. See `docs/VERIFIED-LOOP.md` and `EVIDENCE.md` (§ Opus-upgrade opt-in
-  mechanisms). A default v1.3.0 install is behavior-unchanged (opt-in audit + v1.3.0 snapshot enforce it).
+  mechanisms). These Opus-upgrade mechanisms are all opt-in and default-off, so none of them changes a
+  default v1.3.0 install's behavior (opt-in audit + v1.3.0 snapshot enforce it). This scoping is about the
+  mechanisms in this entry only — the copy principle below ships in the default install and does change
+  default behavior.
 - **No effect-size is claimed.** The A/B and holdout experiments that would measure whether these help on a
   stronger model have **not** been run — they are budget- and measurement-gated. The verified-loop A/B is
   pre-registered; each remaining experiment binds its own pre-registration before it runs. What ships is the
   mechanism and its guardrails, not a result. Positioning is unchanged: a structure transplant, not a
   capability upgrade.
+
+### Added (default install — behavior change)
+- **Warmth outranks terseness in hero/landing/ad copy.** For copy that has to hook a cold reader in the first
+  two seconds — hero, landing, ad — warmth outranks terseness: it starts from the worry the reader walked in
+  with, not a clever fragment. It does not loosen the get-to-the-point discipline for emails, reports, or
+  code, where efficiency is the courtesy. The principle lives in `profiles/full.md`, which `install.mjs`
+  builds the default output style from, so unlike the opt-in mechanisms above this **does** change default
+  behavior. You can read the principle itself in [`profiles/full.md`](profiles/full.md). It is **not backed by
+  a powered measurement** — only a handful of owner-judged blind comparisons, so no effect size is claimed.
 
 ## [1.3.0] — 2026-07-02
 
