@@ -22,6 +22,9 @@ const SERVER_VERSION = '1.0.0';
 const DEFAULT_PROTOCOL = '2025-06-18';
 // Per MCP spec: echo the client's requested version only if we support it; otherwise answer with our latest.
 const SUPPORTED_PROTOCOLS = new Set(['2025-06-18', '2025-03-26', '2024-11-05']);
+const TASK_CRITERIA_ENABLED = new Set(['on', '1', 'true']).has(
+  String(process.env.FABLE_TASK_CRITERIA || '').trim().toLowerCase(),
+);
 
 // Host-awareness (B7): the same zero-dep server runs under Claude Code AND Codex CLI. The Codex install sets
 // FABLE_HOST=codex plus FABLE_PROFILE_HOME / FABLE_HOME / FABLE_TASTE_FILE in config.toml so profile/taste/
@@ -527,15 +530,36 @@ const DOD_CATALOG = {
   ] },
 };
 
-function fableCheck(text, dodId) {
+function fableCheck(text, dodId, taskCriteriaBlock) {
   const t = String(text || '');
   const cat = DOD_CATALOG[dodId];
   if (!cat) return { ok: false, error: `unknown dod_id "${dodId}". Valid: ${Object.keys(DOD_CATALOG).join(' | ')}` };
+  let taskCriteria = [];
+  if (TASK_CRITERIA_ENABLED && taskCriteriaBlock !== undefined) {
+    try {
+      const { parseTaskCriteriaBlock } = require('./task-criteria');
+      taskCriteria = parseTaskCriteriaBlock(taskCriteriaBlock).criteria;
+    } catch (error) {
+      return { ok: false, error: `invalid task_criteria block: ${error.message}` };
+    }
+  }
   const items = [];
   for (const it of cat.items) {
     if (it.kind === 'human') { items.push({ id: it.id, label: it.label, status: 'UNCHECKED', evidence: null, gap: null, fix: it.fix }); continue; }
     let r; try { r = it.check(t); } catch (e) { r = { pass: false, evidence: 'check error: ' + e.message }; }
     items.push({ id: it.id, label: it.label, status: r.pass ? 'PASS' : 'FAIL', evidence: r.evidence, gap: r.pass ? null : it.gap, fix: r.pass ? null : it.fix });
+  }
+  // Captured task criteria are semantic user intent. Surface them for explicit confirmation;
+  // never pretend a text-only deterministic check can auto-grade arbitrary acceptance criteria.
+  for (const criterion of taskCriteria) {
+    items.push({
+      id: `task:${criterion.id}`,
+      label: `task criterion — ${criterion.description}`,
+      status: 'UNCHECKED',
+      evidence: null,
+      gap: null,
+      fix: `Confirm the finished deliverable satisfies: ${criterion.description}`,
+    });
   }
   // Taste-memory: rules become extra HARD gate items; notes become UNCHECKED items.
   const store = loadTaste();
@@ -561,7 +585,25 @@ function fableCheck(text, dodId) {
     ? `BLOCK — ${fail.length} acceptance check(s) failed: ${fail.map(f => f.id).join(', ')}. Fix and re-run before delivering.`
     : `PASS — all ${pass.length} deterministic check(s) met.`)
     + (unchecked.length ? ` ${unchecked.length} item(s) need human confirmation (never auto-passed): ${unchecked.map(u => u.id).join(', ')}.` : '');
-  return { ok: true, dod_id: dodId, domain: cat.domain, gate, pass_count: pass.length, fail_count: fail.length, unchecked_count: unchecked.length, taste_applied: tasteApplied, items, summary };
+  return {
+    ok: true,
+    dod_id: dodId,
+    domain: cat.domain,
+    gate,
+    pass_count: pass.length,
+    fail_count: fail.length,
+    unchecked_count: unchecked.length,
+    ...(TASK_CRITERIA_ENABLED && taskCriteriaBlock !== undefined
+      ? {
+        task_criteria_applied: taskCriteria.length > 0,
+        task_criteria_count: taskCriteria.length,
+        task_criteria: taskCriteria,
+      }
+      : {}),
+    taste_applied: tasteApplied,
+    items,
+    summary,
+  };
 }
 
 const TOOLS = [
@@ -591,12 +633,17 @@ const TOOLS = [
   },
   {
     name: 'fable_check',
-    description: 'Deterministically GATE a finished deliverable against a per-domain Definition of Done before you hand it over — the delivery gate. dod_id ∈ code | doc-planning | research | marketing-copy | funnel-design. Returns each acceptance item as PASS / FAIL / UNCHECKED with the gap and the fix, plus an overall gate of PASS or BLOCK. A BLOCK means a checkable criterion is unmet: fix it and re-run, do not deliver. UNCHECKED items are taste/judgement calls a human must confirm — they are never auto-passed. Also enforces your taste-memory rules for the domain. Zero LLM. Run it on the artifact you are about to deliver, not on a draft message (that is fable_lint).',
+    description: TASK_CRITERIA_ENABLED
+      ? 'Deterministically GATE a finished deliverable against a per-domain Definition of Done before you hand it over — the delivery gate. dod_id ∈ code | doc-planning | research | marketing-copy | funnel-design. Returns each acceptance item as PASS / FAIL / UNCHECKED with the gap and the fix, plus an overall gate of PASS or BLOCK. A BLOCK means a checkable criterion is unmet: fix it and re-run, do not deliver. UNCHECKED items are taste/judgement calls a human must confirm — they are never auto-passed. Optional task_criteria accepts the fable-task-criteria:v1 block captured for this task and surfaces those criteria alongside the generic catalog. Also enforces your taste-memory rules for the domain. Zero LLM. Run it on the artifact you are about to deliver, not on a draft message (that is fable_lint).'
+      : 'Deterministically GATE a finished deliverable against a per-domain Definition of Done before you hand it over — the delivery gate. dod_id ∈ code | doc-planning | research | marketing-copy | funnel-design. Returns each acceptance item as PASS / FAIL / UNCHECKED with the gap and the fix, plus an overall gate of PASS or BLOCK. A BLOCK means a checkable criterion is unmet: fix it and re-run, do not deliver. UNCHECKED items are taste/judgement calls a human must confirm — they are never auto-passed. Also enforces your taste-memory rules for the domain. Zero LLM. Run it on the artifact you are about to deliver, not on a draft message (that is fable_lint).',
     inputSchema: {
       type: 'object',
       properties: {
         text: { type: 'string', description: 'The finished deliverable text to gate.' },
         dod_id: { type: 'string', enum: ['code', 'doc-planning', 'research', 'marketing-copy', 'funnel-design'], description: 'Which domain Definition of Done to check against.' },
+        ...(TASK_CRITERIA_ENABLED
+          ? { task_criteria: { type: 'string', description: 'Optional fable-task-criteria:v1 block captured in this task\'s plan/contract.' } }
+          : {}),
       },
       required: ['text', 'dod_id'],
     },
@@ -687,7 +734,11 @@ function handle(msg) {
         }
         if (name === 'fable_check') {
           if (typeof args.text !== 'string' || typeof args.dod_id !== 'string') return error(id, -32602, 'fable_check requires "text" and "dod_id" string arguments');
-          return result(id, { content: [{ type: 'text', text: JSON.stringify(fableCheck(args.text, args.dod_id), null, 2) }] });
+          if (TASK_CRITERIA_ENABLED && args.task_criteria !== undefined && typeof args.task_criteria !== 'string') return error(id, -32602, 'fable_check optional "task_criteria" must be a string');
+          const report = TASK_CRITERIA_ENABLED
+            ? fableCheck(args.text, args.dod_id, args.task_criteria)
+            : fableCheck(args.text, args.dod_id);
+          return result(id, { content: [{ type: 'text', text: JSON.stringify(report, null, 2) }] });
         }
         if (name === 'fable_taste') {
           return result(id, { content: [{ type: 'text', text: JSON.stringify(fableTaste(args), null, 2) }] });

@@ -1,0 +1,30 @@
+{
+  "experiment_id": "opus-verified-loop-ab-2026-07",
+  "registered_at": "2026-07-17T00:00:00Z",
+  "decision_rule": "ship the verified-loop opt-in iff the Fable-Loop arm's hidden-test pass rate exceeds the prompt-matched-solo control by >= 8 percentage points AND its total token cost is within <= 25% of that control; else park. A null (no gain) result is published verbatim, not tuned away.",
+  "primary_metric": "hidden-test pass rate on the G0.2 opus-fixture executable oracles (fraction of the 12 hidden oracles that PASS), scored by the frozen fixture, arm-blind",
+  "co_primary_metrics": [
+    "total tokens per arm (G0.1 cost instrumentation)",
+    "wall-clock ms per arm (G0.1 cost instrumentation)"
+  ],
+  "floor_n": 6,
+  "task_n": 6,
+  "arms": [
+    "plain-opus",
+    "one-shot-stop-gate",
+    "prompt-matched-solo",
+    "fable-loop"
+  ],
+  "off_trigger_list": [],
+  "judge_id": "frozen-executable-oracle (no LLM judge — pass rate is decided by G0.2 hidden oracles, not preference)",
+  "margin": "8pp pass-rate gain vs prompt-matched-solo at <= 25% token overhead",
+  "guard_metrics": [
+    "atomic-task unnecessary-work penalty: on the atomic single-file tasks, the Fable-Loop arm is DOCKED if it adds loop/verifier/resume work the one-shot arm did not need (loop must not tax easy tasks)"
+  ],
+  "control_rationale": "The prompt-matched-solo arm gets the SAME acceptance criteria as the Fable-Loop arm but no durable state / no verified-completion loop. If Fable-Loop only matches solo, the gain was the criteria, not the loop. Comparing against plain-opus alone would overstate the loop's value (charter #1 / harness-paradox caution).",
+  "hard_preconditions": [
+    "G0.2 one-shot Opus baseline attestation MUST be recorded first (fixture must have headroom — if plain-opus already saturates the hidden oracles, the A/B cannot discriminate and the fixture is re-hardened + re-frozen before this experiment runs)",
+    "elon budget go-ahead for real Opus token spend (owner decision — HUMAN_GATE Stage 3)"
+  ],
+  "note": "Pre-registered BEFORE any run (registered_at precedes first_run_at). The RUN is elon-budget-gated; this file fixes the decision rule so the result cannot be reframed after the numbers are in."
+}

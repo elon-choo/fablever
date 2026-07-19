@@ -13,9 +13,11 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const baseDir = path.join(os.homedir(), '.claude', 'fable-profile');
 const ledgerPath = path.join(baseDir, 'measure-ledger.jsonl');
+const saltPath = path.join(baseDir, 'measurement-salt');
 const projectsDir = path.join(os.homedir(), '.claude', 'projects');
 const outPath = path.join(baseDir, 'measure-outcomes.jsonl');
 
@@ -23,14 +25,18 @@ const outPath = path.join(baseDir, 'measure-outcomes.jsonl');
 const REINSTRUCT = /\b(no,|nope|actually|that's wrong|that is wrong|not what i|undo|revert|stop,|wrong|instead|don'?t do)\b|아니|다시|틀렸|되돌|그게 아니|하지\s*마|왜\s*안/i;
 
 function readLedger() {
-  const byId = new Map();
+  const assignments = new Map();
   let raw = '';
-  try { raw = fs.readFileSync(ledgerPath, 'utf8'); } catch { return byId; }
+  try { raw = fs.readFileSync(ledgerPath, 'utf8'); } catch { return assignments; }
   for (const line of raw.split('\n')) {
     if (!line.trim()) continue;
-    try { const o = JSON.parse(line); if (o.session_id) byId.set(o.session_id, o.arm); } catch { /* skip */ }
+    try {
+      const o = JSON.parse(line);
+      if (o.session_id) assignments.set(`raw:${o.session_id}`, { session_id: o.session_id, arm: o.arm });
+      else if (o.session_key) assignments.set(`hmac:${o.session_key}`, { session_key: o.session_key, arm: o.arm });
+    } catch { /* skip */ }
   }
-  return byId;
+  return assignments;
 }
 
 function findTranscript(sid) {
@@ -40,6 +46,24 @@ function findTranscript(sid) {
   for (const d of dirs) {
     const p = path.join(projectsDir, d, sid + '.jsonl');
     try { if (fs.existsSync(p)) return p; } catch { /* skip */ }
+  }
+  return null;
+}
+
+function findTranscriptByKey(sessionKey, salt) {
+  if (!salt) return null;
+  let dirs = [];
+  try { dirs = fs.readdirSync(projectsDir); } catch { return null; }
+  for (const d of dirs) {
+    const dir = path.join(projectsDir, d);
+    let files = [];
+    try { files = fs.readdirSync(dir); } catch { continue; }
+    for (const file of files) {
+      if (!file.endsWith('.jsonl')) continue;
+      const sid = file.slice(0, -'.jsonl'.length);
+      const digest = crypto.createHmac('sha256', salt).update(sid).digest('hex');
+      if (`s_${digest.slice(0, 24)}` === sessionKey) return path.join(dir, file);
+    }
   }
   return null;
 }
@@ -95,12 +119,19 @@ function harvest(tpath) {
 function main() {
   const ledger = readLedger();
   if (!ledger.size) { console.log('No ledger yet at', ledgerPath, '— run sessions with FABLE_MEASURE=on first.'); return; }
+  let salt = null;
+  try { salt = fs.readFileSync(saltPath); } catch {}
   const rows = [];
-  for (const [sid, arm] of ledger) {
-    const tpath = findTranscript(sid);
-    if (!tpath) { rows.push({ session_id: sid, arm, transcript: false }); continue; }
+  for (const assignment of ledger.values()) {
+    const tpath = assignment.session_id
+      ? findTranscript(assignment.session_id)
+      : findTranscriptByKey(assignment.session_key, salt);
+    const identity = assignment.session_id
+      ? { session_id: assignment.session_id }
+      : { session_key: assignment.session_key };
+    if (!tpath) { rows.push({ ...identity, arm: assignment.arm, transcript: false }); continue; }
     const h = harvest(tpath);
-    rows.push({ session_id: sid, arm, transcript: true, ...h, edits_by_file: undefined });
+    rows.push({ ...identity, arm: assignment.arm, transcript: true, ...h, edits_by_file: undefined });
   }
   fs.writeFileSync(outPath, rows.map(r => JSON.stringify(r)).join('\n') + '\n');
   const withT = rows.filter(r => r.transcript);

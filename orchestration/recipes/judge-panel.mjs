@@ -36,6 +36,25 @@ const SCORE_SCHEMA = {
 }
 
 let a = args; if (typeof a === 'string') { try { a = JSON.parse(a); } catch (_) { a = {}; } } if (typeof a !== 'object' || !a) a = {}
+// The Workflow VM cannot read process.env or import the shared resolver. The Node
+// preflight serializes its optional result; an empty object preserves v1.3 fallback.
+const readonlyAgentType = a.preflight && a.preflight.readonlyAgentType
+const readonlyAgentOptions = readonlyAgentType ? { agentType: readonlyAgentType } : {}
+const ADVISORY_ROLES = {
+  judge: readonlyAgentOptions,
+}
+// Optional host-level cost preflight. Omitted preserves legacy direct-recipe behavior.
+// When supplied, fail closed before phase(), parallel(), or the first agent() call.
+const preflight = a.preflight
+if (preflight !== undefined && (!preflight || preflight.allow !== true || preflight.route !== 'panel')) {
+  log('judge-panel: preflight refused multi-agent spend; use the single-lens route.')
+  return {
+    refused: true,
+    allow: false,
+    route: 'single-lens',
+    reason: (preflight && preflight.reason) || 'invalid-preflight-input',
+  }
+}
 const task = a.task
 if (!task) { log('judge-panel: no args.task.'); return { skipped: true } }
 // COST-2 floor: judge-panel is the most expensive recipe (N gen + N judges + synth). It must
@@ -66,7 +85,7 @@ phase('Judge')
 const scores = (await parallel(candidates.map(c => () =>
   agent('Score this candidate solution against the rubric [' + rubric.join(', ') + '], each 0-10, then a total. Be a strict, independent judge.' +
     '\n\nTASK:\n' + task + '\n\nCANDIDATE #' + c.i + ':\n' + c.text,
-    { label: 'judge:' + c.i, phase: 'Judge', schema: SCORE_SCHEMA })
+    { label: 'judge:' + c.i, phase: 'Judge', schema: SCORE_SCHEMA, ...ADVISORY_ROLES.judge })
     .then(s => s ? { ...s, _candidate: c } : null)
 ))).filter(Boolean)
 

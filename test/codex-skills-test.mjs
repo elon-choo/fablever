@@ -9,16 +9,36 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { runCodex } from '../codex/lib/codex-install.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const INSTALL = path.join(REPO, 'install.mjs');
 const SKILLS_SRC = path.join(REPO, '.agents', 'skills');
+const UPGRADED_PLAN = path.join(REPO, 'skill', 'optin', 'fable-plan', 'SKILL.md');
+const UPGRADED_ORCHESTRATE = path.join(REPO, 'skill', 'optin', 'orchestrate', 'SKILL.md');
 
 let ok = 0, n = 0;
 const t = (cond, msg) => { n++; if (cond) { ok++; console.log('PASS:', msg); } else console.log('FAIL:', msg); };
 const read = p => { try { return readFileSync(p, 'utf8'); } catch { return ''; } };
 const rj = p => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const lsdirs = d => { try { return readdirSync(d, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name).sort(); } catch { return []; } };
+const snapshotTree = root => {
+  const entries = [];
+  const visit = (dir, rel = '') => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const child = path.join(rel, entry.name);
+      const absolute = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        entries.push([child, 'dir']);
+        visit(absolute, child);
+      } else {
+        entries.push([child, 'file', readFileSync(absolute).toString('base64')]);
+      }
+    }
+  };
+  visit(root);
+  return entries;
+};
 
 function newSandbox() {
   const SB = mkdtempSync(path.join(tmpdir(), 'codex-skills-'));
@@ -26,7 +46,17 @@ function newSandbox() {
   mkdirSync(CH, { recursive: true });
   return { SB, CH };
 }
-const runIn = (SB, CH, args, cwd) => spawnSync(process.execPath, [INSTALL, ...args], { env: { ...process.env, HOME: SB, USERPROFILE: SB, CODEX_HOME: CH }, cwd: cwd || REPO, encoding: 'utf8' });
+const runIn = (SB, CH, args, cwd, extraEnv = {}) => {
+  const env = { ...process.env, HOME: SB, USERPROFILE: SB, CODEX_HOME: CH };
+  delete env.FABLE_TASK_CRITERIA;
+  delete env.FABLE_ORCHESTRATION_PREFLIGHT;
+  delete env.FABLE_READONLY_VERIFIER;
+  return spawnSync(process.execPath, [INSTALL, ...args], {
+    env: { ...env, ...extraEnv },
+    cwd: cwd || REPO,
+    encoding: 'utf8',
+  });
+};
 const userSkillsDir = SB => path.join(SB, '.agents', 'skills');
 
 // What the repo actually ships (source of truth for the test).
@@ -57,9 +87,29 @@ for (const nm of SHIPPED) {
   const got = lsdirs(dst);
   t(SHIPPED.every(nm => got.includes(nm)), `full install: all ${SHIPPED.length} skills copied to $HOME/.agents/skills`);
   t(SHIPPED.every(nm => existsSync(path.join(dst, nm, 'SKILL.md'))), 'full install: each copied skill has its SKILL.md');
+  t(read(path.join(dst, 'fable-plan', 'SKILL.md')) === read(path.join(SKILLS_SRC, 'fable-plan', 'SKILL.md')), 'full install: default fable-plan bytes match the HEAD-compatible source');
   const iv = rj(path.join(CH, 'fable-profile', 'installed-version.json'));
   t(iv && Array.isArray(iv.skills) && SHIPPED.every(nm => iv.skills.includes(nm)), 'full install: installed-version.json records the skill list');
   t(iv && iv.skills_dir === dst, 'full install: installed-version.json records the skills dir');
+  rmSync(SB, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// 2b) task-criteria opt-in selects the upgraded fable-plan guidance without changing the shipped default
+{
+  const { SB, CH } = newSandbox();
+  runIn(SB, CH, ['--codex-full'], undefined, { FABLE_TASK_CRITERIA: 'on' });
+  t(read(path.join(userSkillsDir(SB), 'fable-plan', 'SKILL.md')) === read(UPGRADED_PLAN), 'FABLE_TASK_CRITERIA: Codex installs upgraded fable-plan guidance');
+  rmSync(SB, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// 2c) preflight opt-in adds orchestrate only to the installed Codex surface
+{
+  const { SB, CH } = newSandbox();
+  runIn(SB, CH, ['--codex-full'], undefined, { FABLE_ORCHESTRATION_PREFLIGHT: 'on' });
+  const installed = path.join(userSkillsDir(SB), 'orchestrate', 'SKILL.md');
+  t(read(installed) === read(UPGRADED_ORCHESTRATE), 'FABLE_ORCHESTRATION_PREFLIGHT: Codex installs upgraded orchestrate guidance');
   rmSync(SB, { recursive: true, force: true });
 }
 
@@ -148,6 +198,39 @@ for (const nm of SHIPPED) {
   const { SB, CH } = newSandbox();
   runIn(SB, CH, ['--codex-full', '--dry-run']);
   t(lsdirs(userSkillsDir(SB)).length === 0, 'dry-run: no skills written');
+  rmSync(SB, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// 10) task-criteria project self-install fails before touching the source tree
+{
+  const { SB, CH } = newSandbox();
+  const syntheticRepo = path.join(SB, 'repo');
+  const sourcePlan = path.join(syntheticRepo, '.agents', 'skills', 'fable-plan', 'SKILL.md');
+  mkdirSync(path.dirname(sourcePlan), { recursive: true });
+  writeFileSync(sourcePlan, '---\nname: fable-plan\ndescription: synthetic source fixture\n---\nHEAD-compatible\n');
+  writeFileSync(path.join(syntheticRepo, 'AGENTS.md'), 'SENTINEL\n');
+  const before = snapshotTree(syntheticRepo);
+  const output = [];
+  const rc = await runCodex({
+    action: 'install',
+    scope: 'project',
+    cwd: syntheticRepo,
+    repoDir: syntheticRepo,
+    styleOnly: false,
+    parts: { agents: true, hooks: true, mcp: true, skills: true },
+    env: {
+      ...process.env,
+      HOME: SB,
+      USERPROFILE: SB,
+      CODEX_HOME: CH,
+      FABLE_TASK_CRITERIA: 'on',
+    },
+    log: line => output.push(line),
+  });
+  t(rc === 2, 'task-criteria self-install: exits 2 before attempting an in-place source overlay');
+  t(output.join('\n').includes('FABLE_TASK_CRITERIA') && output.join('\n').includes('source skill'), 'task-criteria self-install: explains the source/destination conflict');
+  t(JSON.stringify(snapshotTree(syntheticRepo)) === JSON.stringify(before), 'task-criteria self-install: source tree remains byte-identical');
   rmSync(SB, { recursive: true, force: true });
 }
 

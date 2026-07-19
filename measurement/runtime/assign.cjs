@@ -8,6 +8,14 @@
 // secret (see privacy.cjs), so the assignment is unguessable and stable per session. Zero dependencies.
 const crypto = require('crypto');
 
+// Opus-bearing model ids are recognized for campaign filtering/reporting only. The model id is NEVER an
+// assignment input: arm selection stays condition-blind and depends only on campaign + session + salt.
+function isOpusModel(model) {
+  const tokens = String(model || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const claude = tokens.indexOf('claude');
+  return claude >= 0 && tokens.indexOf('opus', claude + 1) > claude;
+}
+
 // → 'off' | 'on'. offPercent is the share of sessions held OUT (untreated). Clamped to [0,100]; a NaN or
 // out-of-range value falls back to 50 (a balanced campaign), never an accidental all-on/all-off.
 function assignArm({ campaignId, sessionId, salt, offPercent }) {
@@ -21,4 +29,4 @@ function assignArm({ campaignId, sessionId, salt, offPercent }) {
   return bucket < pct ? 'off' : 'on';
 }
 
-module.exports = { assignArm };
+module.exports = { assignArm, isOpusModel };

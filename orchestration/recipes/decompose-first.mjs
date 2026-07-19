@@ -35,6 +35,25 @@ const TREE_SCHEMA = {
 }
 
 let a = args; if (typeof a === 'string') { try { a = JSON.parse(a); } catch (_) { a = {}; } } if (typeof a !== 'object' || !a) a = {}
+// The Workflow VM cannot read process.env or import the shared resolver. The Node
+// preflight serializes its optional result; an empty object preserves v1.3 fallback.
+const readonlyAgentType = a.preflight && a.preflight.readonlyAgentType
+const readonlyAgentOptions = readonlyAgentType ? { agentType: readonlyAgentType } : {}
+const ADVISORY_ROLES = {
+  planningAdviser: readonlyAgentOptions,
+}
+// Optional host-level cost preflight. Omitted preserves legacy direct-recipe behavior.
+// When supplied, fail closed before phase() or the planner's first agent() call.
+const preflight = a.preflight
+if (preflight !== undefined && (!preflight || preflight.allow !== true || preflight.route !== 'decompose')) {
+  log('decompose-first: preflight refused multi-agent spend; use the single-lens route.')
+  return {
+    refused: true,
+    allow: false,
+    route: 'single-lens',
+    reason: (preflight && preflight.reason) || 'invalid-preflight-input',
+  }
+}
 const task = a.task
 if (!task) { log('decompose-first: no args.task.'); return { skipped: true } }
 const maxWidth = Math.max(1, Math.min(16, a.maxWidth || 12)) // honor min(16, cores-2) spirit
@@ -44,7 +63,7 @@ const tree = await agent(
   'Classify how to decompose this task. Do NOT solve it yet. Pick exactly one split-axis from the fixed menu ' +
   '[' + SPLIT_AXES.join(', ') + '] and list the independent sub-problems it produces. If the task is genuinely atomic, use split_axis="none" and a single subproblem.' +
   '\n\nTASK:\n' + task,
-  { label: 'plan', phase: 'Plan', schema: TREE_SCHEMA }
+  { label: 'plan', phase: 'Plan', schema: TREE_SCHEMA, ...ADVISORY_ROLES.planningAdviser }
 )
 
 const plannedCount = (tree.subproblems || []).length

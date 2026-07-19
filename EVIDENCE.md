@@ -214,6 +214,57 @@ the five checks, not from this sentence.
 
 ---
 
+## Opus-upgrade opt-in mechanisms (v1.4-track — shipped default-off, measurement pending)
+
+A stage×goal upgrade added deterministic scaffolding for evidence-grounded completion. Every mechanism
+below is **additive, opt-in, and default-off**: a default v1.3.0 install is behavior-unchanged (an
+opt-in audit + a v1.3.0 behavioral snapshot enforce this). Each ships with a deterministic test that
+gates its guarantees; **no effect-size is claimed** — the A/B and holdout experiments that would
+measure whether these help on a stronger model **have not been run** (they are budget- and
+measurement-gated). The verified-loop A/B is pre-registered (`eval/opus-prereg/verified-loop-ab-2026-07.prereg.json`);
+each remaining experiment binds its own pre-registration before it runs (the binding lint refuses a
+result without one). What is shipped is the *mechanism and its guardrails*, not a result.
+
+| Mechanism | What it enforces (a guardrail, not a magnitude) | Test |
+|---|---|---|
+| Cost instrumentation | per-arm tokens + wall-clock + fixture hash; checked hook-exemption precondition | `test/cost-instrumentation-test.mjs` |
+| Hidden-oracle fixture | multi-part tasks with hidden executable oracles (bidirectional, non-trivial) | `eval/opus-fixture/validate.mjs` |
+| Pre-registration binding | a magnitude result must bind to a prereg recorded before the run | `test/opus-prereg-test.mjs` |
+| Magnitude-claim lint | flags an unmeasured Opus effect-size claim, or uncited orchestration-superiority prose, in the docs | `test/opus-claim-lint-test.mjs` |
+| Retry/iteration budget | proven caps (generation-round = 1); halt-and-surface on exhaustion | `test/retry-budget-test.mjs` |
+| Read-only verifiers | advisory roles are a subset of a read-only allowlist (falsifiable) | `test/readonly-verifiers-test.mjs` |
+| Pre-flight route gate | a route below its cost floor is refused before any agent spawns | `test/preflight-gate-test.mjs` |
+| Single writable authority | contract + append-only ledger; a doctored cache cannot forge completion | `test/run-state-test.mjs` |
+| Evidence receipts | a criterion completes only when bound to a fresh executable-check receipt | `test/evidence-receipt-test.mjs` |
+| Bounded verified loop | completion repaired only by an executable PASS; retry only by a FAIL, repair-only | `test/verified-loop-test.mjs` |
+| Restart recovery | next criterion reconstructed from contract + ledger alone (no replay) | `test/restart-recovery-test.mjs` |
+| Active-run doctor | names the violated invariant + a safe next action; report-only | `test/run-doctor-test.mjs` |
+| Two-strike continuation | ledger-derived progress; bounded resumes (no infinite continuation) | `test/continuation-test.mjs` |
+| Cost-only tier routing | mechanical work → cheaper tier, judgment → Opus; no quality claim | `test/tier-routing-test.mjs` |
+| Hook-exemption (opt-in) | flag off = v1.3.0-identical injection; on = no restraint payload for recipe verifiers | `test/hook-exemption-test.mjs` |
+| Durable plan artifact | decision-complete plan, hash-bound to the contract; product files untouched during planning | `test/plan-artifact-test.mjs` |
+| Task-criteria capture | at most one clarify question (no mandatory interview); criteria parseable by `fable_check` | `test/task-criteria-test.mjs` |
+| Verification-debt state | planned/done/verified + open debt on the SAME single authority (no second store) | `test/state-debt-test.mjs` |
+| Holdout arming (measurement) | condition-blind Opus arm assignment; inert unless `FABLE_MEASURE=on` | `test/measurement-assignment-test.mjs` |
+| Verified-loop A/B harness | 4-arm harness armed + fail-closed on the real run (budget-gated); scoring reads the hidden oracles | `test/verified-loop-ab-test.mjs` |
+| Opt-in flag audit | flag manifest + fail-closed scan; empty default behavioral diff vs v1.3.0 | `test/optin-audit-test.mjs` |
+| Ledger evidence bookkeeping | every done row is FS-backed; every gate carries an independent reviewer verdict | `test/ledger-evidence-test.mjs` |
+
+Deferred (budget/measurement-gated, not shipped as a result): the Stage-1 Opus rebaseline, the
+verified-loop A/B, the skill-trigger-phrasing A/B, the stop-gate holdout, the tier-routing cost eval,
+and the resume A/B. Each is armed (harness / pre-registration / fixture) and waits on the owner's
+measurement go-ahead; none asserts a magnitude in the meantime.
+
+**Boundary record (proven negatives — do not re-add):** the disproven forms stay rejected — an
+always-on parallel roster (single-agent-with-lens-menu already matched it at a fraction of the cost),
+a 500-iteration oracle loop, a mandatory interview stage, count quotas, a second evidence-rewrite
+pass, generation-round escalation, a duplicate state store, quality claims about tier selection, and
+judge-preference-triggered retries. Each has a controlled-A/B basis; re-introducing one requires a new
+A/B that overturns it. The bounded verified loop is the honest kernel that keeps the useful part
+(verify before claiming done) while avoiding every one of those. See `docs/VERIFIED-LOOP.md`.
+
+---
+
 *Not affiliated with Anthropic. Claude, Anthropic, and Fable are Anthropic trademarks, used
 nominatively to describe what this independent community tool works with. See [`NOTICE`](NOTICE).
 Provenance and full claims ledger: [`docs/PUBLICATION-READINESS.md`](docs/PUBLICATION-READINESS.md).*

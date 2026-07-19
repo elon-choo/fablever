@@ -6,15 +6,16 @@
  * its own context). Codex passes the subagent's role as `agent_type`; we also read the Claude-Code keys
  * (subagent_type / agentType / subagentType) so one hook body works under either host.
  *
- * Orchestration / skeptic / verifier roles are EXEMPT: the restraint governor tells an agent to stop early
- * and under-validate, which is backwards for fan-out and adversarial verification depth. Those agents get
- * no injection.
+ * Legacy calibrated orchestration roles keep their v1.3.0 exemptions. The G2.2 recipe verifier is exempt
+ * only with FABLE_VERIFIER_HOOK_EXEMPTION=on (default OFF), so default installs preserve prior injection.
  *
  * Zero dependencies. FAIL-OPEN: any error → exit 0, no stdout. Disable with FABLE_PROFILE=off (or touch
  * <profile-home>/OFF). Profile-home resolution: FABLE_PROFILE_HOME → FABLE_HOME/.. → <hookdir>/../fable-profile.
  */
 const fs = require('fs');
 const path = require('path');
+
+const VERIFIER_EXEMPTION_FLAG = 'FABLE_VERIFIER_HOOK_EXEMPTION';
 
 const COMPACT_FALLBACK =
   'Fable working style (Codex): act when you have enough — recommend, don\'t survey; lead with the outcome; ' +
@@ -58,6 +59,29 @@ function isHoldoutOff(sessionId) {
   return false;
 }
 
+function verifierExemptionEnabled() {
+  return ['on', '1', 'true'].includes((process.env[VERIFIER_EXEMPTION_FLAG] || '').trim().toLowerCase());
+}
+
+function readReadonlyVerifierType() {
+  const candidates = [];
+  if (process.env.FABLE_HOME) {
+    candidates.push(path.join(process.env.FABLE_HOME, 'orchestration', 'lib', 'readonly-verifiers.mjs'));
+  }
+  for (const home of profileHomes()) {
+    candidates.push(path.join(home, 'runtime', 'orchestration', 'lib', 'readonly-verifiers.mjs'));
+  }
+  candidates.push(path.join(__dirname, '..', '..', 'orchestration', 'lib', 'readonly-verifiers.mjs'));
+  for (const file of candidates) {
+    try {
+      const source = fs.readFileSync(file, 'utf8');
+      const match = source.match(/^\s*export const READ_ONLY_AGENT_TYPE\s*=\s*(['"])([^'"\r\n]+)\1\s*;?/m);
+      if (match && match[2]) return match[2];
+    } catch (_) { /* try next source; missing/unreadable registry must fail open */ }
+  }
+  return '';
+}
+
 // Opt-in, ZERO-CONTENT trust trace (see fable-session.js) — proves Codex actually ran this hook.
 function traceHook(name) {
   const f = process.env.FABLE_HOOK_TRACE_FILE;
@@ -79,6 +103,16 @@ try {
         if (isHoldoutOff(String(ev.session_id || ev.sessionId || '').trim())) process.exit(0); // off-arm baseline
         const t = ev.agent_type || ev.subagent_type || ev.agentType || ev.subagentType ||
           (ev.hookSpecificOutput && ev.hookSpecificOutput.subagentType) || '';
+        // G2.3 opt-in only: recipe advisory roles share READ_ONLY_AGENT_TYPE from the
+        // shipped registry. Exact-match it; any registry/parse error falls through to
+        // the v1.3.0 injection path. Flag unset/off performs no registry read.
+        if (t && verifierExemptionEnabled()) {
+          const readonlyVerifierType = readReadonlyVerifierType();
+          if (readonlyVerifierType && t === readonlyVerifierType) {
+            try { process.stderr.write('[fable-subagent] exempting recipe verifier from restraint payload: ' + t + '\n'); } catch (_) {}
+            process.exit(0);
+          }
+        }
         // Exact-match calibrated orchestration roles (incl. Claude's built-in Explore/Plan), plus an
         // anchored pattern for skeptic/refute/diverge/orchestrate/adversarial role names.
         const EXEMPT = new Set(['red-team-validator', 'evidence-verifier', 'purple-team-arbiter', 'Explore', 'Plan']);

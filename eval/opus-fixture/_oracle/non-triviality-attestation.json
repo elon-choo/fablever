@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-07-17T07:36:54.163Z",
+  "model": "claude-opus-4-8",
+  "arm": "plain-opus (one-shot, no Fable style, no stop gate, no loop) — identical invocation to the G3.6 harness arm",
+  "budget_confirmed_ref": "owner-authorized",
+  "fixture_sha256": "7f8635df8adb2dfd08ec4b53b415ba967a0d8d660696812620c9f056b606225f",
+  "one_shot_baseline": {
+    "csv-parse": {
+      "failed": false,
+      "checks": {
+        "check1.mjs": "pass",
+        "check2.mjs": "pass"
+      },
+      "exit": 0,
+      "wall_clock_ms": 86338,
+      "usage": null,
+      "spawn_error": null
+    },
+    "duration-parse": {
+      "failed": false,
+      "checks": {
+        "check1.mjs": "pass",
+        "check2.mjs": "pass"
+      },
+      "exit": 0,
+      "wall_clock_ms": 71639,
+      "usage": null,
+      "spawn_error": null
+    },
+    "json-pointer": {
+      "failed": false,
+      "checks": {
+        "check1.mjs": "pass",
+        "check2.mjs": "pass"
+      },
+      "exit": 0,
+      "wall_clock_ms": 65584,
+      "usage": null,
+      "spawn_error": null
+    },
+    "path-normalize": {
+      "failed": false,
+      "checks": {
+        "check1.mjs": "pass",
+        "check2.mjs": "pass"
+      },
+      "exit": 0,
+      "wall_clock_ms": 34851,
+      "usage": null,
+      "spawn_error": null
+    },
+    "semver-compare": {
+      "failed": false,
+      "checks": {
+        "check1.mjs": "pass",
+        "check2.mjs": "pass"
+      },
+      "exit": 0,
+      "wall_clock_ms": 82344,
+      "usage": null,
+      "spawn_error": null
+    },
+    "token-bucket": {
+      "failed": false,
+      "checks": {
+        "check1.mjs": "pass",
+        "check2.mjs": "pass"
+      },
+      "exit": 0,
+      "wall_clock_ms": 48220,
+      "usage": null,
+      "spawn_error": null
+    }
+  },
+  "failed_task_count": 0,
+  "total_tasks": 6,
+  "note": "failed:true = one-shot Opus did NOT pass every hidden oracle for that task = the task has headroom for the A/B to measure. If failed_task_count is below the fixture floor, the fixture is saturated and MUST be hardened + re-frozen before G3.6 runs — publishing an A/B on a saturated fixture would measure nothing."
+}

@@ -19,6 +19,7 @@ function holdoutOff(opts) {
   try {
     const env = (opts && opts.env) || process.env;
     if (!onish(env.FABLE_MEASURE)) return false;
+    if (String(env.FABLE_PROFILE || '').toLowerCase() === 'off') return false;
     const home = env.FABLE_MEASURE_HOME;
     const campaign = env.FABLE_MEASURE_CAMPAIGN;
     const sessionId = String((opts && opts.sessionId) || '').trim();

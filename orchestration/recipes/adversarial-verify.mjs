@@ -73,6 +73,27 @@ const ANTI_CONTAMINATION =
 const MAX_AGENTS = 24 // caps the number of skeptic lenses (the synthesis agent is +1), well under the 1000 lifetime cap
 
 let a = args; if (typeof a === 'string') { try { a = JSON.parse(a); } catch (_) { a = {}; } } if (typeof a !== 'object' || !a) a = {}
+// Workflow has no per-call tools option and its VM cannot read process.env or import
+// the shared resolver. The Node preflight serializes the optional custom agent type;
+// when absent, each advisory call retains its exact v1.3 agentType dispatch.
+const readonlyAgentType = a.preflight && a.preflight.readonlyAgentType
+const readonlyAgentOptions = readonlyAgentType ? { agentType: readonlyAgentType } : {}
+const ADVISORY_ROLES = {
+  crossModelRefuter: readonlyAgentOptions,
+  verificationSynthesizer: readonlyAgentOptions,
+}
+// Optional host-level cost preflight. Omitted preserves legacy direct-recipe behavior.
+// When supplied, fail closed before phase(), parallel(), or the first agent() call.
+const preflight = a.preflight
+if (preflight !== undefined && (!preflight || preflight.allow !== true || preflight.route !== 'panel')) {
+  log('adversarial-verify: preflight refused multi-agent spend; use the single-lens route.')
+  return {
+    refused: true,
+    allow: false,
+    route: 'single-lens',
+    reason: (preflight && preflight.reason) || 'invalid-preflight-input',
+  }
+}
 const artifact = a.artifact || (a.artifactPath ? ('See file: ' + a.artifactPath + ' (read it first).') : null)
 if (!artifact) {
   log('adversarial-verify: no artifact provided (pass args.artifact or args.artifactPath). Nothing to verify.')
@@ -101,7 +122,8 @@ if (!lensKeys.length) { log('adversarial-verify: no valid lenses after filtering
 phase('Refute')
 // Reuse the machine's calibrated skeptic agentTypes where they fit; fall back to
 // a default fresh-context worker. Each skeptic sees ONLY the artifact + its lens —
-// no sibling output, so no anchoring.
+// no sibling output, so no anchoring. The read-only verifier opt-in overrides every
+// legacy lens dispatch without changing the flag-off path.
 const AGENT_FOR_LENS = { correctness: 'red-team-validator', security: 'red-team-validator', edge_cases: 'red-team-validator', overclaim: 'evidence-verifier' }
 const thunks = lensKeys.map(k => () =>
   agent(
@@ -110,7 +132,7 @@ const thunks = lensKeys.map(k => () =>
     '\n\nReview ONLY through this lens and try to BREAK the artifact below. Report concrete, evidence-backed defects. ' +
     'Mark defect_class honestly: contradiction/omission are what a fresh reviewer reliably catches; only claim deep-reasoning if you can show the flawed step.' +
     '\n\n=== ARTIFACT UNDER REVIEW ===\n' + artifact,
-    { label: 'refute:' + k, phase: 'Refute', schema: VERDICT_SCHEMA, agentType: AGENT_FOR_LENS[k] }
+    { label: 'refute:' + k, phase: 'Refute', schema: VERDICT_SCHEMA, agentType: readonlyAgentType || AGENT_FOR_LENS[k] }
   )
 )
 
@@ -132,7 +154,7 @@ if (crossEnabled) {
     'prefix each finding with the external model name. Set lens to "cross-model". If the tool errors or is ' +
     'unavailable, return refuted:false, defect_class:none, and ONE finding noting the tool was unavailable.' +
     '\n\n=== ARTIFACT UNDER REVIEW ===\n' + artifact,
-    { label: 'xverify:' + xc.provider, phase: 'Refute', schema: VERDICT_SCHEMA }
+    { label: 'xverify:' + xc.provider, phase: 'Refute', schema: VERDICT_SCHEMA, ...ADVISORY_ROLES.crossModelRefuter }
   ))
 }
 
@@ -189,7 +211,7 @@ if (!confirmed.length) {
     'Here are their structured verdicts:\n' + JSON.stringify(verdicts.concat(crossVerdicts), null, 1) +
     '\n\nDeduplicate overlapping findings, rank by severity, and write a tight verdict: is this artifact safe to deliver? ' +
     'List the must-fix blockers first. Be concrete; cite the lens each finding came from. Do not invent findings the reviewers did not raise.',
-    { label: 'synthesize', phase: 'Synthesize' }
+    { label: 'synthesize', phase: 'Synthesize', ...ADVISORY_ROLES.verificationSynthesizer }
   )
 }
 

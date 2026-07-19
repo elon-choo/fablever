@@ -39,6 +39,25 @@ const VERIFY_SCHEMA = {
 }
 
 let a = args; if (typeof a === 'string') { try { a = JSON.parse(a); } catch (_) { a = {}; } } if (typeof a !== 'object' || !a) a = {}
+// The Workflow VM cannot read process.env or import the shared resolver. The Node
+// preflight serializes its optional result; an empty object preserves v1.3 fallback.
+const readonlyAgentType = a.preflight && a.preflight.readonlyAgentType
+const readonlyAgentOptions = readonlyAgentType ? { agentType: readonlyAgentType } : {}
+const ADVISORY_ROLES = {
+  verifier: readonlyAgentOptions,
+}
+// Optional host-level cost preflight. Omitted preserves legacy direct-recipe behavior.
+// When supplied, fail closed before phase(), pipeline(), or the first agent() call.
+const preflight = a.preflight
+if (preflight !== undefined && (!preflight || preflight.allow !== true || preflight.route !== 'decompose')) {
+  log('pipeline-map: preflight refused multi-agent spend; use the single-lens route.')
+  return {
+    refused: true,
+    allow: false,
+    route: 'single-lens',
+    reason: (preflight && preflight.reason) || 'invalid-preflight-input',
+  }
+}
 const STAGE_COUNT = 3 // extract -> transform -> verify
 // Hard agent budget: items x 3 stages must stay under the 1000-agent lifetime cap that the
 // sibling recipes defend. Default ~960 agents => ~320 items. (There is intentionally NO
@@ -67,7 +86,7 @@ const results = await pipeline(
   // carries the TRANSFORM output (tr.output) into the result so the product is preserved.
   (tr, item, i) => agent('Transformed output for item #' + i + ':\n' + JSON.stringify(tr) +
     '\n\nORIGINAL ITEM:\n' + String(item) + '\n\nTASK: ' + verify + ' Set ok=false (with a reason in note) if it does not hold.',
-    { label: 'verify:' + i, phase: 'Map', schema: VERIFY_SCHEMA })
+    { label: 'verify:' + i, phase: 'Map', schema: VERIFY_SCHEMA, ...ADVISORY_ROLES.verifier })
     .then(v => v ? { ok: v.ok, output: (tr && tr.output) || '', verify_note: v.note, item_index: i } : null)
 )
 

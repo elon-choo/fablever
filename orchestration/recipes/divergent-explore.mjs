@@ -57,6 +57,26 @@ const ANTI_CONTAMINATION =
   'Your job is to GENERATE genuinely distinct approaches under your lens. Quantity of DISTINCT ideas matters here.'
 
 let a = args; if (typeof a === 'string') { try { a = JSON.parse(a); } catch (_) { a = {}; } } if (typeof a !== 'object' || !a) a = {}
+// The Workflow VM cannot read process.env or import the shared resolver. The Node
+// preflight serializes its optional result; an empty object preserves v1.3 fallback.
+const readonlyAgentType = a.preflight && a.preflight.readonlyAgentType
+const readonlyAgentOptions = readonlyAgentType ? { agentType: readonlyAgentType } : {}
+const ADVISORY_ROLES = {
+  ideaAdviser: readonlyAgentOptions,
+  advisorySynthesizer: readonlyAgentOptions,
+}
+// Optional host-level cost preflight. Omitted preserves legacy direct-recipe behavior.
+// When supplied, fail closed before phase(), parallel(), or the first agent() call.
+const preflight = a.preflight
+if (preflight !== undefined && (!preflight || preflight.allow !== true || preflight.route !== 'decompose')) {
+  log('divergent-explore: preflight refused multi-agent spend; use the single-lens route.')
+  return {
+    refused: true,
+    allow: false,
+    route: 'single-lens',
+    reason: (preflight && preflight.reason) || 'invalid-preflight-input',
+  }
+}
 const question = a.question
 if (!question) { log('divergent-explore: no args.question — nothing to explore.'); return { skipped: true } }
 
@@ -107,7 +127,7 @@ while (round < maxRounds && dryStreak < dryStreakToStop && agentsSpawned < HARD_
       '\n\nLENS: ' + k + ' — ' + DIVERGE_LENSES[k] +
       '\n\nOPEN PROBLEM:\n' + question + seedNote +
       '\n\nPropose distinct approaches strictly from your lens. Each needs a one-line title, the approach, and its key risk.',
-      { label: 'diverge:r' + round + ':' + k, phase: 'Diverge', schema: HYP_SCHEMA }
+      { label: 'diverge:r' + round + ':' + k, phase: 'Diverge', schema: HYP_SCHEMA, ...ADVISORY_ROLES.ideaAdviser }
     )
   ))).filter(Boolean)
 
@@ -126,7 +146,7 @@ const synthesis = await agent(
   '\n\nHere are ' + all.length + ' candidate approaches gathered from independent lenses:\n' + JSON.stringify(all, null, 1) +
   '\n\nGroup near-duplicates, keep the genuinely distinct ones, and rank them. For each kept approach give: when it wins, when it loses. ' +
   'Be honest that breadth here came from independence, not from any single brilliant pass — flag any approach that looks distinct-but-weak.',
-  { label: 'synthesize', phase: 'Synthesize' }
+  { label: 'synthesize', phase: 'Synthesize', ...ADVISORY_ROLES.advisorySynthesizer }
 )
 
 return {

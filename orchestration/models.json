@@ -7,6 +7,29 @@
     "adjudicator": "gpt-5.5",
     "judges": ["gpt-5.5", "gemini-3.1-pro-preview"]
   },
+  "cost_routing": {
+    "_note": "Task-category tier selection is a spend policy only. It does not assert output quality, model capability, accuracy, or task success. Each ordered category chain starts with its cost route and ends with its fallback.",
+    "enabled_mode": "auto",
+    "tiers": {
+      "lower-cost": {
+        "kind": "delegation",
+        "target": "codex",
+        "cost_class": "lower"
+      },
+      "opus": {
+        "kind": "model-ref",
+        "target": "active.worker_claude",
+        "cost_class": "baseline"
+      }
+    },
+    "category_chains": {
+      "mechanical-edit": ["lower-cost", "opus"],
+      "bounded-code-change": ["lower-cost", "opus"],
+      "deterministic-check": ["lower-cost", "opus"],
+      "judgment": ["opus"]
+    },
+    "unclassified_chain": ["opus"]
+  },
   "families": {
     "openai": { "endpoint": "chat", "pin": "gpt-5.5", "max_quality": "gpt-5.5-pro", "max_quality_note": "gpt-5.5-pro is NOT a chat model (needs /v1/responses or /v1/completions); not used on the chat path until that endpoint is wired." },
     "google": { "endpoint": "generateContent", "pin": "gemini-3.1-pro-preview" },

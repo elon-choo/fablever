@@ -48,6 +48,27 @@ Precedence: env `FABLE_ULTRA` > `~/.claude/fable-profile/mode.json` (`{"ultra":"
 default `auto`. The `auto` gate is an honest heuristic, not a guarantee — `on`/`off` always
 override. Self-test: `node orchestration/lib/mode.mjs --selftest`.
 
+### Explicit task-category cost route (`auto` only)
+
+[`lib/tier-routing.mjs`](lib/tier-routing.mjs) adds an inert unit API for callers that already
+have an explicit task category. Calling `routeTaskCategory(category)` while
+`FABLE_ULTRA=auto` reads the `cost_routing` block in the existing [`models.json`](models.json);
+`on` and `off` do not activate category routing. Merely installing fablever or leaving the
+mode at `auto` does not dispatch this path.
+
+| task category | selected tier | ordered fallback chain |
+|---|---|---|
+| `mechanical-edit` | `lower-cost` → Codex delegation | `lower-cost` → `opus` |
+| `bounded-code-change` | `lower-cost` → Codex delegation | `lower-cost` → `opus` |
+| `deterministic-check` | `lower-cost` → Codex delegation | `lower-cost` → `opus` |
+| `judgment` | `opus` | `opus` |
+| unknown / blank (`UNCLASSIFIED`) | `opus` fallback | `opus` |
+
+The category names and chains live only in `models.json`. The `opus` tier resolves
+`active.worker_claude`; the lower-cost tier names a Codex delegation target and introduces
+no second model pin. This is a spend policy only. It makes no claim about output quality,
+capability, accuracy, or task success.
+
 ---
 
 ## Staying current — detect → validate → adopt (daily, token-safe)

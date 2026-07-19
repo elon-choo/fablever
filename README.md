@@ -58,6 +58,14 @@ and local diagnostics `node tools/fable-doctor.mjs` · `node tools/fable-report.
 > acceptance gap on **80.6%** of blocked tasks vs **12.9%** for a generic "make it better" pass. It does
 > *not* beat a generic second revision on overall quality (16–9, p=0.23, n.s.) — and we say so. Recompute:
 > `cat eval/comparison/fable-check-sim/out4/RESULTS.md`. Details: [`EVIDENCE.md`](EVIDENCE.md) §2.1.
+>
+> **One real-use pilot (n=1, not a magnitude claim):** the same brief was run twice on Opus, fablever on
+> vs off, and the owner picked the arm blind — he chose the **on** arm ("the number's right there, none of
+> that long-winded AI explaining, I see exactly what to do next"). Blind assignment was withheld until after
+> his verdict; a manipulation check confirmed the arms differed. The on arm cost **~3× the wall-clock** and
+> offered fewer options (more restraint, less invention). Pre-registered as *descriptive only* — one
+> deliverable he can personally judge, no effect-size claimed. Raw:
+> `eval/results-paired-deliverable-2026-07-17.md`.
 
 ```bash
 git clone https://github.com/elon-choo/fablever && cd fablever

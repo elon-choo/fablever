@@ -51,13 +51,16 @@ fills its `args`. The skill is pulled on a trigger, never always-on.
 
 ## Decision table (task shape → recipe → primitive)
 
-| task shape | recipe | primitive | gate |
-|---|---|---|---|
-| "is this artifact/plan/diff sound?" | `adversarial-verify` | `parallel()` barrier | RED output-gate |
-| "what are the possible approaches?" | `divergent-explore` | `parallel()` + JS loop-until-dry | dry-stop + hard ceiling |
-| "do this big multi-part task" | `decompose-first` | task-tree → `parallel()` *or* sequential | complexity floor |
-| "process each of N items in stages" | `pipeline-map` | `pipeline()` (no barrier) | per-item verify |
-| "produce one high-stakes artifact" | `judge-panel` | `parallel()` best-of-N | gated to high-stakes |
+The **preflight route** column applies only when the opt-in cost gate is installed
+(`FABLE_ORCHESTRATION_PREFLIGHT=on`); a default install has no preflight and routes as v1.3.0 did.
+
+| task shape | preflight route | recipe | primitive | in-recipe gate |
+|---|---|---|---|---|
+| "is this artifact/plan/diff sound?" | `panel` | `adversarial-verify` | `parallel()` barrier | RED output-gate |
+| "what are the possible approaches?" | `decompose` | `divergent-explore` | `parallel()` + JS loop-until-dry | dry-stop + hard ceiling |
+| "do this big multi-part task" | `decompose` | `decompose-first` | task-tree → `parallel()` *or* sequential | complexity floor |
+| "process each of N items in stages" | `decompose` | `pipeline-map` | `pipeline()` (no barrier) | per-item verify |
+| "produce one high-stakes artifact" | `panel` | `judge-panel` | `parallel()` best-of-N | high-stakes guard |
 
 Trivial tasks should hit a **complexity floor** and stay solo — fan-out on a
 one-liner is over-building. The three fan-out recipes (`adversarial-verify`,
@@ -65,13 +68,18 @@ one-liner is over-building. The three fan-out recipes (`adversarial-verify`,
 `judge-panel` is gated to high-stakes artifacts by the decision table, and `pipeline-map`
 processes the items it's handed.
 
-> **Honest caveat on the floor (Round 1, COST-1/COST-2).** The JS floors live *inside*
-> each recipe, so they only fire **after** the Workflow has already launched — they make
-> a mis-routed recipe no-op, they do **not** decide route-vs-solo. The actual stay-solo
-> decision is the `orchestrate` skill's model judgment (prose), with no deterministic
-> pre-flight gate. And `judge-panel` (the most expensive recipe) has **no JS floor at
-> all** — its high-stakes gating is prose-only. So "the floor is JS-deterministic" is true
-> only for post-launch width, not for the spend decision a cost-conscious team cares about.
+> **Preflight cost gate (COST-1/COST-2) — opt-in, default-off.** This gate ships only with the opt-in
+> runtime: set `FABLE_ORCHESTRATION_PREFLIGHT=on` at install time and the installer selects the upgraded
+> `orchestrate` skill (which invokes the gate before any Workflow launch) and keeps
+> `orchestration/lib/preflight-gate.mjs` on disk. **A default install has neither** — it behaves exactly as
+> v1.3.0 did, launching a recipe without this gate. When enabled: `single-lens` is
+> the default cost route. `decompose` requires `taskSize >= 200` and at least two
+> declared independent parts; `panel` requires `taskSize >= 400` and an explicit
+> `precisionNeed: at-scale` signal. A refusal does not launch Workflow or spawn an
+> agent. The gate authorizes multi-agent spend only; it does not estimate task
+> success or model capability, and agent count remains a cost denominator.
+> Direct manual Workflow launches bypass the host preflight and retain each recipe's
+> existing internal guards.
 
 ## Guardrails (binding — from the rejected-ideas list)
 

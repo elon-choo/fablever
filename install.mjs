@@ -28,7 +28,12 @@ const HOOKS_DIR = path.join(CLAUDE_DIR, 'hooks');
 const STYLES_DIR = path.join(CLAUDE_DIR, 'output-styles');
 const SKILLS_DIR = path.join(CLAUDE_DIR, 'skills');
 const SKILLS_SRC = path.join(REPO, 'claude-code', 'skills');
+const SKILL_OVERLAYS = path.join(REPO, 'skill', 'optin');
 const SKILL_MARKER = '.fable-skill';
+const AGENTS_DIR = path.join(CLAUDE_DIR, 'agents');
+const READONLY_AGENT_SRC = path.join(REPO, 'claude-code', 'agents', 'fable-readonly-verifier.md');
+const READONLY_AGENT_DST = path.join(AGENTS_DIR, 'fable-readonly-verifier.md');
+const READONLY_AGENT_MARKER = '<!-- fablever-owned:readonly-verifier:v1 -->';
 const SETTINGS = path.join(CLAUDE_DIR, 'settings.json');
 const PROFILE_DST_DIR = path.join(CLAUDE_DIR, 'fable-profile');
 const RUNTIME_DIR = path.join(PROFILE_DST_DIR, 'runtime');
@@ -38,6 +43,7 @@ const MODE_CFG = path.join(PROFILE_DST_DIR, 'mode.json');
 const FABLE_HOME_PTR = path.join(PROFILE_DST_DIR, 'fable-home');
 const MERGE = path.join(REPO, 'claude-code', 'lib', 'settings-merge.js');
 const MCP_REMOVE = path.join(REPO, 'claude-code', 'lib', 'mcp-remove.js');
+const MCP_ENV_SYNC = path.join(REPO, 'claude-code', 'lib', 'mcp-env.js');
 const XVPRESET = path.join(REPO, 'orchestration', 'lib', 'xverify-preset.mjs');
 const MCP_SERVER = path.join(RUNTIME_DIR, 'mcp', 'src', 'server.js');
 const FUSION_SERVER = path.join(RUNTIME_DIR, 'fusion', 'fusion-server.js');
@@ -58,9 +64,30 @@ const REINJECT = { src: path.join(REPO, 'claude-code/hooks/fable-reinject.sh'), 
 // Opt-in Stop hook (`--with-stop-gate`): deterministically enforces the unsupported-done-claim rule on the
 // final message — compiles the validated fable_lint rule into a hook so it fires without self-invocation.
 const STOPGATE = { src: path.join(REPO, 'claude-code/hooks/fable-stopgate.js'), dst: path.join(HOOKS_DIR, 'fable-stopgate.js'), cmd: hookCmd('fable-stopgate.js') };
+const READONLY_GATE = {
+  src: path.join(REPO, 'claude-code/hooks/fable-readonly-verifier-gate.js'),
+  dst: path.join(HOOKS_DIR, 'fable-readonly-verifier-gate.js'),
+};
+const READONLY_GATE_MARKER = 'fablever-owned:readonly-verifier-gate:v1';
 // Out-of-band measurement holdout (opt-in via --with-measure-holdout). The SessionStart hook is INERT unless
 // the user exports FABLE_MEASURE=on, so registering it is safe; it never runs by default. See measurement/.
 const HOLDOUT = { src: path.join(REPO, 'measurement/holdout.js'), dst: path.join(HOOKS_DIR, 'fable-holdout.js'), cmd: hookCmd('fable-holdout.js') };
+const OPTIN_RUNTIME_FILES = Object.freeze([
+  'docs/VERIFIED-LOOP.md',
+  'docs/proposals/CODEX-CROSS-ANALYSIS.md',
+  'docs/proposals/HARNESS-UPGRADE-LEDGER.md',
+  'mcp/src/task-criteria.js',
+  'orchestration/lib/budget.mjs',
+  'orchestration/lib/continuation.mjs',
+  'orchestration/lib/plan-artifact.mjs',
+  'orchestration/lib/preflight-gate.mjs',
+  'orchestration/lib/readonly-verifiers.mjs',
+  'orchestration/lib/run-doctor.mjs',
+  'orchestration/lib/run-state.mjs',
+  'orchestration/lib/tier-routing.mjs',
+  'orchestration/lib/verified-loop.mjs',
+  'orchestration/optin-flags.json',
+]);
 
 // ---- tiny cross-platform shell-free helpers ----
 const log = m => process.stdout.write(m + '\n');
@@ -71,6 +98,25 @@ const rmf = f => { try { fs.rmSync(f, { force: true }); } catch (_) {} };
 const cpR = (src, dst) => { try { fs.cpSync(src, dst, { recursive: true }); } catch (_) {} };
 const writeFile = (f, c) => fs.writeFileSync(f, c);
 const chmodx = f => { try { fs.chmodSync(f, 0o755); } catch (_) {} };
+// The v1.3.0 tag is frozen forever, and it shipped exactly ONE file under docs/proposals. So instead of
+// hand-listing each new internal planning doc to prune (a list nobody remembers to update — that drift is
+// what turned the opt-in audit red), we KEEP the immutable baseline set and prune every other proposal.
+// Any planning doc added from now on is excluded automatically, and the default install's file set stays
+// byte-equal to v1.3.0. npm already excludes docs/proposals via package.json "files"; this makes the
+// git-clone installer agree with it.
+const BASELINE_PROPOSALS = new Set(['HANDOFF-LAYER-PLAN.md']);
+
+function trimOptinRuntime(root) {
+  if (UPGRADE_RUNTIME_ENABLED) return;
+  for (const relativePath of OPTIN_RUNTIME_FILES) rmf(path.join(root, relativePath));
+  const proposalsDir = path.join(root, 'docs', 'proposals');
+  let entries = [];
+  try { entries = fs.readdirSync(proposalsDir, { withFileTypes: true }); } catch (_) { return; }
+  for (const entry of entries) {
+    if (entry.isFile() && BASELINE_PROPOSALS.has(entry.name)) continue;
+    rmf(path.join(proposalsDir, entry.name));
+  }
+}
 function symlinkOrCopy(src, dst) { // POSIX: symlink (matches install.sh); Windows / no-priv: copy
   rmf(dst);
   try { if (!isWin) { fs.symlinkSync(src, dst); return; } } catch (_) {}
@@ -92,6 +138,52 @@ function ourSkillNames() {
       .map(d => d.name).sort();
   } catch { return []; }
 }
+function selectedSkillSource(name) {
+  if (name === 'fable-plan' && DO_TASK_CRITERIA) {
+    return path.join(SKILL_OVERLAYS, 'fable-plan');
+  }
+  if (name === 'orchestrate' && (DO_ORCHESTRATION_PREFLIGHT || DO_READONLY_AGENT)) {
+    return path.join(SKILL_OVERLAYS, 'orchestrate');
+  }
+  return path.join(SKILLS_SRC, name);
+}
+function assertSelectedSkillSources() {
+  for (const name of ourSkillNames()) {
+    const skill = path.join(selectedSkillSource(name), 'SKILL.md');
+    if (!fs.existsSync(skill)) throw new Error(`missing selected skill source: ${skill}`);
+  }
+}
+function replaceSkillDirectory(src, dst) {
+  const sourceSkill = path.join(src, 'SKILL.md');
+  if (!fs.existsSync(sourceSkill)) {
+    throw new Error(`missing selected skill source: ${sourceSkill}`);
+  }
+  mkdirp(path.dirname(dst));
+  const stage = fs.mkdtempSync(path.join(path.dirname(dst), '.fable-skill-stage-'));
+  const previous = `${stage}.previous`;
+  let movedPrevious = false;
+  try {
+    fs.cpSync(src, stage, { recursive: true });
+    writeFile(path.join(stage, SKILL_MARKER), 'fablever-owned; removed cleanly on uninstall\n');
+    if (!fs.existsSync(path.join(stage, 'SKILL.md'))) {
+      throw new Error(`selected skill copy is incomplete: ${sourceSkill}`);
+    }
+    if (fs.existsSync(dst)) {
+      fs.renameSync(dst, previous);
+      movedPrevious = true;
+    }
+    try {
+      fs.renameSync(stage, dst);
+    } catch (error) {
+      if (movedPrevious && !fs.existsSync(dst)) fs.renameSync(previous, dst);
+      throw error;
+    }
+    if (movedPrevious) rmrf(previous);
+  } finally {
+    rmrf(stage);
+    if (fs.existsSync(previous) && fs.existsSync(dst)) rmrf(previous);
+  }
+}
 function installSkills() {
   mkdirp(SKILLS_DIR);
   const done = [];
@@ -101,7 +193,7 @@ function installSkills() {
       log(`  skills    -> SKIP '${name}': a skill of that name exists and was NOT installed by fablever (left untouched)`);
       continue;
     }
-    rmrf(dst); cpR(path.join(SKILLS_SRC, name), dst); writeFile(path.join(dst, SKILL_MARKER), 'fablever-owned; removed cleanly on uninstall\n');
+    replaceSkillDirectory(selectedSkillSource(name), dst);
     done.push(name);
   }
   if (done.length) log(`  skills    -> ${done.length} on-demand skill(s) -> ${SKILLS_DIR} (${done.join(', ')}; pulled only when relevant — zero always-on cost)`);
@@ -113,19 +205,92 @@ function uninstallSkills() {
   try { if (fs.readdirSync(SKILLS_DIR).length === 0) fs.rmdirSync(SKILLS_DIR); } catch (_) {}
 }
 
+// ---- Workflow advisory agent (explicit tools: allowlist; no deny-list) ---------------------------------
+function assertReadonlyAgentInstallable() {
+  if (fs.existsSync(READONLY_AGENT_DST)) {
+    let existing = '';
+    try { existing = fs.readFileSync(READONLY_AGENT_DST, 'utf8'); } catch (_) {}
+    if (!existing.includes(READONLY_AGENT_MARKER)) {
+      throw new Error(`refusing to overwrite non-fablever agent: ${READONLY_AGENT_DST}`);
+    }
+  }
+}
+function assertReadonlyGateInstallable() {
+  if (fs.existsSync(READONLY_GATE.dst)) {
+    let existing = '';
+    try { existing = fs.readFileSync(READONLY_GATE.dst, 'utf8'); } catch (_) {}
+    if (!existing.includes(READONLY_GATE_MARKER)) {
+      throw new Error(`refusing to overwrite non-fablever hook: ${READONLY_GATE.dst}`);
+    }
+  }
+}
+function installReadonlyAgent() {
+  assertReadonlyAgentInstallable();
+  mkdirp(AGENTS_DIR);
+  fs.copyFileSync(READONLY_AGENT_SRC, READONLY_AGENT_DST);
+  log(`  verifier  -> ${READONLY_AGENT_DST} (fresh-context; explicit read-only tools allowlist)`);
+}
+function uninstallReadonlyAgent() {
+  try {
+    const existing = fs.readFileSync(READONLY_AGENT_DST, 'utf8');
+    if (existing.includes(READONLY_AGENT_MARKER)) rmf(READONLY_AGENT_DST);
+  } catch (_) {}
+  try { if (fs.readdirSync(AGENTS_DIR).length === 0) fs.rmdirSync(AGENTS_DIR); } catch (_) {}
+}
+function uninstallReadonlyGate() {
+  try {
+    const existing = fs.readFileSync(READONLY_GATE.dst, 'utf8');
+    if (existing.includes(READONLY_GATE_MARKER)) rmf(READONLY_GATE.dst);
+  } catch (_) {}
+}
+
 // ---- args ----
 const args = process.argv.slice(2);
 const has = f => args.includes(f);
 let XVERIFY = 'off', XVERIFY_EXPLICIT = 0;
 for (const a of args) { if (a === '--with-xverify') { XVERIFY = 'openrouter'; XVERIFY_EXPLICIT = 1; } else if (a.startsWith('--with-xverify=')) { XVERIFY = a.slice('--with-xverify='.length); XVERIFY_EXPLICIT = 1; } }
+const XVERIFY_ENABLED = XVERIFY_EXPLICIT && XVERIFY !== 'off' && XVERIFY !== 'claude-only';
 const WITH_HOOK = has('--with-hook'), SET_STYLE = !has('--no-style'), DO_MCP = !has('--no-mcp');
 const WITH_STOP_GATE = has('--with-stop-gate');
 const DO_SUBAGENT = !has('--no-subagent'), DO_ONBOARD = !has('--no-onboard'), DO_MODELCHK = !has('--no-modelcheck'), WITH_FUSION = has('--with-fusion');
 const DO_UPDATECHK = !has('--no-update-check');
 // On-demand Agent Skills (zero always-on cost — pulled only when relevant). Part of the default/full install,
 // never of the minimal style-only surface (which promises "no hooks, no MCP"): STYLE_ONLY suppresses them.
-const STYLE_ONLY = !DO_MCP && !DO_SUBAGENT && !DO_ONBOARD && !DO_MODELCHK && !DO_UPDATECHK;
+const STYLE_ONLY = !DO_MCP && !DO_SUBAGENT && !DO_ONBOARD && !DO_MODELCHK && !DO_UPDATECHK && !WITH_FUSION && !XVERIFY_ENABLED;
 const DO_SKILLS = !has('--no-skills') && !STYLE_ONLY;
+const DO_READONLY_AGENT = ['on', '1', 'true'].includes(
+  (process.env.FABLE_READONLY_VERIFIER || '').trim().toLowerCase(),
+);
+const DO_ORCHESTRATION_PREFLIGHT = ['on', '1', 'true'].includes(
+  (process.env.FABLE_ORCHESTRATION_PREFLIGHT || '').trim().toLowerCase(),
+);
+const DO_TASK_CRITERIA = ['on', '1', 'true'].includes(
+  (process.env.FABLE_TASK_CRITERIA || '').trim().toLowerCase(),
+);
+const UPGRADE_RUNTIME_ENABLED = [
+  process.env.FABLE_BUDGET_CONFIG,
+  process.env.FABLE_BUDGET_CONFIG_FILE,
+  process.env.FABLE_CLAUDE_BIN,
+  process.env.FABLE_MEASURE,
+  process.env.FABLE_MEASURE_CAMPAIGN,
+  process.env.FABLE_MEASURE_HOME,
+  process.env.FABLE_MEASURE_OFF_PCT,
+  process.env.FABLE_MEASURE_TEXT_SIGNALS,
+  process.env.FABLE_OPUS_BASELINE_ATTESTED,
+  process.env.FABLE_OPUS_BUDGET_CONFIRMED,
+  process.env.FABLE_OPUS_MODEL,
+  process.env.FABLE_ORCHESTRATION_PREFLIGHT,
+  process.env.FABLE_PROGRESS_CONTINUATION,
+  process.env.FABLE_READONLY_VERIFIER,
+  process.env.FABLE_TASK_CRITERIA,
+  process.env.FABLE_ULTRA,
+  process.env.FABLE_VERIFIED_LOOP,
+  process.env.FABLE_VERIFIER_HOOK_EXEMPTION,
+].some((entry) => {
+  const value = String(entry || '').trim().toLowerCase();
+  return value !== '' && !['off', '0', 'false', 'none'].includes(value);
+});
+const DO_RUNTIME = DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK || XVERIFY_ENABLED;
 const UNINSTALL = has('--uninstall');
 // A6 measurement holdout (opt-in) · A7 dry-run · B1 Codex-native path (separate surface; never touches Claude).
 const DO_MEASURE_HOLDOUT = has('--with-measure-holdout'), NO_MEASURE_HOLDOUT = has('--no-measure-holdout'), MEASURE_STATUS = has('--measure-status');
@@ -166,7 +331,11 @@ if (CODEX_STATUS || CODEX_INSTALL_REQ || has('--codex-uninstall')) {
 if (MEASURE_STATUS) { await import(new URL('./measurement/status.mjs', import.meta.url)); process.exit(0); }
 
 // ---- dry-run plan for the Claude-Code install/uninstall (A7) ----
-if (DRY) { renderClaudePlan(UNINSTALL ? 'uninstall' : 'install'); process.exit(0); }
+if (DRY) {
+  if (!UNINSTALL && DO_SKILLS) assertSelectedSkillSources();
+  renderClaudePlan(UNINSTALL ? 'uninstall' : 'install');
+  process.exit(0);
+}
 
 // ---- uninstall ----
 if (UNINSTALL) {
@@ -184,6 +353,8 @@ if (UNINSTALL) {
   for (const f of [REINJECT.dst, STOPGATE.dst, SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, HOLDOUT.dst, STYLE_DST]) rmf(f);
   for (const f of ['full.md', 'compact.md', 'core.md', 'xverify.json', 'mode.json', 'fable-home', 'onboarded', 'onboard-shown-count', 'model-check.json', 'model-notified.json', 'installed-version.json', 'update-check.json', 'update-notified.json']) rmf(path.join(PROFILE_DST_DIR, f));
   uninstallSkills();
+  uninstallReadonlyAgent();
+  uninstallReadonlyGate();
   rmrf(RUNTIME_DIR);
   try { fs.rmdirSync(PROFILE_DST_DIR); } catch (_) {}
   if (haveClaude()) { claude(['mcp', 'remove', 'fable-profile', '--scope', 'user']); claude(['mcp', 'remove', 'fable-fusion', '--scope', 'user']); }
@@ -193,6 +364,16 @@ if (UNINSTALL) {
 }
 
 // ---- install ----
+if (DO_READONLY_AGENT) {
+  assertReadonlyAgentInstallable();
+  assertReadonlyGateInstallable();
+} else {
+  // A default/off re-install must restore the HEAD install surface after a prior opt-in.
+  // Marker checks inside these helpers preserve any pre-existing unowned files.
+  uninstallReadonlyAgent();
+  uninstallReadonlyGate();
+}
+if (DO_SKILLS) assertSelectedSkillSources();
 log(`Installing Fable profile from: ${REPO}  (platform: ${process.platform})`);
 mkdirp(HOOKS_DIR); mkdirp(STYLES_DIR); mkdirp(PROFILE_DST_DIR);
 
@@ -246,10 +427,18 @@ fs.copyFileSync(STOPGATE.src, STOPGATE.dst); chmodx(STOPGATE.dst);
 if (WITH_STOP_GATE) { node([MERGE, 'stophook-on', SETTINGS, STOPGATE.cmd]); log('  stop-gate -> Stop hook registered (enforces "show the check, or say not-verified"; one nudge, never loops; FABLE_STOP_GATE=off to disable)'); }
 else log('  stop-gate -> staged but NOT registered (opt-in: re-run with --with-stop-gate)');
 
+// 5b) tool-level backstop for advisory agents. It is referenced by the custom
+// agent's own hooks: frontmatter, so it activates only while that opt-in agent runs.
+if (DO_READONLY_AGENT) {
+  fs.copyFileSync(READONLY_GATE.src, READONLY_GATE.dst); chmodx(READONLY_GATE.dst);
+  log('  verifier  -> agent-scoped PreToolUse fail-closed read-only gate installed');
+}
+
 // 4.5) immutable runtime copy (servers + profiles + orchestration + docs) so hooks/MCP resolve from any cwd
-if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK) {
+if (DO_RUNTIME) {
   rmrf(RUNTIME_DIR); mkdirp(RUNTIME_DIR);
   for (const d of ['mcp', 'fusion', 'profiles', 'orchestration', 'docs']) cpR(path.join(REPO, d), path.join(RUNTIME_DIR, d));
+  trimOptinRuntime(RUNTIME_DIR);
   writeFile(FABLE_HOME_PTR, RUNTIME_DIR + '\n');
   log(`  runtime   -> copied to ${RUNTIME_DIR} (immutable; incl. orchestration/ for the SessionStart hooks)`);
 }
@@ -258,6 +447,7 @@ if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK) {
 // plan-first (fable-plan) skills are A/B-validated (eval/technique-ab); they cost ZERO tokens until the model
 // pulls one, so they add capability without the always-on tax. Reversible via the .fable-skill marker.
 if (DO_SKILLS) installSkills();
+if (DO_READONLY_AGENT) installReadonlyAgent();
 
 // record the installed version (commit sha + repo url + clone path) so the update-check hook can compare
 // against the public repo. Best-effort: if this isn't a git clone, sha stays '' and the check no-ops.
@@ -268,13 +458,48 @@ writeFile(VERSION_FILE, JSON.stringify({ sha: git(['rev-parse', 'HEAD']), repo_u
 // 5b) register MCP (best-effort; print the command if claude is absent or it fails)
 function registerMcp(name, server, extra) {
   if (!DO_MCP && name === 'fable-profile') return;
+  const taskCriteria = name === 'fable-profile' && DO_TASK_CRITERIA;
+  const addArgs = [
+    'mcp', 'add', '--transport', 'stdio', name, '--scope', 'user',
+    ...(taskCriteria ? ['--env', 'FABLE_TASK_CRITERIA=on'] : []),
+    '--', 'node', server,
+  ];
+  const manual = `claude mcp add --transport stdio ${name} --scope user${taskCriteria ? ' --env FABLE_TASK_CRITERIA=on' : ''} -- node "${server}"`;
   if (haveClaude()) {
-    if (claudeMcpHas(name)) { log(`  ${name === 'fable-profile' ? 'mcp     ' : 'fusion  '}  -> already registered`); return; }
-    const r = claude(['mcp', 'add', '--transport', 'stdio', name, '--scope', 'user', '--', 'node', server]);
+    if (claudeMcpHas(name)) {
+      if (name === 'fable-profile') {
+        const desired = taskCriteria ? 'on' : '--absent';
+        const synced = node([
+          MCP_ENV_SYNC,
+          'sync',
+          path.join(HOME, '.claude.json'),
+          name,
+          'FABLE_TASK_CRITERIA',
+          desired,
+        ], { capture: true });
+        if (synced.status === 0) {
+          const changed = (synced.stdout || '').trim() === 'changed';
+          log(`  mcp       -> ${changed ? `updated registration (${taskCriteria ? 'task criteria on' : 'HEAD-compatible task criteria off'})` : 'already registered'}`);
+          return;
+        }
+        if (!taskCriteria) {
+          // A project/local registration can appear in `mcp list` without a user-scope
+          // ~/.claude.json entry. Default installs must preserve that HEAD behavior.
+          log('  mcp       -> already registered');
+          return;
+        }
+        log(`  mcp       -> WARN: existing non-user or unreadable registration preserved; run manually:\n               ${manual}`);
+        return;
+      } else if (!taskCriteria) {
+        log('  fusion    -> already registered');
+        return;
+      }
+    }
+    const r = claude(addArgs);
     if (!r.error && r.status === 0) log(`  ${name === 'fable-profile' ? 'mcp     ' : 'fusion  '}  -> registered (scope: user)${extra ? ' ' + extra : ''}`);
-    else log(`  ${name}  -> WARN: 'claude mcp add' failed; run manually:\n               claude mcp add --transport stdio ${name} --scope user -- node "${server}"`);
+    else log(`  ${name}  -> WARN: 'claude mcp add' failed; run manually:\n               ${manual}`);
   } else {
-    log(`  ${name}  -> 'claude' CLI not found; add manually:\n               claude mcp add --transport stdio ${name} --scope user -- node "${server}"`);
+    log(`  ${name}  -> 'claude' CLI not found; add manually:\n               ${manual}`);
   }
 }
 if (DO_MCP) registerMcp('fable-profile', MCP_SERVER);
@@ -347,18 +572,29 @@ if (process.stdout.isTTY && !process.env.CI) {
 // Function declaration (hoisted) so the early `if (DRY)` dispatch can call it. It derives the plan from the
 // SAME flag consts the real install uses, but performs NO mutation.
 function renderClaudePlan(action) {
-  const styleOnly = !DO_MCP && !DO_SUBAGENT && !DO_ONBOARD && !DO_MODELCHK && !DO_UPDATECHK;
+  const styleOnly = STYLE_ONLY;
   const aliasMap = { off: 'claude-only', 'claude-only': 'claude-only', codex: 'gpt-oauth', 'gpt-oauth': 'gpt-oauth', openrouter: 'gpt-api+gemini-api', 'gpt-api+gemini-api': 'gpt-api+gemini-api', 'gpt-oauth+gemini-api': 'gpt-oauth+gemini-api' };
   const xv = (() => { try { return JSON.parse(fs.readFileSync(XVERIFY_CFG, 'utf8')); } catch { return null; } })();
   const preset = XVERIFY_EXPLICIT ? (aliasMap[XVERIFY] || XVERIFY) : ((xv && xv.preset) || 'claude-only');
   const externalVerify = preset === 'claude-only' ? 'off (claude-only — same-family panel; no cross-model)' : `${preset} (cross-model reviewer; needs a key/login — opt-in)`;
 
   if (action === 'uninstall') {
+    const removes = [STYLE_DST, `${SETTINGS} (outputStyle restored to prior; fablever hooks removed)`, RUNTIME_DIR,
+      SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, REINJECT.dst, STOPGATE.dst, HOLDOUT.dst, `${PROFILE_DST_DIR}/{full,compact,core}.md`, XVERIFY_CFG, MODE_CFG, VERSION_FILE,
+      `${SKILLS_DIR}/* (only fablever-marked skills; any user-authored skill is left untouched)`];
+    try {
+      if (fs.readFileSync(READONLY_GATE.dst, 'utf8').includes(READONLY_GATE_MARKER)) {
+        removes.push(`${READONLY_GATE.dst} (fablever-owned)`);
+      }
+    } catch (_) {}
+    try {
+      if (fs.readFileSync(READONLY_AGENT_DST, 'utf8').includes(READONLY_AGENT_MARKER)) {
+        removes.push(`${READONLY_AGENT_DST} (fablever-owned)`);
+      }
+    } catch (_) {}
     const plan = {
       host: 'claude-code', mode: 'uninstall',
-      removes: [STYLE_DST, `${SETTINGS} (outputStyle restored to prior; fablever hooks removed)`, RUNTIME_DIR,
-        SUBHOOK.dst, ONBOARD.dst, MODELCHK.dst, UPDATECHK.dst, REINJECT.dst, STOPGATE.dst, HOLDOUT.dst, `${PROFILE_DST_DIR}/{full,compact,core}.md`, XVERIFY_CFG, MODE_CFG, VERSION_FILE,
-        `${SKILLS_DIR}/* (only fablever-marked skills; any user-authored skill is left untouched)`],
+      removes,
       mcp_removed: ['fable-profile', 'fable-fusion'],
       preserved: ['measure-ledger.jsonl / measure-outcomes.jsonl (your measurement campaign data)', 'every non-fablever hook, permission, and setting in settings.json'],
       network: 'none', credential: 'none',
@@ -389,8 +625,12 @@ function renderClaudePlan(action) {
   const mcp = [];
   if (DO_MCP) mcp.push('fable-profile (node mcp/src/server.js, scope user)');
   if (WITH_FUSION) mcp.push('fable-fusion (needs OPENROUTER_API_KEY)');
-  if (DO_MCP || WITH_FUSION || DO_ONBOARD || DO_MODELCHK || DO_UPDATECHK) creates.push(`${RUNTIME_DIR}/ (immutable runtime: mcp + fusion + profiles + orchestration + docs)`);
+  if (DO_RUNTIME) creates.push(`${RUNTIME_DIR}/ (immutable runtime: mcp + fusion + profiles + orchestration + docs)`);
   if (DO_SKILLS) creates.push(`${SKILLS_DIR}/{${ourSkillNames().join(',')}} (on-demand Agent Skills; zero always-on cost; .fable-skill marker → clean uninstall)`);
+  if (DO_READONLY_AGENT) {
+    creates.push(`${READONLY_AGENT_DST} (Workflow advisory roles; explicit read-only tools allowlist)`);
+    creates.push(`${READONLY_GATE.dst} (agent-scoped PreToolUse fail-closed allowlist backstop)`);
+  }
 
   const networkBits = [];
   if (DO_UPDATECHK) networkBits.push('anonymous `git ls-remote HEAD` once/24h (no key, no code, no data)');

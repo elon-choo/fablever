@@ -2,7 +2,8 @@
 // eval/codex-native-ab/run.mjs — the component-A/B runner.
 //
 //   node run.mjs --dry-run [--json]                      print the plan; NO install, NO model call, NO writes
-//   node run.mjs --codex-home=<dir> [--arms=B,A,M,H,S] [--task=<id>] [--seed=1] [--out=<dir>] [--assume-hook-trust]
+//   node run.mjs --codex-home=<dir> [--arms=B,A,M,H,S] [--task=<id>] [--seed=1] [--out=<dir>]
+//                [--require-hook-exemption --hook-exemption-event=<redacted-captured-SubagentStart.json>]
 //
 // Execute requires a dedicated eval CODEX_HOME you logged into ONCE by hand (the runner never reads auth). For
 // each task × arm it: copies the fixture into a throwaway workspace, applies the arm's fablever install
@@ -13,11 +14,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ARMS, ARM_IDS } from './lib/arms.mjs';
 import { safeCodexEnv } from './lib/safe-env.mjs';
 import { parseEvents } from './lib/codex-events.mjs';
+import { fixtureSha256 } from './cost-report.mjs';
 import { mulberry32 } from '../../measurement/lib/stats.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -33,7 +36,11 @@ const SEED = Number(val('seed', '1')) || 1;
 const armSel = (val('arms', ARM_IDS.join(','))).split(',').map(s => s.trim()).filter(a => ARMS[a]);
 const taskSel = val('task', '');
 const MODEL = val('model', '');
-const assumeTrust = has('--assume-hook-trust');   // treat H/S hooks as trusted without checking the trace
+// The legacy flag remains a CLI compatibility alias, but no longer bypasses verification. Both names run
+// the same bidirectional behavioral probe before any H/S/F arm starts.
+const legacyAssumeTrust = has('--assume-hook-trust');
+const requireHookExemption = has('--require-hook-exemption') || legacyAssumeTrust;
+const hookExemptionEvent = val('hook-exemption-event', '');
 const requireTrust = has('--require-hook-trust');  // DROP an H/S run whose hooks did not actually fire
 // Pass Codex's --dangerously-bypass-hook-trust so the H/S project hooks actually fire under `codex exec`
 // (interactive /hooks trust does not carry to the throwaway per-task workspaces). Safe here: the hooks are
@@ -55,6 +62,62 @@ const codexArgs = (prompt, finalPath, inject = []) => ['exec', '--json', '--ephe
 // Run the codex binary. A `.js`/`.mjs` CODEX_BIN (a fake shim, for offline harness tests) is run via node so
 // it works cross-platform; a real `codex` binary is spawned directly.
 const spawnCodex = (a, opts) => /\.[cm]?js$/.test(CODEX_BIN) ? spawnSync(process.execPath, [CODEX_BIN, ...a], opts) : spawnSync(CODEX_BIN, a, opts);
+
+// Checked hook-exemption precondition. The caller supplies a REDACTED event captured from a real Codex
+// SubagentStart hook invocation; this pins the live payload key instead of trusting a guessed boolean. We then
+// perform a temporary project install, verify its effective hooks.json registration, and execute THAT installed
+// hook. Empty exempt output alone is insufficient, so a normal-role control must emit a sentinel payload.
+function checkHookExemption(evalHome) {
+  if (!hookExemptionEvent) return { ok: false, reason: 'missing --hook-exemption-event=<redacted captured SubagentStart JSON>' };
+  const eventFile = path.resolve(process.cwd(), hookExemptionEvent);
+  let eventRaw, captured;
+  try { eventRaw = fs.readFileSync(eventFile, 'utf8'); captured = JSON.parse(eventRaw); }
+  catch (error) { return { ok: false, reason: `cannot read captured SubagentStart event: ${error.message}` }; }
+  if (!captured || captured.hook_event_name !== 'SubagentStart') return { ok: false, reason: 'captured event is not hook_event_name=SubagentStart' };
+  const canonicalRoles = ['red-team-validator', 'evidence-verifier', 'purple-team-arbiter'];
+  if (typeof captured.agent_type !== 'string' || !canonicalRoles.includes(captured.agent_type)) {
+    return { ok: false, reason: 'captured event does not pin Codex agent_type to a canonical exempt role' };
+  }
+
+  const preflight = fs.mkdtempSync(path.join(os.tmpdir(), 'cab-hook-exemption-'));
+  const sentinel = 'FABLE_HOOK_EXEMPTION_PROBE_SENTINEL';
+  try {
+    const install = spawnSync(process.execPath, [
+      INSTALL, '--codex-full', '--codex-scope=project', '--no-codex-agents', '--no-codex-mcp', '--no-codex-skills',
+    ], { cwd: preflight, env: safeCodexEnv(evalHome, { HOME: evalHome }).env, encoding: 'utf8' });
+    if (install.error || install.status !== 0) return { ok: false, reason: `temporary hook install failed (status ${install.status})` };
+
+    const probe = path.join(preflight, '.codex', 'hooks', 'fable-subagent.js');
+    const hooksFile = path.join(preflight, '.codex', 'hooks.json');
+    const profile = path.join(preflight, '.codex', 'fable-profile');
+    if (!fs.existsSync(probe)) return { ok: false, reason: 'temporary install did not produce the effective SubagentStart hook' };
+    let hooks; try { hooks = JSON.parse(fs.readFileSync(hooksFile, 'utf8')); } catch { return { ok: false, reason: 'temporary install did not produce valid hooks.json' }; }
+    const registered = (hooks?.hooks?.SubagentStart || []).some(entry => entry?.matcher === '*' && (entry.hooks || []).some(hook => String(hook?.command || '').includes(probe)));
+    if (!registered) return { ok: false, reason: 'effective hooks.json does not register the installed SubagentStart hook' };
+
+    fs.writeFileSync(path.join(profile, 'compact.md'), sentinel + '\n');
+    const { env } = safeCodexEnv(evalHome, { FABLE_PROFILE_HOME: profile });
+    const run = event => spawnSync(process.execPath, [probe], {
+      input: JSON.stringify(event),
+      env, encoding: 'utf8', timeout: 10_000,
+    });
+    for (const role of canonicalRoles) {
+      const exempt = run({ ...captured, agent_type: role });
+      if (exempt.error || exempt.status !== 0) return { ok: false, reason: `exempt-role probe failed for ${role} (status ${exempt.status})` };
+      if (String(exempt.stdout || '').trim()) return { ok: false, reason: `exempt role still received the restraint payload: ${role}` };
+    }
+
+    const control = run({ ...captured, agent_type: 'general-purpose' });
+    if (control.error || control.status !== 0) return { ok: false, reason: `ordinary-role control failed (status ${control.status})` };
+    let payload; try { payload = JSON.parse(String(control.stdout || '')); } catch { return { ok: false, reason: 'ordinary-role control did not emit valid hook JSON' }; }
+    if (payload?.hookSpecificOutput?.hookEventName !== 'SubagentStart' || payload?.hookSpecificOutput?.additionalContext !== sentinel) {
+      return { ok: false, reason: 'ordinary-role control did not emit the sentinel restraint payload' };
+    }
+    return { ok: true, event_sha256: createHash('sha256').update(eventRaw).digest('hex') };
+  } finally {
+    fs.rmSync(preflight, { recursive: true, force: true });
+  }
+}
 
 // The compact Fable working-style reminder, delivered as developer-role context via `-c developer_instructions`
 // for arms whose hook layer cannot fire under `codex exec` (the exec equivalent of the SessionStart/reinject
@@ -129,7 +192,7 @@ function plan() {
     codex_command_template: `${CODEX_BIN} ${codexArgs('<prompt>', '<workspace>/final.txt').join(' ')}`,
     network: 'Codex model access only (the model call). No other network.',
     credentials: 'the runner inspects/copies NO auth; a token-free allowlist env is passed to the child.',
-    hook_trust: `H and S require Codex to actually run their hooks. Pass --trust-hooks (adds Codex's --dangerously-bypass-hook-trust, vetted fablever hooks only) so they fire under codex exec; the trace gate then verifies hook_fired. Add --require-hook-trust to DROP any H/S run whose hooks still didn't fire.${trustHooks ? '  [--trust-hooks ON]' : ''}`,
+    hook_trust: `H/S/F hook exemption can be checked before any arm starts with --require-hook-exemption plus --hook-exemption-event=<redacted captured SubagentStart JSON> (legacy --assume-hook-trust is a checked alias, never a bypass). Pass --trust-hooks (adds Codex's --dangerously-bypass-hook-trust, vetted fablever hooks only) so native hooks can fire; --require-hook-trust retains the per-run trace check.${trustHooks ? '  [--trust-hooks ON]' : ''}${requireHookExemption ? '  [exemption preflight ON]' : ''}`,
     scoring: 'scope_violation + acceptance_pass + unnecessary_change are computed here (path/exit based); unsupported_done_claim is scored by the FROZEN oracle in score.mjs, not by the code under test.',
     writes: 'nothing in --dry-run.',
   };
@@ -142,12 +205,14 @@ function shuffleArms(seed) {
 }
 
 // ---- one task × arm -------------------------------------------------------------------------------------
-function runOne(task, armId, evalHome, outDir) {
+function runOne(task, armId, evalHome, outDir, exemptionPreflight) {
   const arm = ARMS[armId];
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), `cab-${task.id}-${armId}-`));
-  const meta = { task: task.id, domain: task.domain, arm: armId, label: arm.label, install_ok: null, hook_trust: null, codex_exit: null, changed_files: [], scope_violation: null, unnecessary_change: null, acceptance_pass: null, counts: null, usage: null, failed: null };
+  const meta = { task: task.id, domain: task.domain, arm: armId, label: arm.label, install_ok: null, hook_trust: null, hook_exemption_preflight: exemptionPreflight, codex_exit: null, wall_clock_ms: null, fixture_sha256: null, changed_files: [], scope_violation: null, unnecessary_change: null, acceptance_pass: null, counts: null, usage: null, failed: null };
   try {
-    fs.cpSync(path.join(DIR, task.fixture), ws, { recursive: true });
+    const fixtureDir = path.join(DIR, task.fixture);
+    meta.fixture_sha256 = fixtureSha256(fixtureDir);
+    fs.cpSync(fixtureDir, ws, { recursive: true });
     if (arm.installArgs) {
       // Even fablever's own install + the task verification get a token-free env — no child in the harness
       // sees a secret, not just the model call.
@@ -160,7 +225,10 @@ function runOne(task, armId, evalHome, outDir) {
     const { env } = safeCodexEnv(evalHome, { FABLE_HOOK_TRACE_FILE: trace });
     const inject = injectArgs(arm, ws);
     meta.inject = inject;
-    const r = spawnCodex(codexArgs(prompt, finalPath, inject), { cwd: ws, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 5 * 60 * 1000 });
+    let r;
+    const started = process.hrtime.bigint();
+    try { r = spawnCodex(codexArgs(prompt, finalPath, inject), { cwd: ws, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 5 * 60 * 1000 }); }
+    finally { meta.wall_clock_ms = Number(process.hrtime.bigint() - started) / 1e6; }
     meta.codex_exit = r.status;
     const events = String(r.stdout || '');
     const parsed = parseEvents(events);
@@ -178,9 +246,9 @@ function runOne(task, armId, evalHome, outDir) {
         meta.hook_fired = true;
         meta.hook_trust = 'n/a — working-style delivered via -c developer_instructions (native codex hooks do not fire under codex exec)';
       } else {
-        const fired = assumeTrust || (() => { try { return fs.readFileSync(trace, 'utf8').trim().length > 0; } catch { return false; } })();
+        const fired = (() => { try { return fs.readFileSync(trace, 'utf8').trim().length > 0; } catch { return false; } })();
         meta.hook_fired = fired;
-        meta.hook_trust = assumeTrust ? 'assumed (--assume-hook-trust)' : (fired ? 'verified (hooks fired)' : 'UNVERIFIED — hooks did not fire; trust them in Codex with /hooks');
+        meta.hook_trust = fired ? 'verified (hooks fired)' : 'UNVERIFIED — hooks did not fire; trust them in Codex with /hooks';
         if (!fired && requireTrust) {
           process.stderr.write(`  drop  -> ${task.id}/${armId}: hooks did not fire and --require-hook-trust is set (untrusted H/S arm would collapse to M)\n`);
           return null;
@@ -219,8 +287,18 @@ if (!evalHome) { process.stderr.write('execute needs --codex-home=<dir> (the eva
 const outDir = val('out', path.join(DIR, 'out'));
 const tasks = loadTasks();
 const order = shuffleArms(SEED).filter(a => armSel.includes(a));
+let exemptionPreflight = null;
+if (requireHookExemption && tasks.length && order.some(armId => ARMS[armId].requiresTrustedHooks)) {
+  if (legacyAssumeTrust) process.stderr.write('note: --assume-hook-trust is now a checked alias for --require-hook-exemption; it no longer bypasses verification.\n');
+  const checked = checkHookExemption(evalHome);
+  if (!checked.ok) {
+    process.stderr.write(`hook-exemption precondition failed before arm start: ${checked.reason}\n`);
+    process.exit(3);
+  }
+  exemptionPreflight = `verified (effective installed hook; captured event sha256 ${checked.event_sha256})`;
+}
 const results = [];
-for (const task of tasks) for (const armId of order) results.push(runOne(task, armId, evalHome, outDir));
+for (const task of tasks) for (const armId of order) results.push(runOne(task, armId, evalHome, outDir, exemptionPreflight));
 const written = results.filter(Boolean);
 process.stdout.write(`Wrote ${written.length} run(s) to ${outDir}${written.length < results.length ? ` (${results.length - written.length} dropped: untrusted hooks)` : ''}\n`);
 if (JSON_OUT) process.stdout.write(JSON.stringify(written, null, 2) + '\n');

@@ -1,0 +1,14 @@
+{
+  "experiment_id": "opus-example-do-not-bind-real-results",
+  "registered_at": "2026-07-16T00:00:00Z",
+  "decision_rule": "EXAMPLE ONLY — ship iff hidden-test pass-rate gain >= 5pp vs the prompt-matched solo control at <= 20% token cost; else park",
+  "primary_metric": "hidden-test pass rate (G0.2 executable oracles)",
+  "co_primary_metrics": ["total tokens (G0.1)", "wall-clock ms (G0.1)"],
+  "floor_n": 12,
+  "task_n": 12,
+  "arms": ["plain-opus", "one-shot-stop-gate", "prompt-matched-solo", "fable-loop"],
+  "off_trigger_list": [],
+  "judge_id": "blind-non-claude-judge",
+  "margin": "5pp",
+  "note": "Reference example that the lint validates as well-formed. It is intentionally NOT bound to any real results file (its experiment_id says so). Copy the template in README.md for a real pre-registration."
+}

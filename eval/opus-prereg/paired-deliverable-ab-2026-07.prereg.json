@@ -1,0 +1,23 @@
+{
+  "experiment_id": "opus-paired-deliverable-ab-2026-07",
+  "registered_at": "2026-07-17T06:52:16Z",
+  "decision_rule": "PILOT, n=1 paired task — descriptive only. NO ship / promote / magnitude claim may fire from this run in either direction: the bar for any such claim is a confirmatory pre-registered A/B at floor_n >= 12 tasks, which this explicitly is not. The ONE decision this pilot may inform: fund the full pre-registered A/B **iff** the owner's blind preference favors the fablever arm; **else park** the line and spend the budget elsewhere. A tie, or a preference for the plain arm, is published verbatim as-is.",
+  "primary_metric": "the owner's BLIND pairwise preference between two deliverables (which is better, and by how much, in his own words) — deliverable quality as a non-developer businessman judges it, not code correctness",
+  "co_primary_metrics": [
+    "wall-clock per arm",
+    "output length per arm (a leaner win is still a win; a longer arm must not win on padding alone)"
+  ],
+  "floor_n": 1,
+  "task_n": 1,
+  "arms": [
+    "opus-fablever-on (real env: Fable output style + hooks active)",
+    "opus-fablever-off (FABLE_PROFILE=off + --settings outputStyle:default — manipulation-checked plain Claude)"
+  ],
+  "off_trigger_list": [],
+  "judge_id": "elon (owner) — BLIND: the two deliverables are presented as A/B with the arm labels withheld until after he judges",
+  "margin": "none — no threshold may fire on n=1; this is a pilot the owner asked to see, not a decision rule",
+  "task": "Write the 상담원-facing intro/landing copy for eveni-call-feedback (이븐아이 크리젠 연동 통화 STT·경량 세일즈 피드백) from an identical brief. Owner-chosen task class: a deliverable he can personally judge on quality, ~1-2h scope, real product, neutral subject (not fablever itself, to avoid a self-referential artifact).",
+  "manipulation_check": "PASSED before the run: the OFF arm answers 'No — plain Claude Code, no named custom working style'; the ON arm answers 'Yes — the Fable output style'. Recorded 2026-07-17. Without this the arms would be indistinguishable and the run void.",
+  "design_rationale": "The owner REJECTED the cross-project holdout design (different projects are not comparable) and asked for a same-task paired comparison he can judge. Both arms get the byte-identical brief, one-shot, same model (opus). Blind presentation prevents his knowledge of the arm from driving the verdict.",
+  "note": "Pre-registered BEFORE either arm ran: registered_at 06:52:16Z precedes first_run_at 06:52:37Z by 21s, and is backed by this file's own mtime (15:52:16 KST = 06:52:16 UTC) — not a chosen number. The first draft carried a wrong stamp (16:20:00Z — a KST value mislabelled as UTC, which made the prereg appear to POST-date the run); the G0.4 binding lint caught it and it was corrected to the file-backed time rather than to a convenient one. Honest scope: n=1 is an anecdote-grade pilot. Charter #1 still binds — no magnitude claim enters the repo from this."
+}

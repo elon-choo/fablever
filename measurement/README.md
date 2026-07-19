@@ -15,11 +15,13 @@ holdout + post-hoc outcome signals) is standard experiment hygiene; we noticed a
 ## What it does
 
 - **`holdout.js`** — a `SessionStart` hook. **Inert unless `FABLE_MEASURE=on`.** When on, it hashes
-  `session_id` → arm (`on` ~80% / `off` ~20%), appends one out-of-band line to `measure-ledger.jsonl`, and
-  for the `off` arm drops `~/.claude/fable-profile/holdout/<sid>.off`. It **never** writes to the model's
+  `session_id` → arm (`on` ~80% / `off` ~20%). Claude/Opus ids (`claude-…-opus-…`) use a campaign-local
+  salt plus HMAC ids for the ledger and marker; the model string selects that path but never enters the arm
+  hash or stored row. The legacy non-Opus assignment stays unchanged. It **never** writes to the model's
   context — the assignment must be invisible, or the control group starts behaving like the treatment.
 - **The off arm runs untreated.** `fable-reinject.sh` and `fable-subagent.js` each carry a one-line guard
   (also inert unless `FABLE_MEASURE=on`) that skips injection when the session's `.off` marker is present.
+  Opus markers are named by HMAC session key, so no raw session id is persisted by the new path.
 - **`collect.mjs`** — *after* the sessions, harvests heuristic outcome signals from the committed
   transcripts (re-instructions, rework edits, failed tool results, tool calls, wall-time) and joins them to
   the arm. Run it whenever; it only reads.
@@ -66,7 +68,8 @@ campaign, let it accrue, read the analysis, then turn it off. Don't leave it on 
 The Codex path uses the same idea with a race-free, privacy-hardened core (Codex fires same-event hooks
 concurrently, so each injector derives the arm from the SAME `HMAC(salt, campaign\0session)` as the logger —
 no shared marker). The ledger is **metadata only**: session/project are HMAC ids, never a raw id/cwd/prompt;
-text-derived flags appear only with `--text-signals` and even then as booleans.
+text-derived flags appear only with `--text-signals` and even then as booleans. Set the campaign allocation
+to 20% off for an Opus holdout; one explicit campaign threshold keeps every event in a session on one arm.
 
 ```bash
 node install.mjs --codex-full                                  # 1) install (provides the runtime logger)
@@ -101,7 +104,7 @@ path, the Codex holdout measures the **injection layer**, not the base `AGENTS.m
   5% nominal). `analyze` prints this caveat; lean on the Holm-corrected p and a clearly-signed CI, and prefer
   more sessions over reading right at the floor.
 - **`FABLE_MEASURE_OFF_PCT` defaults to 50** if unset — `start` prints the export, but if you skip it both the
-  guard and the logger silently use 50/50. Set it from the `start` output for any other allocation.
+  guard and the logger silently use 50/50. Set it to 20 for the Opus holdout (or use any preregistered split).
 - **The guard and logger agree only while the campaign salt is stable.** `start` seeds the salt once and the
   logger only ever READS it (never creates one), so a normally-started campaign is consistent from session 1;
   deleting/regenerating the salt mid-campaign would flip ~half of subsequent sessions' arms. Don't.

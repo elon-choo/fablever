@@ -1,9 +1,9 @@
 // measurement-assignment-test.mjs — the load-bearing correctness + privacy core of the holdout measurement.
-// Verifies: (1) assignArm is deterministic and race/order-invariant (every hook derives the SAME arm with no
-// shared marker); (2) the salt+anonId privacy primitives are one-way and stable; (3) the Codex measure hook
-// writes metadata-only rows — HMAC ids, never a raw session id/cwd/prompt/secret — gates on FABLE_MEASURE,
-// keeps text-derived signals behind the opt-in tier, and logs BOTH arms. Zero network. Exit 0 = all pass.
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, statSync, readdirSync } from 'node:fs';
+// Verifies: (1) assignArm is deterministic and race/order-invariant; (2) salt+anonId stay one-way; (3) Opus
+// model ids take a condition-blind ~20% holdout path in both the standalone Claude hook and shared Codex
+// runtime; (4) ledgers/markers use HMAC ids; (5) off arms are actually untreated; (6) FABLE_MEASURE unset
+// performs zero filesystem writes. Zero network. Exit 0 = all pass.
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, existsSync, rmSync, statSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,9 +12,14 @@ import { createRequire } from 'node:module';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const { assignArm } = require(path.join(REPO, 'measurement/runtime/assign.cjs'));
+const { assignArm, isOpusModel } = require(path.join(REPO, 'measurement/runtime/assign.cjs'));
+const { holdoutOff } = require(path.join(REPO, 'measurement/runtime/holdout.cjs'));
 const { readOrCreateSalt, anonId } = require(path.join(REPO, 'measurement/runtime/privacy.cjs'));
 const HOOK = path.join(REPO, 'measurement/hooks/codex-measure.js');
+const CLAUDE_HOLDOUT = path.join(REPO, 'measurement/holdout.js');
+const COLLECT = path.join(REPO, 'measurement/collect.mjs');
+const CLAUDE_SUBAGENT = path.join(REPO, 'claude-code/hooks/fable-subagent.js');
+const CLAUDE_REINJECT = path.join(REPO, 'claude-code/hooks/fable-reinject.sh');
 
 let ok = 0, n = 0;
 const t = (cond, msg) => { n++; if (cond) { ok++; console.log('PASS:', msg); } else console.log('FAIL:', msg); };
@@ -38,6 +43,25 @@ const SALT = Buffer.from('a'.repeat(64), 'hex');
   let off = 0, total = 600;
   for (let i = 0; i < total; i++) if (assignArm({ campaignId: 'big', sessionId: 's' + i, salt: SALT, offPercent: 50 }) === 'off') off++;
   t(off > total * 0.4 && off < total * 0.6, `assignArm: ~50/50 split over ${total} sessions (got ${off} off)`);
+
+  const opusIds = ['claude-opus-4-8', 'claude-3-opus-20240229', 'anthropic:claude-opus-4.1'];
+  const nonOpusIds = [
+    'claude-sonnet-4-8', 'claude-haiku-4-5', 'gpt-5.5-codex',
+    'openai-opus', 'gpt-opus', 'not-opus', 'opus-compatible-test', '', 'unknown',
+  ];
+  t(opusIds.every(isOpusModel), 'model recognition: Claude/Opus ids are recognized');
+  t(nonOpusIds.every(id => !isOpusModel(id)), 'model recognition: non-Claude Opus aliases and Sonnet/Haiku/GPT stay non-Opus');
+
+  const blindArgs = { campaignId: 'opus-campaign', sessionId: 'same-session', salt: SALT, offPercent: 20 };
+  const modelBlindArms = opusIds.map(model => assignArm({ ...blindArgs, model }));
+  t(new Set(modelBlindArms).size === 1, 'Opus assignment is condition-blind: model alias never enters the arm hash');
+
+  let opusOff = 0;
+  const opusTotal = 1000;
+  for (let i = 0; i < opusTotal; i++) {
+    if (assignArm({ campaignId: 'cmp', sessionId: 'opus-dist-' + i, salt: SALT, offPercent: 20 }) === 'off') opusOff++;
+  }
+  t(opusOff > opusTotal * 0.15 && opusOff < opusTotal * 0.25, `Opus allocation: ~20% untreated over ${opusTotal} sessions (got ${opusOff} off)`);
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -94,6 +118,7 @@ const newHome = () => { const h = mkdtempSync(path.join(tmpdir(), 'fable-measure
   t(!ledgerText.includes(SECRET), 'privacy: a secret planted in prompt+cwd never appears in the ledger');
   t(!('prompt' in row) && !('cwd' in row) && !('session_id' in row), 'row: no raw prompt/cwd/session_id fields');
   t(['on', 'off'].includes(row.arm) && row.metrics && row.metrics.user_turn === 1, 'row: tagged with an arm + user_turn metric');
+  t(row.model === 'gpt-5.5-codex', 'non-Opus model metadata behavior is unchanged');
   rmSync(home, { recursive: true, force: true });
 }
 
@@ -146,7 +171,219 @@ const newHome = () => { const h = mkdtempSync(path.join(tmpdir(), 'fable-measure
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// 6) the Codex injector hooks honor the holdout: off-arm suppresses, on-arm injects, no-campaign injects
+// 6) Opus sessions: recognized + deterministic 20% HMAC arms, model-blind, private, and context-invisible
+{
+  const home = newHome();
+  const armOf = sid => assignArm({ campaignId: 'cmp', sessionId: sid, salt: SALT, offPercent: 20 });
+  let onSid = null, offSid = null;
+  for (let i = 0; i < 200 && !(onSid && offSid); i++) {
+    const sid = 'opus' + i;
+    if (armOf(sid) === 'on') onSid ||= sid;
+    else offSid ||= sid;
+  }
+  const MODEL_SECRET = 'claude-opus-4-8-secret-model-suffix';
+  const RAW_CWD = '/private/opus-project';
+  const RAW_PROMPT = 'secret prompt content must stay out of band';
+  const env = { FABLE_MEASURE_HOME: home, FABLE_MEASURE_OFF_PCT: '20' };
+  const eventFor = (sid, model, hookEventName) => ({
+    session_id: sid,
+    cwd: RAW_CWD,
+    hook_event_name: hookEventName,
+    prompt: RAW_PROMPT,
+    model,
+  });
+
+  const onRun = runHook(eventFor(onSid, MODEL_SECRET, 'SessionStart'), env);
+  const offRun = runHook(eventFor(offSid, 'anthropic:claude-3-opus-20240229', 'SessionStart'), env);
+  const onKey = anonId('s', onSid, SALT);
+  const offKey = anonId('s', offSid, SALT);
+  const onRow = onRun.rows.find(row => row.session_key === onKey);
+  const offRow = offRun.rows.find(row => row.session_key === offKey);
+
+  t(onSid && offSid && onRow?.arm === 'on' && offRow?.arm === 'off', 'Opus hook: seeded 20% campaign proves both on and off arms');
+  t(onRow?.arm === armOf(onSid) && offRow?.arm === armOf(offSid), 'Opus hook: logged arms exactly match assignArm(session hash)');
+  t(onRow?.model === 'claude-opus' && offRow?.model === 'claude-opus', 'Opus hook: Claude/Opus ids are recognized and canonicalized');
+  t(/^s_[0-9a-f]{24}$/.test(onRow?.session_key || '') && /^p_[0-9a-f]{24}$/.test(onRow?.project_key || ''), 'Opus hook: session/project identifiers remain HMAC-only');
+  t(onRun.r.status === 0 && offRun.r.status === 0 && onRun.r.stdout === '' && offRun.r.stdout === ''
+    && !onRun.r.stdout.includes('additionalContext') && !offRun.r.stdout.includes('additionalContext'),
+  'Opus hook: exits 0, emits no stdout, and never surfaces the arm as additionalContext');
+
+  const modelLessEvent = eventFor(onSid, 'claude-opus-4-8', 'UserPromptSubmit');
+  delete modelLessEvent.model;
+  const aliasRun = runHook(modelLessEvent, env);
+  const aliasRows = aliasRun.rows.filter(row => row.session_key === onKey);
+  t(aliasRows.length >= 2 && aliasRows.every(row => row.arm === 'on'), 'Opus hook: same session stays on when later events omit model metadata');
+
+  const opusLedger = aliasRun.ledgerText;
+  t(!opusLedger.includes(onSid) && !opusLedger.includes(offSid) && !opusLedger.includes(RAW_CWD)
+    && !opusLedger.includes(RAW_PROMPT) && !opusLedger.includes(MODEL_SECRET),
+  'Opus privacy: raw session/cwd/prompt/model-derived content never enters the ledger');
+  rmSync(home, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// 7) installed-style Claude SessionStart hook: Opus HMAC assignment drives an actually untreated off arm
+{
+  const root = mkdtempSync(path.join(tmpdir(), 'fable-claude-opus-'));
+  const hookDir = path.join(root, 'hooks');
+  const installedHoldout = path.join(hookDir, 'fable-holdout.js');
+  const userHome = path.join(root, 'user-home');
+  const profileDir = path.join(userHome, '.claude', 'fable-profile');
+  const measureHome = path.join(root, 'measure');
+  mkdirSync(hookDir);
+  mkdirSync(profileDir, { recursive: true });
+  mkdirSync(measureHome);
+  copyFileSync(CLAUDE_HOLDOUT, installedHoldout); // no ./runtime beside it: exercises the standalone fallback
+  writeFileSync(path.join(profileDir, 'compact.md'), 'compact-profile');
+  writeFileSync(path.join(profileDir, 'core.md'), 'core-profile');
+  writeFileSync(path.join(measureHome, 'measurement-salt'), SALT, { mode: 0o600 });
+
+  const armOf = sid => assignArm({ campaignId: 'cmp', sessionId: sid, salt: SALT, offPercent: 20 });
+  let onSid = null, offSid = null;
+  for (let i = 0; i < 200 && !(onSid && offSid); i++) {
+    const sid = 'claude-opus-session-' + i;
+    if (armOf(sid) === 'on') onSid ||= sid;
+    else offSid ||= sid;
+  }
+  const env = {
+    PATH: process.env.PATH,
+    HOME: userHome,
+    USERPROFILE: userHome,
+    FABLE_MEASURE: 'on',
+    FABLE_MEASURE_HOME: measureHome,
+    FABLE_MEASURE_CAMPAIGN: 'cmp',
+  };
+  const MODEL_SECRET = 'claude-opus-4-8-private-model-suffix';
+  const RAW_CWD = '/private/claude-opus-project';
+  const RAW_PROMPT = 'private Opus prompt must not be stored';
+  const eventFor = (sid, model = MODEL_SECRET) => ({
+    session_id: sid,
+    cwd: RAW_CWD,
+    prompt: RAW_PROMPT,
+    hook_event_name: 'SessionStart',
+    model,
+  });
+  const runInstalledHoldout = event => spawnSync(process.execPath, [installedHoldout], {
+    input: JSON.stringify(event),
+    env,
+    encoding: 'utf8',
+  });
+
+  const onRun = runInstalledHoldout(eventFor(onSid));
+  const offRun = runInstalledHoldout(eventFor(offSid, 'anthropic:claude-3-opus-20240229'));
+  const rows = readFileSync(path.join(measureHome, 'measure-ledger.jsonl'), 'utf8')
+    .split('\n').filter(Boolean).map(JSON.parse);
+  const onKey = anonId('s', onSid, SALT);
+  const offKey = anonId('s', offSid, SALT);
+  const onRow = rows.find(row => row.session_key === onKey);
+  const offRow = rows.find(row => row.session_key === offKey);
+  const ledgerText = JSON.stringify(rows);
+
+  t(onRun.status === 0 && offRun.status === 0 && onRun.stdout === '' && offRun.stdout === '', 'Claude Opus holdout: standalone installed hook exits 0 with no stdout');
+  t(onRow?.arm === 'on' && offRow?.arm === 'off' && onRow.arm === armOf(onSid) && offRow.arm === armOf(offSid), 'Claude Opus holdout: seeded session hash proves deterministic on and off arms');
+  t(onRow?.model === 'claude-opus' && offRow?.model === 'claude-opus'
+    && /^s_[0-9a-f]{24}$/.test(offRow?.session_key || '') && /^p_[0-9a-f]{24}$/.test(offRow?.project_key || ''),
+  'Claude Opus holdout: recognition is canonical and identifiers are HMAC-only');
+  t(!ledgerText.includes(onSid) && !ledgerText.includes(offSid) && !ledgerText.includes(RAW_CWD)
+    && !ledgerText.includes(RAW_PROMPT) && !ledgerText.includes(MODEL_SECRET),
+  'Claude Opus privacy: raw session/cwd/prompt/model-derived content never enters the ledger');
+  t(existsSync(path.join(measureHome, 'holdout', `${offKey}.off`))
+    && !existsSync(path.join(measureHome, 'holdout', `${onKey}.off`))
+    && !existsSync(path.join(measureHome, 'holdout', `${offSid}.off`)),
+  'Claude Opus holdout: off marker is HMAC-named and on has no marker');
+
+  const runClaudeSubagent = event => spawnSync(process.execPath, [CLAUDE_SUBAGENT], {
+    input: JSON.stringify({ ...event, agent_type: 'coder' }),
+    env,
+    encoding: 'utf8',
+  });
+  const subOff = runClaudeSubagent(eventFor(offSid, 'claude-sonnet-4-8'));
+  const subOn = runClaudeSubagent(eventFor(onSid));
+  t(subOff.stdout === '' && subOn.stdout.includes('additionalContext'), 'Claude Opus subagent: parent off arm stays untreated even for a Sonnet subagent');
+
+  const runClaudeReinject = event => spawnSync('bash', [CLAUDE_REINJECT], {
+    input: JSON.stringify(event),
+    env,
+    encoding: 'utf8',
+  });
+  const reinjectOff = runClaudeReinject({ ...eventFor(offSid), model: undefined });
+  const reinjectOn = runClaudeReinject(eventFor(onSid));
+  t(reinjectOff.status === 0 && reinjectOff.stdout === '', 'Claude Opus reinject: off arm is untreated');
+  t(reinjectOn.status === 0 && /(?:compact|core)-profile/.test(reinjectOn.stdout), 'Claude Opus reinject: on arm still injects');
+  rmSync(root, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// 8) post-hoc Claude collector can join an HMAC ledger row without re-persisting the raw session id
+{
+  const root = mkdtempSync(path.join(tmpdir(), 'fable-opus-collect-'));
+  const profileDir = path.join(root, '.claude', 'fable-profile');
+  const projectDir = path.join(root, '.claude', 'projects', 'p');
+  mkdirSync(profileDir, { recursive: true });
+  mkdirSync(projectDir, { recursive: true });
+  writeFileSync(path.join(profileDir, 'measurement-salt'), SALT, { mode: 0o600 });
+  const rawSid = 'collector-private-opus-session';
+  const sessionKey = anonId('s', rawSid, SALT);
+  writeFileSync(path.join(profileDir, 'measure-ledger.jsonl'), JSON.stringify({ session_key: sessionKey, arm: 'off' }) + '\n');
+  writeFileSync(path.join(projectDir, `${rawSid}.jsonl`), [
+    JSON.stringify({ type: 'user', timestamp: '2026-01-01T00:00:00Z', message: { role: 'user', content: 'hello' } }),
+    JSON.stringify({ type: 'assistant', timestamp: '2026-01-01T00:01:00Z', message: { role: 'assistant', content: 'done' } }),
+  ].join('\n') + '\n');
+  const collected = spawnSync(process.execPath, [COLLECT], {
+    env: { PATH: process.env.PATH, HOME: root, USERPROFILE: root },
+    encoding: 'utf8',
+  });
+  const outcomeText = readFileSync(path.join(profileDir, 'measure-outcomes.jsonl'), 'utf8');
+  const outcome = JSON.parse(outcomeText.trim());
+  t(collected.status === 0 && outcome.session_key === sessionKey && outcome.transcript === true, 'Opus collector: HMAC ledger row joins to the local transcript');
+  t(!('session_id' in outcome) && !outcomeText.includes(rawSid), 'Opus collector privacy: joined outcome does not re-persist the raw session id');
+  rmSync(root, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// 9) mandatory inert direction: unset measurement writes nothing; profile-off disables before any write
+{
+  const root = mkdtempSync(path.join(tmpdir(), 'fable-opus-inert-'));
+  const inertEnv = {
+    PATH: process.env.PATH,
+    HOME: path.join(root, 'home'),
+    USERPROFILE: path.join(root, 'home'),
+    FABLE_MEASURE_HOME: path.join(root, 'measure'),
+    FABLE_MEASURE_CAMPAIGN: 'cmp',
+  };
+  const event = { session_id: 'opus-inert', cwd: '/must-not-write', hook_event_name: 'SessionStart', model: 'claude-opus-4-8' };
+  const codex = spawnSync(process.execPath, [HOOK], { input: JSON.stringify(event), env: inertEnv, encoding: 'utf8' });
+  const claude = spawnSync(process.execPath, [CLAUDE_HOLDOUT], { input: JSON.stringify(event), env: inertEnv, encoding: 'utf8' });
+  t(codex.status === 0 && claude.status === 0 && codex.stdout === '' && claude.stdout === '', 'FABLE_MEASURE unset: Opus assignment hooks exit 0 with no stdout');
+  t(readdirSync(root).length === 0, 'FABLE_MEASURE unset: Opus assignment hooks perform zero filesystem writes');
+  rmSync(root, { recursive: true, force: true });
+
+  const profileRoot = mkdtempSync(path.join(tmpdir(), 'fable-opus-profile-off-'));
+  const measureHome = path.join(profileRoot, 'measure');
+  mkdirSync(measureHome);
+  writeFileSync(path.join(measureHome, 'measurement-salt'), SALT, { mode: 0o600 });
+  const profileOffEnv = {
+    PATH: process.env.PATH,
+    HOME: path.join(profileRoot, 'home'),
+    USERPROFILE: path.join(profileRoot, 'home'),
+    FABLE_MEASURE: 'on',
+    FABLE_PROFILE: 'off',
+    FABLE_MEASURE_HOME: measureHome,
+    FABLE_MEASURE_CAMPAIGN: 'cmp',
+    FABLE_MEASURE_OFF_PCT: '20',
+  };
+  const profileCodex = spawnSync(process.execPath, [HOOK], { input: JSON.stringify(event), env: profileOffEnv, encoding: 'utf8' });
+  const profileClaude = spawnSync(process.execPath, [CLAUDE_HOLDOUT], { input: JSON.stringify(event), env: profileOffEnv, encoding: 'utf8' });
+  t(profileCodex.status === 0 && profileClaude.status === 0 && profileCodex.stdout === '' && profileClaude.stdout === '', 'FABLE_PROFILE=off: Opus hooks exit 0 with no stdout');
+  t(readdirSync(measureHome).join(',') === 'measurement-salt' && !existsSync(path.join(measureHome, 'events'))
+    && readdirSync(profileRoot).join(',') === 'measure',
+  'FABLE_PROFILE=off: seeded measurement home receives zero additional filesystem writes');
+  t(holdoutOff({ env: profileOffEnv, sessionId: 'opus1' }) === false, 'FABLE_PROFILE=off: shared injector guard is disabled');
+  rmSync(profileRoot, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// 10) the Codex injector hooks honor both legacy and default-20% Opus holdouts
 {
   const home = newHome();
   writeFileSync(path.join(home, 'measurement-salt'), SALT, { mode: 0o600 });
@@ -169,6 +406,25 @@ const newHome = () => { const h = mkdtempSync(path.join(tmpdir(), 'fable-measure
   t(subOn.stdout.includes('additionalContext'), 'subagent hook: on-arm still injects');
   const rjOff = runHookFile('fable-reinject.js', { session_id: offSid }, campaign);
   t((rjOff.stdout || '') === '', 'reinject hook: off-arm suppresses injection');
+
+  const opusArmOf = sid => assignArm({ campaignId: 'cmp', sessionId: sid, salt: SALT, offPercent: 20 });
+  let opusOnSid = null, opusOffSid = null;
+  for (let i = 0; i < 200 && !(opusOnSid && opusOffSid); i++) {
+    const sid = 'codex-opus-' + i;
+    if (opusArmOf(sid) === 'on') opusOnSid ||= sid;
+    else opusOffSid ||= sid;
+  }
+  const opusCampaign = { ...campaign, FABLE_MEASURE_OFF_PCT: '20' };
+  const opusEvent = sid => ({ source: 'startup', session_id: sid, model: 'claude-opus-4-8' });
+  const opusSessionOff = runHookFile('fable-session.js', opusEvent(opusOffSid), opusCampaign);
+  const opusSessionOn = runHookFile('fable-session.js', opusEvent(opusOnSid), opusCampaign);
+  t(opusSessionOff.stdout === '' && opusSessionOn.stdout.includes('additionalContext'), 'Codex Opus session hook: explicit-20% off is untreated; on injects');
+  const opusSubOff = runHookFile('fable-subagent.js', { session_id: opusOffSid, model: 'claude-sonnet-4-8', agent_type: 'coder' }, opusCampaign);
+  const opusSubOn = runHookFile('fable-subagent.js', { ...opusEvent(opusOnSid), agent_type: 'coder' }, opusCampaign);
+  t(opusSubOff.stdout === '' && opusSubOn.stdout.includes('additionalContext'), 'Codex Opus subagent hook: explicit-20% parent off arm survives a different subagent model');
+  const opusReinjectOff = runHookFile('fable-reinject.js', { session_id: opusOffSid }, opusCampaign);
+  const opusReinjectOn = runHookFile('fable-reinject.js', opusEvent(opusOnSid), opusCampaign);
+  t(opusReinjectOff.stdout === '' && opusReinjectOn.stdout.includes('additionalContext'), 'Codex Opus reinject hook: explicit-20% arm survives missing model metadata');
   rmSync(home, { recursive: true, force: true });
 }
 

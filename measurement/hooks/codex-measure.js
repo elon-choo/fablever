@@ -15,13 +15,17 @@
 const fs = require('fs');
 const path = require('path');
 const { anonId } = require('../runtime/privacy.cjs');
-const { assignArm } = require('../runtime/assign.cjs');
+const { assignArm, isOpusModel } = require('../runtime/assign.cjs');
 
 const onish = v => /^(on|1|true|yes)$/i.test(String(v || ''));
 // model/permission_mode are host-set metadata, but we treat the event as untrusted: bound them so an
 // unexpected/oversized/secret-shaped value can never land verbatim in the ledger (metadata-only contract).
 const PERM_MODES = new Set(['default', 'plan', 'acceptedits', 'acceptedits-once', 'bypasspermissions', 'read-only', 'workspace-write', 'danger-full-access', 'unknown']);
-const safeModel = v => { const s = String(v || 'unknown'); return (s.length <= 40 && /^[\w.\-:]+$/.test(s)) ? s : 'other'; };
+const safeModel = v => {
+  const s = String(v || 'unknown');
+  if (isOpusModel(s)) return 'claude-opus';
+  return (s.length <= 40 && /^[\w.\-:]+$/.test(s)) ? s : 'other';
+};
 const safePerm = v => { const s = String(v || 'unknown').toLowerCase(); return PERM_MODES.has(s) ? s : 'other'; };
 // user "steer me back" proxy (EN + KO) — applied ONLY to the user's own prompt, only in the opt-in tier.
 const REINSTRUCT = /\b(no,|nope|actually|that'?s wrong|not what i|undo|revert|stop,|wrong|instead|don'?t do)\b|아니|다시|틀렸|되돌|그게 아니|하지\s*마/i;
@@ -37,6 +41,7 @@ function appendEvent(baseDir, sessionKey, row) {
 
 try {
   if (!onish(process.env.FABLE_MEASURE)) process.exit(0);
+  if (String(process.env.FABLE_PROFILE || '').toLowerCase() === 'off') process.exit(0);
 
   const baseDir = process.env.FABLE_MEASURE_HOME;
   const campaignId = process.env.FABLE_MEASURE_CAMPAIGN;

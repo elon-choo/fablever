@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "baselineRef": "v1.3.0",
+  "baselineRefRationale": "The immutable v1.3.0 release tag, NEVER git HEAD. A HEAD baseline only equals the pre-upgrade tree while the upgrade is uncommitted; once committed it would compare the upgrade against itself and pass forever, silently killing the charter #2 default-parity proof.",
+  "defaultPolicy": "Every upgrade environment input is inactive when absent. baselineEnvReads registers v1.3.0 inputs without reclassifying their legacy defaults.",
+  "approvedCarveOuts": [],
+  "baselineEnvReads": [
+    "FABLE_CODEX_BIN",
+    "FABLE_FUSION",
+    "FABLE_HOME",
+    "FABLE_HOOK_TRACE_FILE",
+    "FABLE_HOST",
+    "FABLE_MODELCHECK",
+    "FABLE_MODELCHECK_REFRESH",
+    "FABLE_ONBOARD",
+    "FABLE_PROFILE",
+    "FABLE_PROFILE_HOME",
+    "FABLE_STOP_GATE",
+    "FABLE_TASTE",
+    "FABLE_TASTE_FILE",
+    "FABLE_TS",
+    "FABLE_UPDATE_CHECK",
+    "FABLE_XVERIFY"
+  ],
+  "flags": [
+    {
+      "name": "FABLE_BUDGET_CONFIG",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Inline retry-budget override; absent uses the bounded built-in defaults."
+    },
+    {
+      "name": "FABLE_BUDGET_CONFIG_FILE",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Retry-budget override file; absent performs no config-file read."
+    },
+    {
+      "name": "FABLE_CLAUDE_BIN",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Evaluation-only Claude executable override; absent uses the runner default."
+    },
+    {
+      "name": "FABLE_MEASURE",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": "off",
+      "purpose": "Primary measurement and holdout activation gate."
+    },
+    {
+      "name": "FABLE_MEASURE_CAMPAIGN",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Measurement campaign label; inert unless FABLE_MEASURE is enabled."
+    },
+    {
+      "name": "FABLE_MEASURE_HOME",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Measurement state directory override; inert unless FABLE_MEASURE is enabled."
+    },
+    {
+      "name": "FABLE_MEASURE_OFF_PCT",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Measurement holdout percentage override; inert unless FABLE_MEASURE is enabled."
+    },
+    {
+      "name": "FABLE_MEASURE_TEXT_SIGNALS",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Measurement text-signal collection toggle; inert unless FABLE_MEASURE is enabled."
+    },
+    {
+      "name": "FABLE_OPUS_BASELINE_ATTESTED",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Evaluation-only prerequisite attestation; absent blocks the real Opus arm."
+    },
+    {
+      "name": "FABLE_OPUS_BUDGET_CONFIRMED",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Evaluation-only spend confirmation; absent blocks the real Opus arm."
+    },
+    {
+      "name": "FABLE_OPUS_MODEL",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Evaluation-only model override; absent uses the preregistered runner default."
+    },
+    {
+      "name": "FABLE_ORCHESTRATION_PREFLIGHT",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": "off",
+      "purpose": "Installer selector for the upgraded orchestrate skill preflight guidance."
+    },
+    {
+      "name": "FABLE_PROGRESS_CONTINUATION",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": "off",
+      "purpose": "Progress-aware continuation activation gate."
+    },
+    {
+      "name": "FABLE_READONLY_VERIFIER",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": "off",
+      "purpose": "Installer gate for the read-only verifier agent and its scoped tool gate. ALSO selects the upgraded orchestrate skill overlay (install.mjs: DO_ORCHESTRATION_PREFLIGHT || DO_READONLY_AGENT) and, like every upgrade flag, skips the opt-in runtime prune — so the guidance and the modules it orders are installed together."
+    },
+    {
+      "name": "FABLE_TASK_CRITERIA",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": "off",
+      "purpose": "Opt-in fable-plan guidance plus MCP fable_check task-criteria schema, parsing, and surfacing."
+    },
+    {
+      "name": "FABLE_ULTRA",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": null,
+      "purpose": "Existing mode input reused by the inert, explicitly called auto-tier routing API; unset preserves the v1.3.0 auto resolver."
+    },
+    {
+      "name": "FABLE_VERIFIED_LOOP",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": "off",
+      "purpose": "Bounded verified-loop activation gate."
+    },
+    {
+      "name": "FABLE_VERIFIER_HOOK_EXEMPTION",
+      "defaultEnabled": false,
+      "defaultEnv": null,
+      "snapshotOffEnv": "off",
+      "purpose": "Subagent restraint-payload exemption gate for the registered read-only verifier role."
+    }
+  ]
+}

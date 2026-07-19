@@ -36,6 +36,23 @@ const rmrf = d => { try { fs.rmSync(d, { recursive: true, force: true }); } catc
 const rmf = f => { try { fs.rmSync(f, { force: true }); } catch (_) {} };
 const cpR = (src, dst) => { try { fs.cpSync(src, dst, { recursive: true }); } catch (_) {} };
 const chmodx = f => { try { fs.chmodSync(f, 0o755); } catch (_) {} };
+const envEnabled = value => ['on', '1', 'true'].includes(String(value || '').trim().toLowerCase());
+const OPTIN_RUNTIME_FILES = Object.freeze([
+  'docs/VERIFIED-LOOP.md',
+  'docs/proposals/CODEX-CROSS-ANALYSIS.md',
+  'docs/proposals/HARNESS-UPGRADE-LEDGER.md',
+  'mcp/src/task-criteria.js',
+  'orchestration/lib/budget.mjs',
+  'orchestration/lib/continuation.mjs',
+  'orchestration/lib/plan-artifact.mjs',
+  'orchestration/lib/preflight-gate.mjs',
+  'orchestration/lib/readonly-verifiers.mjs',
+  'orchestration/lib/run-doctor.mjs',
+  'orchestration/lib/run-state.mjs',
+  'orchestration/lib/tier-routing.mjs',
+  'orchestration/lib/verified-loop.mjs',
+  'orchestration/optin-flags.json',
+]);
 // Skills are plain directories under .agents/skills/, each containing a SKILL.md. A skill dir is "ours"
 // only if it is named fable-* AND carries a SKILL.md — both conditions, so uninstall can never touch a
 // user-authored skill that merely shares the folder.
@@ -85,7 +102,7 @@ function hookEntry(event, hookFile, matcher, statusMessage) {
 }
 
 // ---- the config.toml MCP marker block -------------------------------------------------------------------
-function tomlBlock(P) {
+function tomlBlock(P, taskCriteriaSkill = false) {
   const a = s => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"'); // TOML basic-string escape
   return [
     TOML_START,
@@ -102,6 +119,7 @@ function tomlBlock(P) {
     `FABLE_PROFILE_HOME = "${a(P.profileHome)}"`,
     `FABLE_HOME = "${a(P.runtime)}"`,
     `FABLE_TASTE_FILE = "${a(P.tasteFile)}"`,
+    ...(taskCriteriaSkill ? ['FABLE_TASK_CRITERIA = "on"'] : []),
     TOML_END,
   ].join('\n');
 }
@@ -117,7 +135,8 @@ function hasForeignMcpTable(tomlText) {
 // ---- resolve every decision ONCE, so dry-run and execute can't drift --------------------------------------
 function resolve(opts) {
   const scope = opts.scope === 'project' ? 'project' : 'user';
-  const P = resolvePaths(scope, { env: opts.env || process.env, cwd: opts.cwd || process.cwd() });
+  const env = opts.env || process.env;
+  const P = resolvePaths(scope, { env, cwd: opts.cwd || process.cwd() });
   const repo = opts.repoDir;
   const parts = opts.parts || { agents: true, hooks: true, mcp: true };
   const styleOnly = !!opts.styleOnly;
@@ -130,10 +149,46 @@ function resolve(opts) {
   const doSkills = !styleOnly && parts.skills !== false;
   const skillsSrc = path.join(repo, '.agents', 'skills');
   const skillsDst = P.agentsSkillsDir;
-  const skillNames = listSkillNames(skillsSrc);
+  const taskCriteriaSkill = envEnabled(env.FABLE_TASK_CRITERIA);
+  const orchestrationPreflightSkill = (
+    envEnabled(env.FABLE_ORCHESTRATION_PREFLIGHT)
+    || envEnabled(env.FABLE_READONLY_VERIFIER)
+  );
+  const skillNames = [
+    ...listSkillNames(skillsSrc),
+    ...(orchestrationPreflightSkill ? ['orchestrate'] : []),
+  ].sort();
+  const upgradeRuntime = [
+    env.FABLE_BUDGET_CONFIG,
+    env.FABLE_BUDGET_CONFIG_FILE,
+    env.FABLE_CLAUDE_BIN,
+    env.FABLE_MEASURE,
+    env.FABLE_MEASURE_CAMPAIGN,
+    env.FABLE_MEASURE_HOME,
+    env.FABLE_MEASURE_OFF_PCT,
+    env.FABLE_MEASURE_TEXT_SIGNALS,
+    env.FABLE_OPUS_BASELINE_ATTESTED,
+    env.FABLE_OPUS_BUDGET_CONFIRMED,
+    env.FABLE_OPUS_MODEL,
+    env.FABLE_ORCHESTRATION_PREFLIGHT,
+    env.FABLE_PROGRESS_CONTINUATION,
+    env.FABLE_READONLY_VERIFIER,
+    env.FABLE_TASK_CRITERIA,
+    env.FABLE_ULTRA,
+    env.FABLE_VERIFIED_LOOP,
+    env.FABLE_VERIFIER_HOOK_EXEMPTION,
+  ].some((entry) => {
+    const value = String(entry || '').trim().toLowerCase();
+    return value !== '' && !['off', '0', 'false', 'none'].includes(value);
+  });
   // Running project-scope install from inside the fablever repo itself would copy .agents/skills onto
   // itself — they are already discoverable there, so we skip the copy and never delete them on uninstall.
   const skillsSelf = path.resolve(skillsSrc) === path.resolve(skillsDst);
+  const skillOverlayConflict = (
+    doSkills
+    && skillsSelf
+    && (taskCriteriaSkill || orchestrationPreflightSkill)
+  );
 
   // AGENTS target: override file only with explicit --codex-patch-override; otherwise the plain AGENTS.md.
   const overrideExists = exists(P.agentsOverride);
@@ -149,8 +204,55 @@ function resolve(opts) {
   const tomlConflict = doMcp && hasForeignMcpTable(readFile(P.configToml)) && !opts.forceMcp;
 
   return { scope, P, repo, styleOnly, doAgents, doHooks, doMcp, doReinject,
-    doSkills, skillsSrc, skillsDst, skillNames, skillsSelf,
+    doSkills, skillsSrc, skillsDst, skillNames, skillsSelf, taskCriteriaSkill,
+    orchestrationPreflightSkill, skillOverlayConflict, upgradeRuntime,
     overrideExists, patchOverride, agentsTarget, agentsSkippedByOverride, hookFiles, tomlConflict, opts };
+}
+
+function selectedSkillSource(R, name) {
+  if (name === 'fable-plan' && R.taskCriteriaSkill) {
+    return path.join(R.repo, 'skill', 'optin', 'fable-plan');
+  }
+  if (name === 'orchestrate' && R.orchestrationPreflightSkill) {
+    return path.join(R.repo, 'skill', 'optin', 'orchestrate');
+  }
+  return path.join(R.skillsSrc, name);
+}
+
+function missingSelectedSkillSources(R) {
+  if (!R.doSkills || R.skillsSelf) return [];
+  return R.skillNames
+    .map(name => path.join(selectedSkillSource(R, name), 'SKILL.md'))
+    .filter(skill => !exists(skill));
+}
+
+function replaceSkillDirectory(src, dst) {
+  const sourceSkill = path.join(src, 'SKILL.md');
+  if (!exists(sourceSkill)) throw new Error(`missing selected skill source: ${sourceSkill}`);
+  mkdirp(path.dirname(dst));
+  const stage = fs.mkdtempSync(path.join(path.dirname(dst), '.fable-skill-stage-'));
+  const previous = `${stage}.previous`;
+  let movedPrevious = false;
+  try {
+    fs.cpSync(src, stage, { recursive: true });
+    if (!exists(path.join(stage, 'SKILL.md'))) {
+      throw new Error(`selected skill copy is incomplete: ${sourceSkill}`);
+    }
+    if (exists(dst)) {
+      fs.renameSync(dst, previous);
+      movedPrevious = true;
+    }
+    try {
+      fs.renameSync(stage, dst);
+    } catch (error) {
+      if (movedPrevious && !exists(dst)) fs.renameSync(previous, dst);
+      throw error;
+    }
+    if (movedPrevious) rmrf(previous);
+  } finally {
+    rmrf(stage);
+    if (exists(previous) && exists(dst)) rmrf(previous);
+  }
 }
 
 // ---- the dry-run plan (read-only) -----------------------------------------------------------------------
@@ -193,13 +295,17 @@ function computePlan(R) {
     } else {
       (exists(P.configToml) ? plan.modifies : plan.creates).push(`${P.configToml}  (fablever:codex:mcp marker block)`);
       if (exists(P.configToml)) plan.backups.push(`${P.configToml}.fable-bak-<ts>`);
-      plan.mcp.push('fable-profile  → node ' + P.mcpServer + '  (env: FABLE_HOST=codex, FABLE_PROFILE_HOME, FABLE_HOME, FABLE_TASTE_FILE)');
+      plan.mcp.push('fable-profile  → node ' + P.mcpServer + `  (env: FABLE_HOST=codex, FABLE_PROFILE_HOME, FABLE_HOME, FABLE_TASTE_FILE${R.taskCriteriaSkill ? ', FABLE_TASK_CRITERIA=on' : ''})`);
       plan.notes.push('After install, run /mcp in Codex to confirm fable-profile is connected.');
     }
   }
   if (R.doSkills) {
     if (R.skillsSelf) {
-      plan.notes.push(`Skills source == destination (${R.skillsDst}) — running inside the fablever repo; the .agents/skills/ skills are already discoverable here, nothing to copy.`);
+      if (R.skillOverlayConflict) {
+        plan.warnings.push(`FABLE_TASK_CRITERIA/FABLE_ORCHESTRATION_PREFLIGHT opt-in skill overlays cannot modify the in-repo source skill directory at ${R.skillsDst}. Use user scope or run project scope from a different project; no files will be written.`);
+      } else {
+        plan.notes.push(`Skills source == destination (${R.skillsDst}) — running inside the fablever repo; the .agents/skills/ skills are already discoverable here, nothing to copy.`);
+      }
     } else if (R.skillNames.length) {
       for (const nm of R.skillNames) plan.creates.push(`${path.join(R.skillsDst, nm)}/  (Codex skill)`);
       plan.skills = R.skillNames.slice();
@@ -216,6 +322,19 @@ function installRuntime(R, plan) {
   // 'measurement' is included so the holdout guard (measurement/runtime/holdout.cjs) and the Codex event
   // logger resolve from the installed runtime — the injector hooks require it to honor an off-arm session.
   for (const d of ['mcp', 'fusion', 'profiles', 'orchestration', 'docs', 'measurement']) cpR(path.join(repo, d), path.join(P.runtime, d));
+  if (!R.upgradeRuntime) {
+    for (const relativePath of OPTIN_RUNTIME_FILES) rmf(path.join(P.runtime, relativePath));
+    // Keep ONLY what the frozen v1.3.0 tag shipped under docs/proposals; prune every later planning doc
+    // automatically (mirrors BASELINE_PROPOSALS in install.mjs). A hand-listed prune drifts the moment
+    // someone adds a ledger — that drift is exactly what turned the opt-in audit red.
+    const proposalsDir = path.join(P.runtime, 'docs', 'proposals');
+    let entries = [];
+    try { entries = fs.readdirSync(proposalsDir, { withFileTypes: true }); } catch (_) { entries = []; }
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name === 'HANDOFF-LAYER-PLAN.md') continue;
+      try { fs.rmSync(path.join(proposalsDir, entry.name), { recursive: true, force: true }); } catch (_) {}
+    }
+  }
   // Flat profile copies so the zero-dep hooks resolve <profile-home>/{compact,core}.md without env.
   for (const v of ['full', 'compact', 'core']) {
     try { fs.copyFileSync(path.join(repo, 'profiles', `${v}.md`), path.join(P.profileHome, `${v}.md`)); } catch (_) {}
@@ -273,7 +392,7 @@ function executeInstall(R, log) {
       // foreign [mcp_servers.fable-profile] table) before inserting a fresh marker block, so the result
       // never has two same-named TOML tables.
       if (R.opts.forceMcp) { cur = removeBlock(cur, TOML_START, TOML_END); cur = stripTomlTable(cur, 'mcp_servers.fable-profile'); }
-      const merged = upsertBlock(cur, TOML_START, TOML_END, tomlBlock(P));
+      const merged = upsertBlock(cur, TOML_START, TOML_END, tomlBlock(P, R.taskCriteriaSkill));
       const existed = writeFileLogged(P.configToml, merged, plan, 'config.toml');
       plan.mcp.push('fable-profile');
       log(`  mcp      -> ${existed ? 'patched' : 'created'} ${P.configToml} (fable-profile; env: FABLE_HOST=codex). Run /mcp in Codex to confirm.`);
@@ -313,7 +432,7 @@ function executeInstall(R, log) {
       mkdirp(R.skillsDst);
       for (const nm of R.skillNames) {
         const dst = path.join(R.skillsDst, nm);
-        rmrf(dst); cpR(path.join(R.skillsSrc, nm), dst); plan.creates.push(dst);
+        replaceSkillDirectory(selectedSkillSource(R, nm), dst); plan.creates.push(dst);
       }
       // skills-only install (no MCP, no hooks) still needs a version record so uninstall can find them.
       if (!R.doMcp && !R.doHooks) recordVersion(R);
@@ -468,6 +587,17 @@ export async function runCodex(opts) {
     log(`  Uninstall:             ${s.uninstall}`);
     log(`  Preview changes:       ${s.dry_run}`);
     return 0;
+  }
+
+  const missingSkills = opts.action === 'install' ? missingSelectedSkillSources(R) : [];
+  if (opts.action === 'install' && (R.skillOverlayConflict || missingSkills.length)) {
+    const plan = computePlan(R);
+    if (missingSkills.length) {
+      plan.warnings.push(`Missing selected skill source(s): ${missingSkills.join(', ')}. No files will be written.`);
+    }
+    if (opts.json) log(JSON.stringify(plan, null, 2));
+    else renderPlanText(plan, log);
+    return 2;
   }
 
   if (opts.dry) {

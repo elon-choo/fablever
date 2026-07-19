@@ -32,22 +32,37 @@ INPUT="$(cat 2>/dev/null)"
 [ -f "${PROFILE_DIR}/OFF" ] && exit 0
 
 # --- extract fields without a JSON dependency (ids/paths are grep-safe) ---
-sid="$(printf '%s' "$INPUT"   | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"'      | head -1 | sed 's/.*:[[:space:]]*"//; s/"$//')"
-sid="${sid//[^A-Za-z0-9_-]/_}"   # sanitize: sid only ever indexes a /tmp marker filename (no path traversal)
+raw_sid="$(printf '%s' "$INPUT" | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*:[[:space:]]*"//; s/"$//')"
+sid="${raw_sid//[^A-Za-z0-9_-]/_}"   # legacy marker/counter filename only (no path traversal)
 tpath="$(printf '%s' "$INPUT" | grep -o '"transcript_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*:[[:space:]]*"//; s/"$//')"
+transcript_model=""
+if [ -n "$tpath" ] && [ -f "$tpath" ]; then
+  transcript_model="$(tail -n 120 "$tpath" 2>/dev/null | grep -o '"model"[[:space:]]*:[[:space:]]*"[^"]*"' | tail -1 | sed 's/.*:[[:space:]]*"//; s/"$//')"
+fi
 
 # --- holdout suppression (OPT-IN measurement only; inert unless FABLE_MEASURE=on) ---
 # When a measurement campaign is running, sessions assigned to the untreated 'off' arm carry a marker
 # (written by measurement/holdout.js); skip injection so that arm is a true baseline. Default: no-op.
 m="$(printf '%s' "${FABLE_MEASURE}" | tr 'A-Z' 'a-z')"   # normalize identically to holdout.js / fable-subagent.js
 case "$m" in
-  on|1|true) [ -n "$sid" ] && [ -f "${PROFILE_DIR}/holdout/${sid}.off" ] && exit 0 ;;
+  on|1|true)
+    [ -n "$sid" ] && [ -f "${PROFILE_DIR}/holdout/${sid}.off" ] && exit 0
+    measure_dir="${FABLE_MEASURE_HOME:-$PROFILE_DIR}"
+    if [ -n "$sid" ] && [ -f "${measure_dir}/measurement-salt" ]; then
+      hsid="$(node -e '
+        const fs = require("fs"), crypto = require("crypto");
+        const salt = fs.readFileSync(process.argv[1]);
+        const hex = crypto.createHmac("sha256", salt).update(String(process.argv[2] || "")).digest("hex");
+        process.stdout.write("s_" + hex.slice(0, 24));
+      ' "${measure_dir}/measurement-salt" "$raw_sid" 2>/dev/null)"
+      [ -n "$hsid" ] && [ -f "${measure_dir}/holdout/${hsid}.off" ] && exit 0
+    fi
+    ;;
 esac
 
 # --- model-aware gate: skip entirely for Fable/Mythos-class models ---
-if [ -n "$tpath" ] && [ -f "$tpath" ]; then
-  model="$(tail -n 120 "$tpath" 2>/dev/null | grep -o '"model"[[:space:]]*:[[:space:]]*"[^"]*"' | tail -1)"
-  case "$model" in
+if [ -n "$transcript_model" ]; then
+  case "$transcript_model" in
     *fable*|*mythos*) exit 0 ;;   # already Fable-class: inject nothing
   esac
 fi

@@ -6,7 +6,7 @@
   "author": "elon-choo (https://github.com/elon-choo)",
   "type": "commonjs",
   "scripts": {
-    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node eval/unsupported-claim-regression/run.mjs && node eval/conflict-regression/run.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs && node test/install-matrix.mjs && node test/skills-install-test.mjs && node test/stopgate-test.mjs && node test/codex-install-test.mjs && node test/codex-skills-test.mjs && node test/measurement-assignment-test.mjs && node test/codex-campaign-test.mjs && node test/measurement-stats-test.mjs && node test/codex-ab-runner-test.mjs && node test/codex-ab-score-test.mjs && node test/codex-ab-judge-test.mjs && node test/privacy-canary/run.mjs",
+    "test": "node test/mcp-test.js && node test/fusion-test.js && node test/orchestration-test.js && node test/orchestration-runtime-test.js && node test/model-test.mjs && node test/update-check-test.mjs && node orchestration/lib/xverify-preset.mjs --selftest && node eval/ultra/score.mjs && node eval/unsupported-claim-regression/run.mjs && node eval/conflict-regression/run.mjs && node test/opus-claim-lint-test.mjs && node test/opus-prereg-test.mjs && node test/opus-fixture-test.mjs && node test/retry-budget-test.mjs && node test/readonly-verifiers-test.mjs && node test/preflight-gate-test.mjs && node test/hook-exemption-test.mjs && node test/run-state-test.mjs && node test/evidence-receipt-test.mjs && node test/plan-artifact-test.mjs && node test/task-criteria-test.mjs && node test/verified-loop-test.mjs && node test/verified-loop-ab-test.mjs && node test/flagship-docs-test.mjs && node test/restart-recovery-test.mjs && node test/run-doctor-test.mjs && node test/continuation-test.mjs && node test/tier-routing-test.mjs && node test/state-debt-test.mjs && node test/ledger-evidence-test.mjs && node test/optin-audit-test.mjs && node test/install-mjs-test.mjs && node test/run-install-test.mjs && node test/install-matrix.mjs && node test/skills-install-test.mjs && node test/stopgate-test.mjs && node test/codex-install-test.mjs && node test/codex-skills-test.mjs && node test/measurement-assignment-test.mjs && node test/codex-campaign-test.mjs && node test/measurement-stats-test.mjs && node test/codex-ab-runner-test.mjs && node test/cost-instrumentation-test.mjs && node test/codex-ab-score-test.mjs && node test/codex-ab-judge-test.mjs && node test/privacy-canary/run.mjs",
     "test:safety": "node test/install-matrix.mjs",
     "test:privacy": "node test/privacy-canary/run.mjs",
     "test:mcp": "node test/mcp-test.js",
@@ -44,7 +44,8 @@
   "engines": { "node": ">=18" },
   "dependencies": {},
   "files": [
-    "profiles", "mcp", "fusion", "orchestration", "eval", "claude-code", "codex", ".agents", "measurement", "tools", "install.sh", "install.mjs", "docs", "README.md", "README.ko.md", "LICENSE",
-    "!docs/proposals"
+    "profiles", "mcp", "fusion", "orchestration", "eval", "claude-code", "codex", ".agents", "skill", "measurement", "tools", "install.sh", "install.mjs", "docs", "README.md", "README.ko.md", "LICENSE",
+    "!docs/proposals",
+    "!eval/opus-fixture"
   ]
 }

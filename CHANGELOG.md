@@ -6,6 +6,22 @@ positioning is unchanged throughout: **a style/structure transplant, not a capab
 
 ## [Unreleased]
 
+### Added (Opus-upgrade track — all opt-in, default-off)
+- **Evidence-grounded completion scaffolding**, added as a stage×goal upgrade and each gated by a
+  deterministic test: cost instrumentation (per-arm tokens/wall-clock/fixture-hash), a hidden-oracle hard
+  fixture, pre-registration binding + a magnitude-claim lint, a deterministic retry/iteration budget,
+  falsifiable read-only verifiers, a pre-flight route-vs-solo cost gate, a single writable run authority
+  (contract + append-only ledger), criterion-bound evidence receipts, the **bounded verified-completion
+  loop** (completion repaired only by an executable check PASS; retry only by a check FAIL, repair-only),
+  compaction/restart recovery, an active-run doctor, progress-aware two-strike continuation, and cost-only
+  task-category model routing. See `docs/VERIFIED-LOOP.md` and `EVIDENCE.md` (§ Opus-upgrade opt-in
+  mechanisms). A default v1.3.0 install is behavior-unchanged (opt-in audit + v1.3.0 snapshot enforce it).
+- **No effect-size is claimed.** The A/B and holdout experiments that would measure whether these help on a
+  stronger model have **not** been run — they are budget- and measurement-gated. The verified-loop A/B is
+  pre-registered; each remaining experiment binds its own pre-registration before it runs. What ships is the
+  mechanism and its guardrails, not a result. Positioning is unchanged: a structure transplant, not a
+  capability upgrade.
+
 ## [1.3.0] — 2026-07-02
 
 ### Added

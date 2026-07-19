@@ -42,11 +42,18 @@ PROFILE_DST_DIR="${CLAUDE_DIR}/fable-profile"
 RUNTIME_DIR="${PROFILE_DST_DIR}/runtime"          # SEC-1: immutable copy the MCP runs from (NOT the mutable clone)
 MERGE="${REPO}/claude-code/lib/settings-merge.js"
 MCP_REMOVE="${REPO}/claude-code/lib/mcp-remove.js"
+MCP_ENV_SYNC="${REPO}/claude-code/lib/mcp-env.js"
 MCP_SERVER="${RUNTIME_DIR}/mcp/src/server.js"
 FUSION_SERVER="${RUNTIME_DIR}/fusion/fusion-server.js"
 XVERIFY_CFG="${PROFILE_DST_DIR}/xverify.json"
 MODE_CFG="${PROFILE_DST_DIR}/mode.json"
 FABLE_HOME_PTR="${PROFILE_DST_DIR}/fable-home"
+READONLY_AGENT_SRC="${REPO}/claude-code/agents/fable-readonly-verifier.md"
+READONLY_AGENT_DST="${CLAUDE_DIR}/agents/fable-readonly-verifier.md"
+READONLY_AGENT_MARKER='<!-- fablever-owned:readonly-verifier:v1 -->'
+READONLY_GATE_SRC="${REPO}/claude-code/hooks/fable-readonly-verifier-gate.js"
+READONLY_GATE_DST="${CLAUDE_DIR}/hooks/fable-readonly-verifier-gate.js"
+READONLY_GATE_MARKER='fablever-owned:readonly-verifier-gate:v1'
 
 # Codex CLI native support, the cross-host --dry-run preview, and the measurement-holdout flags all live in
 # the UNIVERSAL Node installer (install.mjs owns that logic; reimplementing it in bash would just duplicate
@@ -114,6 +121,66 @@ for a in "$@"; do
 done
 have() { command -v "$1" >/dev/null 2>&1; }
 
+XVERIFY_ENABLED=0
+if [ "$XVERIFY_EXPLICIT" = "1" ] && [ "$XVERIFY" != "off" ] && [ "$XVERIFY" != "claude-only" ]; then
+  XVERIFY_ENABLED=1
+fi
+DO_READONLY_AGENT=0
+READONLY_VALUE="${FABLE_READONLY_VERIFIER:-}"
+READONLY_VALUE="${READONLY_VALUE#"${READONLY_VALUE%%[![:space:]]*}"}"
+READONLY_VALUE="${READONLY_VALUE%"${READONLY_VALUE##*[![:space:]]}"}"
+case "$(printf '%s' "$READONLY_VALUE" | tr '[:upper:]' '[:lower:]')" in
+  on|1|true) DO_READONLY_AGENT=1 ;;
+esac
+DO_TASK_CRITERIA=0
+TASK_CRITERIA_VALUE="${FABLE_TASK_CRITERIA:-}"
+TASK_CRITERIA_VALUE="${TASK_CRITERIA_VALUE#"${TASK_CRITERIA_VALUE%%[![:space:]]*}"}"
+TASK_CRITERIA_VALUE="${TASK_CRITERIA_VALUE%"${TASK_CRITERIA_VALUE##*[![:space:]]}"}"
+case "$(printf '%s' "$TASK_CRITERIA_VALUE" | tr '[:upper:]' '[:lower:]')" in
+  on|1|true) DO_TASK_CRITERIA=1 ;;
+esac
+DO_ORCHESTRATION_PREFLIGHT=0
+PREFLIGHT_VALUE="${FABLE_ORCHESTRATION_PREFLIGHT:-}"
+PREFLIGHT_VALUE="${PREFLIGHT_VALUE#"${PREFLIGHT_VALUE%%[![:space:]]*}"}"
+PREFLIGHT_VALUE="${PREFLIGHT_VALUE%"${PREFLIGHT_VALUE##*[![:space:]]}"}"
+case "$(printf '%s' "$PREFLIGHT_VALUE" | tr '[:upper:]' '[:lower:]')" in
+  on|1|true) DO_ORCHESTRATION_PREFLIGHT=1 ;;
+esac
+UPGRADE_RUNTIME_ENABLED=0
+upgrade_runtime_value_enabled() {
+  _upgrade_value="$1"
+  _upgrade_value="${_upgrade_value#"${_upgrade_value%%[![:space:]]*}"}"
+  _upgrade_value="${_upgrade_value%"${_upgrade_value##*[![:space:]]}"}"
+  case "$(printf '%s' "$_upgrade_value" | tr '[:upper:]' '[:lower:]')" in
+    ''|off|0|false|none) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+if upgrade_runtime_value_enabled "${FABLE_BUDGET_CONFIG:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_BUDGET_CONFIG_FILE:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_CLAUDE_BIN:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_MEASURE:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_MEASURE_CAMPAIGN:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_MEASURE_HOME:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_MEASURE_OFF_PCT:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_MEASURE_TEXT_SIGNALS:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_OPUS_BASELINE_ATTESTED:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_OPUS_BUDGET_CONFIRMED:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_OPUS_MODEL:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_ORCHESTRATION_PREFLIGHT:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_PROGRESS_CONTINUATION:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_READONLY_VERIFIER:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_TASK_CRITERIA:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_ULTRA:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_VERIFIED_LOOP:-}" \
+  || upgrade_runtime_value_enabled "${FABLE_VERIFIER_HOOK_EXEMPTION:-}"; then
+  UPGRADE_RUNTIME_ENABLED=1
+fi
+DO_RUNTIME=0
+if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ] || [ "$DO_ONBOARD" = "1" ] || [ "$DO_MODELCHK" = "1" ] || [ "$DO_UPDATECHK" = "1" ] || [ "$XVERIFY_ENABLED" = "1" ]; then
+  DO_RUNTIME=1
+fi
+
 if [ "$UNINSTALL" = "1" ]; then
   echo "Uninstalling Fable profile..."
   node "$MERGE" style-off "$SETTINGS" Fable 2>/dev/null || true
@@ -126,6 +193,13 @@ if [ "$UNINSTALL" = "1" ]; then
   rm -f "$PROFILE_DST_DIR/full.md" "$PROFILE_DST_DIR/compact.md" "$PROFILE_DST_DIR/core.md" "$XVERIFY_CFG" "$MODE_CFG" "$FABLE_HOME_PTR"
   rm -f "$PROFILE_DST_DIR/onboarded" "$PROFILE_DST_DIR/onboard-shown-count" "$PROFILE_DST_DIR/model-check.json" "$PROFILE_DST_DIR/model-notified.json"  # so a later re-install re-onboards cleanly
   rm -f "$PROFILE_DST_DIR/installed-version.json" "$PROFILE_DST_DIR/update-check.json" "$PROFILE_DST_DIR/update-notified.json"
+  if [ -f "$READONLY_AGENT_DST" ] && grep -Fq "$READONLY_AGENT_MARKER" "$READONLY_AGENT_DST"; then
+    rm -f "$READONLY_AGENT_DST"
+  fi
+  if [ -f "$READONLY_GATE_DST" ] && grep -Fq "$READONLY_GATE_MARKER" "$READONLY_GATE_DST"; then
+    rm -f "$READONLY_GATE_DST"
+  fi
+  rmdir "${CLAUDE_DIR}/agents" 2>/dev/null || true
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true
   rmdir "$PROFILE_DST_DIR" 2>/dev/null || true
   if have claude; then
@@ -141,6 +215,25 @@ if [ "$UNINSTALL" = "1" ]; then
 fi
 
 if ! have node; then echo "ERROR: node is required (MCP server + settings merge)." >&2; exit 1; fi
+
+if [ "$DO_READONLY_AGENT" = "1" ] \
+  && [ -f "$READONLY_AGENT_DST" ] && ! grep -Fq "$READONLY_AGENT_MARKER" "$READONLY_AGENT_DST"; then
+  echo "ERROR: refusing to overwrite non-fablever agent: $READONLY_AGENT_DST" >&2
+  exit 1
+fi
+if [ "$DO_READONLY_AGENT" != "1" ]; then
+  if [ -f "$READONLY_AGENT_DST" ] && grep -Fq "$READONLY_AGENT_MARKER" "$READONLY_AGENT_DST"; then
+    rm -f "$READONLY_AGENT_DST"
+  fi
+  if [ -f "$READONLY_GATE_DST" ] && grep -Fq "$READONLY_GATE_MARKER" "$READONLY_GATE_DST"; then
+    rm -f "$READONLY_GATE_DST"
+  fi
+fi
+if [ "$DO_READONLY_AGENT" = "1" ] \
+  && [ -f "$READONLY_GATE_DST" ] && ! grep -Fq "$READONLY_GATE_MARKER" "$READONLY_GATE_DST"; then
+  echo "ERROR: refusing to overwrite non-fablever hook: $READONLY_GATE_DST" >&2
+  exit 1
+fi
 
 echo "Installing Fable profile from: $REPO"
 mkdir -p "${CLAUDE_DIR}/hooks" "${CLAUDE_DIR}/output-styles" "$PROFILE_DST_DIR"
@@ -218,27 +311,84 @@ fi
 #       the SessionStart hooks (onboarding xverify-preset.mjs, daily model-freshness.mjs) and the
 #       fusion model registry (models.json) all resolve out of here, NOT the clone, so they work
 #       from any cwd after the user restarts. Re-running install.sh refreshes this copy.
-if [ "$DO_MCP" = "1" ] || [ "$WITH_FUSION" = "1" ] || [ "$DO_ONBOARD" = "1" ] || [ "$DO_MODELCHK" = "1" ] || [ "$DO_UPDATECHK" = "1" ]; then
+if [ "$DO_READONLY_AGENT" = "1" ]; then
+  mkdir -p "${CLAUDE_DIR}/agents"
+  cp "$READONLY_AGENT_SRC" "$READONLY_AGENT_DST"
+  echo "  verifier   -> $READONLY_AGENT_DST (fresh-context; explicit read-only tools allowlist)"
+  cp "$READONLY_GATE_SRC" "$READONLY_GATE_DST"; chmod +x "$READONLY_GATE_DST"
+  echo "  verifier   -> agent-scoped PreToolUse fail-closed read-only gate installed"
+fi
+if [ "$DO_RUNTIME" = "1" ]; then
   rm -rf "$RUNTIME_DIR" 2>/dev/null || true   # refresh cleanly so files deleted from the repo don't persist stale
   mkdir -p "$RUNTIME_DIR"
   cp -R "${REPO}/mcp" "${REPO}/fusion" "${REPO}/profiles" "${REPO}/orchestration" "${REPO}/docs" "$RUNTIME_DIR"/ 2>/dev/null || true
+  if [ "$UPGRADE_RUNTIME_ENABLED" != "1" ]; then
+    rm -f \
+      "$RUNTIME_DIR/docs/VERIFIED-LOOP.md" \
+      "$RUNTIME_DIR/docs/proposals/CODEX-CROSS-ANALYSIS.md" \
+      "$RUNTIME_DIR/docs/proposals/HARNESS-UPGRADE-LEDGER.md" \
+      "$RUNTIME_DIR/mcp/src/task-criteria.js" \
+      "$RUNTIME_DIR/orchestration/lib/budget.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/continuation.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/plan-artifact.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/preflight-gate.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/readonly-verifiers.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/run-doctor.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/run-state.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/tier-routing.mjs" \
+      "$RUNTIME_DIR/orchestration/lib/verified-loop.mjs" \
+      "$RUNTIME_DIR/orchestration/optin-flags.json"
+    # Keep ONLY the proposals the frozen v1.3.0 tag shipped; prune every later planning doc automatically.
+    # Mirrors BASELINE_PROPOSALS in install.mjs — a hand-maintained list drifts, this does not.
+    if [ -d "$RUNTIME_DIR/docs/proposals" ]; then
+      find "$RUNTIME_DIR/docs/proposals" -mindepth 1 ! -name 'HANDOFF-LAYER-PLAN.md' -exec rm -rf {} + 2>/dev/null || true
+    fi
+  fi
   printf '%s\n' "$RUNTIME_DIR" > "$FABLE_HOME_PTR"   # pointer the hooks read to find orchestration/ from any cwd
   echo "  runtime   -> copied to $RUNTIME_DIR (immutable; incl. orchestration/ for the SessionStart hooks; re-run to refresh)"
 fi
 
 # 5) register the MCP server globally (portable on-demand tools + subagent-reachable profile)
 if [ "$DO_MCP" = "1" ]; then
+  MCP_MANUAL_ENV=""
+  if [ "$DO_TASK_CRITERIA" = "1" ]; then
+    MCP_MANUAL_ENV=" --env FABLE_TASK_CRITERIA=on"
+  fi
+  add_fable_profile_mcp() {
+    if [ "$DO_TASK_CRITERIA" = "1" ]; then
+      claude mcp add --transport stdio fable-profile --scope user --env FABLE_TASK_CRITERIA=on -- node "$MCP_SERVER"
+    else
+      claude mcp add --transport stdio fable-profile --scope user -- node "$MCP_SERVER"
+    fi
+  }
   if have claude; then
     if claude mcp list 2>/dev/null | grep -q '^fable-profile\b'; then
-      echo "  mcp       -> already registered"
+      DESIRED_TASK_CRITERIA="--absent"
+      [ "$DO_TASK_CRITERIA" = "1" ] && DESIRED_TASK_CRITERIA="on"
+      MCP_SYNC_RESULT="$(node "$MCP_ENV_SYNC" sync "$HOME/.claude.json" fable-profile FABLE_TASK_CRITERIA "$DESIRED_TASK_CRITERIA" 2>/dev/null || true)"
+      if [ "$MCP_SYNC_RESULT" = "changed" ]; then
+        if [ "$DO_TASK_CRITERIA" = "1" ]; then
+          echo "  mcp       -> updated registration (task criteria on)"
+        else
+          echo "  mcp       -> updated registration (HEAD-compatible task criteria off)"
+        fi
+      elif [ "$MCP_SYNC_RESULT" = "unchanged" ]; then
+        echo "  mcp       -> already registered"
+      elif [ "$DO_TASK_CRITERIA" != "1" ]; then
+        # A project/local registration can appear in `mcp list` without a user-scope
+        # ~/.claude.json entry. Preserve the legacy default instead of creating a duplicate.
+        echo "  mcp       -> already registered"
+      else
+        echo "  mcp       -> WARN: existing non-user or unreadable registration preserved; add task criteria manually (see README)"
+      fi
     else
-      claude mcp add --transport stdio fable-profile --scope user -- node "$MCP_SERVER" \
+      add_fable_profile_mcp \
         && echo "  mcp       -> registered (scope: user)" \
         || echo "  mcp       -> WARN: 'claude mcp add' failed; add manually (see README)"
     fi
   else
     echo "  mcp       -> 'claude' CLI not found; add manually:"
-    echo "               claude mcp add --transport stdio fable-profile --scope user -- node $MCP_SERVER"
+    echo "               claude mcp add --transport stdio fable-profile --scope user${MCP_MANUAL_ENV} -- node $MCP_SERVER"
   fi
 fi
 
