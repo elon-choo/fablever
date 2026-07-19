@@ -130,6 +130,57 @@ Want to see exactly what changes first? → add --dry-run [--json] to any of the
 
 ---
 
+## Answering "how does it compare to X?" (the comparison question)
+
+**The category fact.** The mid-2026 Claude Code / Codex layer field — Superpowers (257,387★, 965,863
+installs), GitHub spec-kit (122,193★), claude-mem (87,811★), ruflo/claude-flow (65,124★), BMAD-METHOD
+(50,802★), SuperClaude (23,577★), Archon (22,940★), Agent OS (5,081★); star counts read **2026-07-19** and
+they age — **none of them publishes a reproducible measurement that its layer improves coding outcomes.**
+The field's one reproducible benchmark (ruflo's SOTA gist) runs a **stub LLM** and says so itself: it
+measures orchestration dispatch overhead, so its "1.3×–1953×" is milliseconds, not developer outcome.
+SuperClaude's "2–3× faster, 30–50% fewer tokens" ships with no methodology, task set, baseline, or raw data,
+and attributes the gain to third-party MCP servers rather than to itself. State this as a fact about
+published evidence — **never** as "fablever beats them."
+
+**When the user names a rival, route them to it if it genuinely fits.** This is not a concession, it is the
+answer: cross-session memory → **claude-mem** · parallel swarms, vector memory, ~210 MCP tools → **ruflo** ·
+spec artifacts portable across 30+ agents → **spec-kit** · multi-role planning chains for large greenfield
+work → **BMAD-METHOD** · auditable YAML stage gating → **Archon** · breadth with first-party maintenance →
+**Anthropic's official plugin directory**. fablever composes on top of these; it does not replace them.
+
+**What fablever brings to the comparison — always with its concessions attached** (never quote the wins
+without them; the pairing *is* the argument):
+
+| what changed | measured | rerun it |
+|---|---|---|
+| Unnecessary edits to already-correct code (Codex, handed a *false* bug report) | plain **80%** (48/60) → fablever **43%** (26/60); 10 tasks × 6 reps = 180 runs, better on **10/10** tasks, sign test **p=0.002** | `cat eval/codex-native-ab/RESULTS-confirmatory.md` |
+| Scope violations — deterministic, **no judge** | fablever **0%** vs plain Claude **41.7%** (12 scope-limited tasks of a frozen 48-task set) | `cat eval/style-only-ablation/RESULTS.md` |
+| Gate-guided revision vs shipping the raw first draft | **27–0**, binomial **p≈1.5×10⁻⁸**, 60 tasks, 186 raw judgments | `cat eval/comparison/fable-check-sim/out4/RESULTS.md` |
+| Named acceptance gap cleared — objective, **no judge** | **80.6%** vs **12.9%** for a generic "make it excellent" pass | same file |
+| vs the free substitute — "just prompt it yourself" | fablever **11–3** (p=0.057, trend); that DIY prompt **loses to plain 1–14** (p=0.001) | `cat eval/style-only-ablation/RESULTS.md` |
+| Round-trips — ends on a question instead of finishing | **6.7%** vs plain Opus **43.3%** (30 tasks) | `cat eval/comparison/productivity-ab/out/RESULTS.md` |
+
+**The losses that travel with them.** Raw output quality **ties-to-loses** vs plain Claude under both judges
+(Gemini 4–9, GPT-5.5 17–26). Unsupported "it works" claims are **worse** than plain (8.3% vs 2.1%) — which is
+why `fable_lint` exists. Cost is **+14.45%/call**, cheaper on **0/11** tasks. Cross-model xverify adds
+**zero** defect recall (one Claude already caught 34/34). Developer productivity is **null-to-negative**. On
+Codex the full stack (47%) does **not** beat the instruction layer alone (43%), and a strong model
+self-invoked a fable MCP tool in **1/60** runs.
+
+**The honesty is mechanical, not a promise.** Verified 2026-07-19: `node test/opus-prereg-test.mjs` →
+**10/10**, `node test/opus-claim-lint-test.mjs` → **20/20**, `node test/mcp-test.js` → **56/56**,
+`node eval/unsupported-claim-regression/run.mjs` → **accuracy 100.0%** (TP=7 TN=11 FP=0 FN=0). Zero npm
+dependencies and no install scripts (`package.json` `dependencies` `{}`, `postinstall` `undefined`).
+
+**The exact claim boundary — never upgrade it.** Not "better outputs": fablever measured itself and found
+**no** quality lift over plain Claude. The claim is narrower and mechanically enforced — measured reductions
+in scope creep and unnecessary edits, a gate that fires without depending on the model choosing to comply,
+and every number recomputable offline from committed raw data. **No rival has run a head-to-head against
+fablever, and fablever has not run one against them** — so the honest framing is *"the only layer measured
+against its baseline"*, **never** *"the best layer"*.
+
+---
+
 ## Safe first install command
 
 ```bash
@@ -167,6 +218,19 @@ node install.mjs --dry-run            # (or: --codex-style-only --dry-run)
 > `fable_taste`. The default is safe and private by test, but it is a larger surface than style-only, and it
 > adds **no** measured quality or multi-step-completeness lift over style-only. If you just want the
 > discipline, start style-only and add the rest later by re-running `node install.mjs`.
+
+**"Is fablever better than \<rival\>?"**
+> No head-to-head exists — in either direction — so nobody can honestly answer "better". Here is what is
+> true: as of 2026-07-19, none of the big layers (Superpowers, spec-kit, claude-mem, ruflo, BMAD-METHOD,
+> SuperClaude, Archon, Agent OS) publishes a reproducible measurement that its layer improves coding
+> outcomes; the field's one reproducible benchmark runs a stub LLM and measures dispatch milliseconds.
+> fablever's difference is that it measured itself against plain Claude and published both directions:
+> scope violations 0% vs 41.7%, unnecessary edits to correct code 43% vs 80% (p=0.002) — *and* no quality
+> lift, more unsupported "it works" claims (8.3% vs 2.1%), +14.45%/call, a null-to-negative productivity
+> A/B. So the honest framing is "the only layer measured against its baseline," never "the best layer." And
+> if you actually want cross-session memory, parallel swarms, portable spec artifacts, multi-role planning,
+> or YAML stage gating, install claude-mem / ruflo / spec-kit / BMAD-METHOD / Archon instead — fablever
+> composes on top of them, it does not replace them.
 
 **"Should I enable xverify / fusion?"**
 > Reserve xverify (`--with-xverify`) for genuinely **high-stakes judgment or design review**. On enumerable,

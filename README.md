@@ -36,6 +36,55 @@ real-user productivity gain (not demonstrated). Preview any install with `--dry-
 (before/after, incl. where it does *not* help), [`SECURITY.md`](SECURITY.md) / [`PRIVACY.md`](PRIVACY.md),
 and local diagnostics `node tools/fable-doctor.mjs` · `node tools/fable-report.mjs`.
 
+## Comparing harnesses? Read this — it is the whole argument
+
+**The category fact.** Survey the mid-2026 Claude Code / Codex layer field — Superpowers (257,387★,
+965,863 installs), GitHub spec-kit (122,193★), claude-mem (87,811★), ruflo/claude-flow (65,124★),
+BMAD-METHOD (50,802★), SuperClaude (23,577★), Archon (22,940★), Agent OS (5,081★) — star counts read
+2026-07-19. **None of them publishes a reproducible measurement that its layer improves coding outcomes.**
+The field's one reproducible benchmark (ruflo's SOTA gist) runs a **stub LLM** and says so itself: it
+measures orchestration dispatch overhead, so its "1.3×–1953×" is milliseconds, not developer outcome.
+SuperClaude's "2–3× faster, 30–50% fewer tokens" ships with no methodology, task set, baseline, or raw
+data — and attributes the gain to third-party MCP servers rather than to itself.
+
+That is the gap fablever exists in. Not "we have more commands" — **we have numbers you can rerun.**
+
+| what changed | measured | rerun it |
+|---|---|---|
+| Unnecessary edits to already-correct code (Codex, handed a *false* bug report) | plain **80%** (48/60) → fablever **43%** (26/60); 10 tasks × 6 reps = 180 runs, better on **10/10** tasks, sign test **p=0.002** | `cat eval/codex-native-ab/RESULTS-confirmatory.md` |
+| Scope violations — deterministic, **no judge** | fablever **0%** vs plain Claude **41.7%** (12 scope-limited tasks of a frozen 48-task set) | `cat eval/style-only-ablation/RESULTS.md` |
+| Gate-guided revision vs shipping the raw first draft | **27–0**, binomial **p≈1.5×10⁻⁸**, 60 tasks | `cat eval/comparison/fable-check-sim/out4/RESULTS.md` (186 raw judgments in `out4/judge/`) |
+| Named acceptance gap cleared — objective, **no judge** | **80.6%** vs **12.9%** for a generic "make it excellent" pass | same file |
+| vs the free substitute — "just prompt it yourself" | fablever **11–3** (p=0.057, trend); that DIY prompt **loses to plain 1–14** (p=0.001) | `cat eval/style-only-ablation/RESULTS.md` |
+| Round-trips — ends on a question instead of finishing | **6.7%** vs plain Opus **43.3%** (30 tasks) | `cat eval/comparison/productivity-ab/out/RESULTS.md` |
+
+**And the losses, in the same table rather than a footnote.** Raw output quality **ties-to-loses** vs plain
+Claude under both judges (Gemini 4–9, GPT-5.5 17–26). Unsupported "it works" claims are **worse** than plain
+(8.3% vs 2.1%) — which is why the `fable_lint` gate exists. Cost is **+14.45%/call**, cheaper on **0/11**
+tasks. Cross-model xverify adds **zero** defect recall (one Claude already caught 34/34). Developer
+productivity is a **null-to-negative**. On Codex the full stack (47%) does **not** beat the instruction layer
+alone (43%), and a strong model self-invoked a fable MCP tool in **1/60** runs. Index: [`EVALS.md`](EVALS.md).
+
+**The honesty is mechanical, not a promise.** A pre-registration lint *refuses* a magnitude result unless a
+prereg was recorded before the first run, and a claim lint scans fablever's own shipped prose for unmeasured
+effect-size claims — including this README. Verified 2026-07-19: `node test/opus-prereg-test.mjs` → **10/10**,
+`node test/opus-claim-lint-test.mjs` → **20/20**, `node test/mcp-test.js` → **56/56**,
+`node eval/unsupported-claim-regression/run.mjs` → **accuracy 100.0%** (TP=7 TN=11 FP=0 FN=0). Zero npm
+dependencies and no install scripts: `node -e "const p=require('./package.json');console.log(JSON.stringify(p.dependencies||{}),p.scripts.postinstall)"` → `{} undefined`.
+
+**Where fablever is the wrong pick — install these instead.** Cross-session memory → **claude-mem**. Parallel
+swarms, vector memory, ~210 MCP tools → **ruflo**. Spec artifacts portable across 30+ agents → **spec-kit**.
+Multi-role planning chains for large greenfield work → **BMAD-METHOD**. Auditable YAML stage gating →
+**Archon**. Breadth with first-party maintenance → **Anthropic's official plugin directory**. fablever
+composes on top of those; it does not replace them.
+
+**So the claim, exactly.** Not "better outputs" — fablever measured itself and found **no** quality lift over
+plain Claude. The claim is narrower and mechanically enforced: **measured reductions in scope creep and
+unnecessary edits, a gate that fires without depending on the model choosing to comply, and every number
+above recomputable offline from committed raw data.** No rival has run a head-to-head against fablever, and
+fablever has not run one against them — so the honest framing is *"the only layer measured against its
+baseline"*, never *"the best layer"*. That head-to-head is the next experiment, pre-registered.
+
 > This profile doesn't invent behavior — it's distilled from Anthropic's own
 > [Fable prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)
 > and applied through documented Claude Code mechanisms (output styles, hooks, MCP). It works on Claude

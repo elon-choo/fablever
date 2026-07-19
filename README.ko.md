@@ -9,6 +9,58 @@
 
 Anthropic이 공식 문서로 제공하는 **Fable 작업 스타일 가이드**를 [Claude Code](https://claude.com/claude-code)(및 모든 MCP 클라이언트)에서 항상 켜져 있는(always-on) 출력 스타일로 적용합니다. 그래서 **어떤** Claude 모델이든 — Opus, Sonnet, Haiku — Fable이 일하는 방식에 더 가깝게 동작합니다: 결단력 있게, 결과 우선으로, 절제하면서, 근거에 기반하여, 그리고 멈춰야 할 때 규율 있게 멈추도록. 모든 프로젝트, 모든 서브에이전트에 적용되며, 누구나 설치할 수 있습니다. **의존성 제로(Zero dependencies).**
 
+## 하네스를 비교 중이신가요? 이 절이 논지의 전부입니다
+
+**업계의 사실.** 2026년 중반 Claude Code / Codex 계층 시장을 훑어보면 — Superpowers(257,387★, 설치
+965,863회), GitHub spec-kit(122,193★), claude-mem(87,811★), ruflo/claude-flow(65,124★),
+BMAD-METHOD(50,802★), SuperClaude(23,577★), Archon(22,940★), Agent OS(5,081★) — 별 개수는 **2026-07-19
+기준**입니다. **그중 어느 것도 자기 계층이 코딩 결과를 개선한다는 재현 가능한 측정을 공개하지 않습니다.**
+이 분야에 하나 있는 재현 가능한 벤치마크(ruflo의 SOTA gist)는 **스텁(stub) LLM**을 돌리며 스스로 그렇게
+밝힙니다 — 오케스트레이션 디스패치 오버헤드를 재는 것이라, 거기 적힌 "1.3×–1953×"는 밀리초이지 개발자의
+결과가 아닙니다. SuperClaude의 "2–3× 더 빠름, 토큰 30–50% 절감"에는 방법론·과제 세트·기준선·원자료가
+하나도 없고, 그 개선을 자기 자신이 아니라 서드파티 MCP 서버 덕으로 돌립니다.
+
+fablever가 존재하는 자리가 바로 그 공백입니다. "명령어가 더 많다"가 아니라 — **직접 다시 돌려볼 수 있는
+수치가 있다**입니다.
+
+| 무엇이 바뀌었나 | 측정값 | 재현 명령 |
+|---|---|---|
+| 이미 올바른 코드에 대한 불필요한 수정(Codex, *거짓* 버그 리포트를 준 조건) | plain **80%**(48/60) → fablever **43%**(26/60); 과제 10개 × 6회 반복 = 180런, **10/10** 과제에서 개선, 부호검정 **p=0.002** | `cat eval/codex-native-ab/RESULTS-confirmatory.md` |
+| 범위 위반 — 결정론적, **판정 모델 없음** | fablever **0%** vs plain Claude **41.7%**(고정된 48개 과제 세트 중 범위 제한 과제 12개) | `cat eval/style-only-ablation/RESULTS.md` |
+| 게이트가 이끈 수정본 vs 원본 초안 그대로 납품 | **27–0**, 이항검정 **p≈1.5×10⁻⁸**, 60개 과제(원판정 186건) | `cat eval/comparison/fable-check-sim/out4/RESULTS.md` |
+| *지목된* 합격 결함을 메움 — 객관적, **판정 모델 없음** | **80.6%** vs 일반 "더 훌륭하게 만들어줘" 수정본 **12.9%** | 같은 파일 |
+| 무료 대체재 대비 — "그냥 직접 프롬프트로 시키면 되지" | fablever **11–3**(p=0.057, 경향); 그 직접 프롬프트는 **plain에 1–14로 짐**(p=0.001) | `cat eval/style-only-ablation/RESULTS.md` |
+| 왕복(round-trip) — 끝내지 않고 질문으로 되돌아옴 | **6.7%** vs plain Opus **43.3%**(30개 과제) | `cat eval/comparison/productivity-ab/out/RESULTS.md` |
+
+**그리고 진 항목들도 각주가 아니라 같은 자리에 적습니다.** 원본 출력 품질은 두 판정 모델 모두에서 plain
+Claude와 **비기거나 집니다**(Gemini 4–9, GPT-5.5 17–26). 근거 없는 "됩니다" 주장은 plain보다 **더
+나쁩니다**(8.3% vs 2.1%) — `fable_lint` 게이트가 존재하는 이유가 이것입니다. 비용은 **호출당 +14.45%**,
+더 싼 과제는 **0/11**입니다. 교차 모델 xverify가 추가로 잡아낸 결함은 **0건**입니다(Claude 하나가 이미
+34/34를 잡았습니다). 개발 생산성은 **없음~마이너스**입니다. Codex에서는 풀스택(47%)이 지시문 계층
+단독(43%)을 **이기지 못하며**, 강한 모델이 fable MCP 도구를 스스로 호출한 것은 **1/60** 런입니다. 색인:
+[`EVALS.md`](EVALS.md) (영문).
+
+**정직성은 약속이 아니라 기계적으로 강제됩니다.** 사전등록(pre-registration) 린트는 첫 런 이전에 사전등록이
+기록되지 않았으면 효과 크기 결과를 *거부*하고, 주장 린트는 fablever 자신이 배포하는 문서를 — 이 README를
+포함해 — 측정되지 않은 효과 크기 주장이 있는지 훑습니다. 2026-07-19 실행 검증:
+`node test/opus-prereg-test.mjs` → **10/10**, `node test/opus-claim-lint-test.mjs` → **20/20**,
+`node test/mcp-test.js` → **56/56**, `node eval/unsupported-claim-regression/run.mjs` → **정확도
+100.0%**(TP=7 TN=11 FP=0 FN=0). npm 의존성 제로, 설치 스크립트 없음:
+`node -e "const p=require('./package.json');console.log(JSON.stringify(p.dependencies||{}),p.scripts.postinstall)"` → `{} undefined`.
+
+**fablever가 잘못된 선택인 경우 — 이쪽을 설치하세요.** 세션 간 기억 → **claude-mem**. 병렬 스웜, 벡터
+기억, 약 210개 MCP 도구 → **ruflo**. 30개 이상 에이전트에 이식되는 스펙 산출물 → **spec-kit**. 대형
+그린필드용 멀티롤 기획 체인 → **BMAD-METHOD**. 감사 가능한 YAML 단계 게이팅 → **Archon**. 1st-party
+유지보수와 넓은 커버리지 → **Anthropic 공식 플러그인 디렉터리**. fablever는 이것들 *위에* 얹히는 것이지
+대체하지 않습니다.
+
+**그래서 주장은 정확히 이렇습니다.** "출력이 더 좋다"가 **아닙니다** — fablever는 스스로를 측정했고 plain
+Claude 대비 품질 향상은 **없었습니다**. 주장은 더 좁고 기계적으로 강제됩니다: **범위 확장(scope creep)과
+불필요한 수정의 측정된 감소, 모델이 따라주기로 선택하는 데 의존하지 않고 발화하는 게이트, 그리고 위의 모든
+수치를 커밋된 원자료로 오프라인에서 재계산할 수 있다는 것.** 어떤 경쟁 도구도 fablever와 맞대결(head-to-head)을
+돌린 적이 없고 fablever도 그들을 상대로 돌린 적이 없습니다 — 그래서 정직한 표현은 *"자기 기준선에 대해
+측정된 유일한 계층"*이지, 결코 *"최고의 계층"*이 아닙니다.
+
 > 이 프로파일은 동작을 새로 만들어내지 않습니다 — Anthropic 자신의
 > [Fable 프롬프팅 가이드](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5)에서
 > 증류해 추출한 뒤, 문서화된 Claude Code 메커니즘(출력 스타일, 훅, MCP)을 통해 적용한 것입니다.
