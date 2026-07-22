@@ -103,6 +103,9 @@
   .msg.ai.bad{border-left:3px solid var(--bad)} .msg.ai.good{border-left:3px solid var(--good)}
   .verdict{margin-top:12px;font-size:.86rem;font-weight:700;line-height:1.5}
   .verdict.bad{color:var(--bad)} .verdict.good{color:var(--good)}
+  .oquote{max-width:44em;margin:0 auto 16px;padding:13px 18px;border-left:3px solid var(--a2);background:var(--bg2);border-radius:0 12px 12px 0;color:#dfe0ea;font-size:.95rem;line-height:1.62;font-style:italic}
+  .oquote b{color:#fff;font-style:normal}
+  .oquote .src{display:block;margin-top:6px;font-style:normal;font-size:.76rem;color:var(--muted);letter-spacing:.02em}
   .bacase{margin-bottom:30px}
   .bacase>h3{text-align:center;font-size:1.05rem;color:var(--muted);font-weight:600;margin:0 0 14px}
   .wins{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
@@ -145,6 +148,7 @@
 <nav><div class="wrap">
   <span class="brand"><span class="d">●</span> fablever</span>
   <a class="navlink" href="#gains"><span data-lang="ko">효과</span><span data-lang="en">Gains</span></a>
+  <a class="navlink" href="#judged"><span data-lang="ko">직접 판정</span><span data-lang="en">He judged it</span></a>
   <a class="navlink" href="#ba"><span data-lang="ko">이렇게 바뀜</span><span data-lang="en">Before / after</span></a>
   <a class="navlink" href="#wins"><span data-lang="ko">근거</span><span data-lang="en">Proof</span></a>
   <a class="navlink" href="#install"><span data-lang="ko">설치</span><span data-lang="en">Install</span></a>
@@ -191,6 +195,48 @@
     <div class="pain rv"><div class="ic">🌙</div><h3><span data-lang="ko">맡기고 신경 끕니다</span><span data-lang="en">Hand it off, walk away</span></h3><p><span data-lang="ko">멀쩡한 코드를 함부로 안 고치니, 무인 실행이나 장시간 작업도 마음 놓고 맡길 수 있습니다.</span><span data-lang="en">Because it won't needlessly rewrite correct code, you can actually trust it with unattended or long-running work.</span></p></div>
     <div class="pain rv"><div class="ic">↩️</div><h3><span data-lang="ko">마음 놓고 한번 켜봅니다</span><span data-lang="en">Switch it on with nothing at stake</span></h3><p><span data-lang="ko">명령 한 줄로 켜고, 한 줄로 제거 — 설정이 바이트 단위로 복원됩니다(140/140). 흔적도, 남는 파일도 없습니다.</span><span data-lang="en">One command on, one command off — your settings restore byte-for-byte (140/140). No residue, no leftover files.</span></p></div>
   </div>
+</div></section>
+
+<section id="judged"><div class="wrap">
+  <div class="kicker"><span data-lang="ko">만든 사람이, 눈 가린 채 골랐습니다</span><span data-lang="en">The maker judged it — blind</span></div>
+  <h2><span data-lang="ko"><span class="gphrase">자기 실제 업무를 양쪽으로 돌려,</span> <span class="gphrase">어느 쪽이 fablever인지 모른 채 골랐습니다.</span></span><span data-lang="en"><span class="gphrase">He ran his own real work both ways —</span> <span class="gphrase">then picked, blind to which was fablever.</span></span></h2>
+  <p class="lead"><span data-lang="ko">같은 브리프를 <b>fablever 켜고 / 끄고</b> 한 번씩 돌린 뒤, 어느 쪽이 fablever인지 가린 채 나란히 놓고 판정했습니다. 아래는 그가 <b>fablever 쪽을 고른</b> 두 사례 — 그의 실제 말과 함께.</span><span data-lang="en">The same brief, run once with <b>fablever on</b> and once <b>off</b>, then judged side-by-side with the labels hidden. Two where he <b>picked the fablever arm</b> — in his own words.</span></p>
+
+  <div class="bacase rv">
+    <h3><span data-lang="ko">① 실제 콜드메일 초안 — 판정: “A가 압도적으로 좋아”</span><span data-lang="en">① A real cold-email draft — verdict: "A is overwhelmingly better"</span></h3>
+    <div class="oquote"><span data-lang="ko">“1번이 훨씬 낫다. 제목부터 조금 더 끌리고… 상대가 봐야 되는 것들, 관심 있어 할 만한 것들만 임팩트 있게 딱 했는데, 2번은 너무 장황하고 <b>AI스러운 말투가 많아</b>. 그래서 <b>A가 압도적으로 좋아</b>.”<span class="src">— 오너, 블라인드 판정 (A = fablever 켬)</span></span><span data-lang="en">”The first one is much better — the subject pulls you in more, and it hits only what the reader needs, with impact. The second is too long-winded, <b>very AI-sounding</b>. So <b>A is overwhelmingly better</b>.”<span class="src">— the owner, judging blind (A = fablever ON)</span></span></div>
+    <div class="ba">
+      <div class="panel before">
+        <span class="ptag"><span data-lang="ko">fablever 끄고</span><span data-lang="en">fablever OFF</span></span>
+        <div class="chat"><div class="msg"><span data-lang="ko">한 제안을 문단으로 해명합니다: <i>“…과하게 들리실 것 같아 이유를 말씀드립니다. …원가가 거의 들지 않습니다. 저희에게 부족한 건 마진이 아니라 사람이 모여 있는 채널이고…”</i></span><span data-lang="en">Justifies the offer in paragraphs: <i>"…in case it sounds like too much, let me explain why. …it costs almost nothing to produce. What we lack isn't margin but a channel where people gather…"</i></span></div></div>
+        <div class="verdict bad"><span data-lang="ko">✕ 다 맞는 말인데 장황하고, 오너 말로 ‘AI스럽다’.</span><span data-lang="en">✕ All true, but long-winded — the owner's word: "AI-sounding".</span></div>
+      </div>
+      <div class="panel after">
+        <span class="ptag"><span data-lang="ko">fablever 켜고</span><span data-lang="en">fablever ON</span></span>
+        <div class="chat"><div class="msg"><span data-lang="ko"><b>“제안은 네 줄로 끝납니다.”</b> — 봐야 할 것만 임팩트 있는 항목으로. <span class="dim" style="color:var(--muted)">그리고 시키지 않았는데, 브리프가 빠뜨린 법적 요건(사전동의 옵트인)을 발송 전에 짚어줍니다.</span></span><span data-lang="en"><b>"The offer fits in four lines."</b> — only what matters, as crisp bullets. <span class="dim" style="color:var(--muted)">And unprompted, it flags a legal requirement the brief had missed (opt-in consent) before you send.</span></span></div></div>
+        <div class="verdict good"><span data-lang="ko">✓ 걷어내고 임팩트 있게 — 게다가 안 시킨 확인까지.</span><span data-lang="en">✓ Trimmed to impact — plus a check you never asked for.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bacase rv">
+    <h3><span data-lang="ko">② 실제 프로젝트 현황 보고 — 판정: “B가 훨씬 좋아”</span><span data-lang="en">② A real project status report — verdict: "B is much better"</span></h3>
+    <div class="oquote"><span data-lang="ko">“A보다 B가 훨씬 좋아. A는 보다가 ‘<b>이게 무슨 말이야</b>’ 하고 머리가 아픈데, B는 처음부터 바로 무슨 말인지 이해되고 <b>결론이 바로바로 보이고 장황하지 않고</b> 너무 좋아.”<span class="src">— 오너, 블라인드 판정 (B = fablever 켬)</span></span><span data-lang="en">“B is much better. A makes me go '<b>what does this even mean</b>' and my head hurts; B I get from the first line — <b>the conclusion is right there, not long-winded</b>. Really good.”<span class="src">— the owner, judging blind (B = fablever ON)</span></span></div>
+    <div class="ba">
+      <div class="panel before">
+        <span class="ptag"><span data-lang="ko">fablever 끄고</span><span data-lang="en">fablever OFF</span></span>
+        <div class="chat"><div class="msg"><span data-lang="ko">상태를 목표별로 길게 나열하고, ‘다음 할 일’을 여러 항목으로 늘어놓습니다 — 다 맞지만 읽다 보면 요점을 놓칩니다.</span><span data-lang="en">Lists the status goal-by-goal at length and spreads "what's next" across several items — all correct, but you lose the thread.</span></div></div>
+        <div class="verdict bad"><span data-lang="ko">✕ 다 맞는데, 오너 말로 ‘이게 무슨 말이야’.</span><span data-lang="en">✕ All correct — but the owner: "what does this even mean".</span></div>
+      </div>
+      <div class="panel after">
+        <span class="ptag"><span data-lang="ko">fablever 켜고</span><span data-lang="en">fablever ON</span></span>
+        <div class="chat"><div class="msg"><span data-lang="ko"><b>결론부터</b>: 지금 막혀 있고, 그걸 푸는 <b>단 하나의 결정</b>이 무엇인지 첫 줄에. 확인 안 된 것은 <b>‘미확인’</b>이라 표시하고, ‘아무것도 안 하면 그대로 멈춰 있음’까지.</span><span data-lang="en"><b>Conclusion first</b>: it's blocked, and the <b>single decision</b> that unblocks it is in the first line. What isn't confirmed is marked <b>"not verified"</b>, and it says plainly what happens if you do nothing.</span></div></div>
+        <div class="verdict good"><span data-lang="ko">✓ 결론 먼저 · 할 일 하나로 · 미확인은 미확인이라고.</span><span data-lang="en">✓ Conclusion first · one action · unverified called unverified.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="methnote"><span data-lang="ko"><b>정직하게 —</b> 오너가 자기 실제 브리프로 눈 가린 채 판정한 <b>n=4 소규모·서술적 파일럿</b>입니다. 효과크기나 승률은 <b>주장하지 않습니다</b>(사전등록이 금지). 같은 절제된 문체가 <b>랜딩 히어로 카피에선 오히려 거슬려</b> 오너가 plain을 골랐고, 그 패배도 그대로 공개합니다. 전체 판정·비용·원본 산출물: <a href="https://github.com/elon-choo/fablever/blob/main/eval/results-paired-deliverable-batch-2026-07-17.md">results-paired-deliverable-batch</a>.</span><span data-lang="en"><b>Honestly —</b> an <b>n=4, descriptive pilot</b> the owner judged blind on his own briefs. No effect-size or win-rate is <b>claimed</b> (the pre-registration forbids it). The same restraint <b>grated on a landing hero</b>, where he picked plain — that loss is published too. Full verdicts, cost, and raw artifacts: <a href="https://github.com/elon-choo/fablever/blob/main/eval/results-paired-deliverable-batch-2026-07-17.md">results-paired-deliverable-batch</a>.</span></p>
 </div></section>
 
 <section id="ba"><div class="wrap">
